@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      CACHE_PATH: /app/data/runtime/cache.sqlite
+    volumes:
+      - lunar-cache:/app/data/runtime
+    expose:
+      - "8000"
+    restart: unless-stopped
+  frontend:
+    build:
+      context: frontend
+      args:
+        BACKEND_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  lunar-cache:

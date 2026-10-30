@@ -1,0 +1,12 @@
+.venv/
+node_modules/
+.next/
+__pycache__/
+.pytest_cache/
+*.sqlite*
+.env
+.env.local
+data/terrain/
+playwright-report/
+test-results/
+*.tsbuildinfo

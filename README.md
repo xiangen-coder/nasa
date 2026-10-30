@@ -94,3 +94,63 @@ The backend verifies SHA-256, lunar radius, CRS, coverage and nodata. It samples
 | JPL Horizons | Live integration not used: `ssd.jpl.nasa.gov` was denied by this cloud network policy. No invented API response substitutes it. |
 | LOLA / NASA PDS | Optional local georeferenced DEM ingestion; no measured raster downloaded or validated in this environment |
 | NASA Moon Trek | External mapping reference link; no undocumented tile API assumed |
+| LROC QuickMap | External imagery/reference link; no public API presumed |
+
+The two bundled text kernels came from `AndrewAnnex/SpiceyPyTestKernels` commit `07c73a7e978e4e7111659a3fb24a012a44c9e8ba`, whose README identifies NAIF source URLs and published checksums. Full SHA-256 provenance and upstream URLs are in `data/kernels/manifest.json`; original NAIF kernel comments are retained. The DE421 kernel remains in the installed Python package rather than being duplicated in Git. Scientific data attribution does not imply NASA endorsement.
+
+## API
+
+All computations are POSTed with structured Pydantic validation. Coordinates and mission date/time errors return 422. Missing site IDs return 404. Scientific runtime failures return 503 with no substitute data. FastAPI publishes an OpenAPI schema and `/docs`.
+
+| Method | Endpoint | Request / response |
+| --- | --- | --- |
+| GET | `/api/health` | Kernel readiness and terrain configuration presence |
+| GET | `/api/sites` | Three geographic reference sites |
+| GET | `/api/sites/{id}` | One reference site |
+| POST | `/api/terrain` | Location → raster status, elevation, slope, horizon, grid |
+| POST | `/api/ephemeris` | Mission → geometric Sun/Earth azimuth/elevation samples |
+| POST | `/api/analyze` | Mission → series, metrics, windows, terrain, provenance |
+| POST | `/api/compare` | Mission, 2–3 locations, weights → explained ranking |
+| POST | `/api/export` | Mission and `format` (`csv` / `json`) → attachment |
+
+Example mission:
+
+```json
+{"name":"Shackleton vicinity","latitude":-89.54,"longitude":0,"start":"2026-10-01T00:00:00Z","end":"2026-10-08T00:00:00Z","interval_minutes":60,"clearance_deg":0}
+```
+
+Ranges: >0 through 31 days, 5–1440-minute cadence, ≤2000 intervals, 0–20° communication clearance. SQLite keys include mission, algorithm, kernel checksums and terrain results/provenance. Database writes are parameterized and serialized; CSPICE access is serialized because of its global state. No external queries occur per timestamp. Health confirms ephemeris readiness, not scientific validity of a configured DEM.
+
+## Validation
+
+```bash
+.venv/bin/pytest backend/tests -q
+npm --prefix frontend run lint
+npm --prefix frontend run typecheck
+npm --prefix frontend run build
+# Install the test browser on an unrestricted development machine:
+cd frontend
+npx playwright install --with-deps chromium
+npm test
+```
+
+If Chromium is already installed (as in this cloud), use `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm --prefix frontend test` from the root. Playwright starts the real backend and production frontend, tests the actual API, animation, comparison, exports, invalidation, error reporting, mobile layout and offline example. Browser downloads from `cdn.playwright.dev` are blocked in this environment; the system Chromium avoids that dependency.
+
+Backend tests include synthetic analytic fixtures for scientific logic; these are test-only and never used as real analysis results. DE421 vectors are checked at 2000/2026/2050 epochs against an independent Skyfield SPK evaluator, and NAIF text kernels against upstream published checksums and lunar radii. This checks NASA data reading and vector chains; it is **not** independent Horizons/LOLA or flight-data validation of the complete angular/terrain model. See `VALIDATION.md` for recorded outcomes and unresolved work.
+
+## Structure
+
+```text
+backend/app/       validation, API, cache, SPICE, terrain, site references
+backend/tests/     unit, API, raster, independent kernel-reader validation
+frontend/app/      responsive dashboard, map, charts, comparison, report
+frontend/tests/    browser integration tests against real services
+data/kernels/     NAIF text kernels and checksum/source manifest
+data/examples/    three computed real-ephemeris examples
+scripts/          repeatable install and example generation
+compose*.yaml     containers and cloud certificate overlay
+```
+
+## Remaining work before mission-quality release
+
+Install and scientifically validate a real high-resolution LOLA product and its reference frame; add a matching precision lunar binary PCK/frame set; validate angular and obstruction output against independent NASA references; add verified lunar imagery/terrain map services where documented; assess hazards and eclipse/disk effects if required. Public hosting/domain provisioning is not complete. The project currently delivers the working geometric simulator/comparator and a tested local terrain integration path, rather than claiming the full mission-grade definition of done.

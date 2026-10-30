@@ -1,0 +1,1772 @@
+{
+  "mission": {
+    "latitude": -88.48,
+    "longitude": -87.1,
+    "name": "de Gerlache vicinity",
+    "start": "2026-10-01T00:00:00Z",
+    "end": "2026-10-08T00:00:00Z",
+    "interval_minutes": 60,
+    "clearance_deg": 0.0
+  },
+  "series": [
+    {
+      "time": "2026-10-01T00:00:00+00:00",
+      "sun_azimuth": 29.95565047308326,
+      "sun_elevation": 2.2996316966442474,
+      "earth_azimuth": 86.08389081013304,
+      "earth_elevation": 6.496980192282696,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T01:00:00+00:00",
+      "sun_azimuth": 29.448092633005444,
+      "sun_elevation": 2.30730010397397,
+      "earth_azimuth": 86.13146266380737,
+      "earth_elevation": 6.489209612165291,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T02:00:00+00:00",
+      "sun_azimuth": 28.94052149820125,
+      "sun_elevation": 2.3148643080424933,
+      "earth_azimuth": 86.1790327031038,
+      "earth_elevation": 6.480716915683575,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T03:00:00+00:00",
+      "sun_azimuth": 28.432937038159604,
+      "sun_elevation": 2.3223237912981514,
+      "earth_azimuth": 86.22659555195749,
+      "earth_elevation": 6.471503011215573,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T04:00:00+00:00",
+      "sun_azimuth": 27.925339224412014,
+      "sun_elevation": 2.3296780443883556,
+      "earth_azimuth": 86.27414588405695,
+      "earth_elevation": 6.46156890402095,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T05:00:00+00:00",
+      "sun_azimuth": 27.417728030395775,
+      "sun_elevation": 2.336926566199039,
+      "earth_azimuth": 86.32167842383969,
+      "earth_elevation": 6.450915695830442,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T06:00:00+00:00",
+      "sun_azimuth": 26.91010343153652,
+      "sun_elevation": 2.3440688638907243,
+      "earth_azimuth": 86.36918794749259,
+      "earth_elevation": 6.439544584416154,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T07:00:00+00:00",
+      "sun_azimuth": 26.402465405261353,
+      "sun_elevation": 2.3511044529347767,
+      "earth_azimuth": 86.41666928396175,
+      "earth_elevation": 6.42745686313879,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T08:00:00+00:00",
+      "sun_azimuth": 25.894813930950765,
+      "sun_elevation": 2.358032857149614,
+      "earth_azimuth": 86.46411731575924,
+      "earth_elevation": 6.414653920481341,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T09:00:00+00:00",
+      "sun_azimuth": 25.38714898998152,
+      "sun_elevation": 2.3648536087357592,
+      "earth_azimuth": 86.51152698001243,
+      "earth_elevation": 6.401137239552946,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T10:00:00+00:00",
+      "sun_azimuth": 24.879470565600432,
+      "sun_elevation": 2.3715662483113107,
+      "earth_azimuth": 86.55889326912825,
+      "earth_elevation": 6.386908397586115,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T11:00:00+00:00",
+      "sun_azimuth": 24.371778643195263,
+      "sun_elevation": 2.3781703249430945,
+      "earth_azimuth": 86.6062112319319,
+      "earth_elevation": 6.371969065400475,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T12:00:00+00:00",
+      "sun_azimuth": 23.864073209906724,
+      "sun_elevation": 2.384665396183799,
+      "earth_azimuth": 86.65347597400407,
+      "earth_elevation": 6.356321006871044,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T13:00:00+00:00",
+      "sun_azimuth": 23.356354254983074,
+      "sun_elevation": 2.391051028100803,
+      "earth_azimuth": 86.70068265891031,
+      "earth_elevation": 6.339966078350428,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T14:00:00+00:00",
+      "sun_azimuth": 22.848621769520527,
+      "sun_elevation": 2.3973267953108386,
+      "earth_azimuth": 86.74782650860027,
+      "earth_elevation": 6.322906228099505,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T15:00:00+00:00",
+      "sun_azimuth": 22.340875746551234,
+      "sun_elevation": 2.4034922810101453,
+      "earth_azimuth": 86.7949028042303,
+      "earth_elevation": 6.305143495686809,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T16:00:00+00:00",
+      "sun_azimuth": 21.833116181096326,
+      "sun_elevation": 2.4095470770042753,
+      "earth_azimuth": 86.84190688680732,
+      "earth_elevation": 6.286680011379063,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T17:00:00+00:00",
+      "sun_azimuth": 21.325343070153153,
+      "sun_elevation": 2.4154907837385644,
+      "earth_azimuth": 86.88883415791688,
+      "earth_elevation": 6.267517995507844,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T18:00:00+00:00",
+      "sun_azimuth": 20.81755641243655,
+      "sun_elevation": 2.4213230103294134,
+      "earth_azimuth": 86.93568008000585,
+      "earth_elevation": 6.247659757836784,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T19:00:00+00:00",
+      "sun_azimuth": 20.30975620884875,
+      "sun_elevation": 2.42704337458829,
+      "earth_azimuth": 86.98244017735927,
+      "earth_elevation": 6.227107696895816,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T20:00:00+00:00",
+      "sun_azimuth": 19.801942461918138,
+      "sun_elevation": 2.4326515030551756,
+      "earth_azimuth": 87.02911003617777,
+      "earth_elevation": 6.2058642993185344,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T21:00:00+00:00",
+      "sun_azimuth": 19.29411517626908,
+      "sun_elevation": 2.4381470310210274,
+      "earth_azimuth": 87.07568530548578,
+      "earth_elevation": 6.183932139148998,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T22:00:00+00:00",
+      "sun_azimuth": 18.786274358308013,
+      "sun_elevation": 2.4435296025572972,
+      "earth_azimuth": 87.12216169722242,
+      "earth_elevation": 6.161313877156581,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-01T23:00:00+00:00",
+      "sun_azimuth": 18.27842001639161,
+      "sun_elevation": 2.448798870540249,
+      "earth_azimuth": 87.16853498694496,
+      "earth_elevation": 6.13801226011522,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T00:00:00+00:00",
+      "sun_azimuth": 17.77055216066884,
+      "sun_elevation": 2.453954496677438,
+      "earth_azimuth": 87.21480101400694,
+      "earth_elevation": 6.114030120089729,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T01:00:00+00:00",
+      "sun_azimuth": 17.262670803209613,
+      "sun_elevation": 2.458996151530935,
+      "earth_azimuth": 87.26095568198856,
+      "earth_elevation": 6.08937037370365,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T02:00:00+00:00",
+      "sun_azimuth": 16.75477595785972,
+      "sun_elevation": 2.463923514542518,
+      "earth_azimuth": 87.30699495900286,
+      "earth_elevation": 6.064036021390938,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T03:00:00+00:00",
+      "sun_azimuth": 16.246867640387567,
+      "sun_elevation": 2.468736274055426,
+      "earth_azimuth": 87.35291487798422,
+      "earth_elevation": 6.038030146648221,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T04:00:00+00:00",
+      "sun_azimuth": 15.738945868312486,
+      "sun_elevation": 2.473434127338172,
+      "earth_azimuth": 87.39871153689987,
+      "earth_elevation": 6.011355915266595,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T05:00:00+00:00",
+      "sun_azimuth": 15.231010661057406,
+      "sun_elevation": 2.478016780605138,
+      "earth_azimuth": 87.44438109906845,
+      "earth_elevation": 5.984016574558111,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T06:00:00+00:00",
+      "sun_azimuth": 14.723062039736218,
+      "sun_elevation": 2.4824839490390547,
+      "earth_azimuth": 87.48991979307985,
+      "earth_elevation": 5.956015452583278,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T07:00:00+00:00",
+      "sun_azimuth": 14.215100027345452,
+      "sun_elevation": 2.486835356810201,
+      "earth_azimuth": 87.53532391326867,
+      "earth_elevation": 5.927355957345688,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T08:00:00+00:00",
+      "sun_azimuth": 13.707124648648433,
+      "sun_elevation": 2.49107073709658,
+      "earth_azimuth": 87.58058981957275,
+      "earth_elevation": 5.898041576007135,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T09:00:00+00:00",
+      "sun_azimuth": 13.199135930079079,
+      "sun_elevation": 2.495189832103766,
+      "earth_azimuth": 87.62571393765259,
+      "earth_elevation": 5.868075874074102,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T10:00:00+00:00",
+      "sun_azimuth": 12.691133899944491,
+      "sun_elevation": 2.4991923930818976,
+      "earth_azimuth": 87.6706927590937,
+      "earth_elevation": 5.837462494582582,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T11:00:00+00:00",
+      "sun_azimuth": 12.18311858823671,
+      "sun_elevation": 2.5030781803441493,
+      "earth_azimuth": 87.71552284118572,
+      "earth_elevation": 5.80620515728722,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T12:00:00+00:00",
+      "sun_azimuth": 11.675090026717236,
+      "sun_elevation": 2.5068469632836097,
+      "earth_azimuth": 87.76020080712499,
+      "earth_elevation": 5.7743076578219314,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T13:00:00+00:00",
+      "sun_azimuth": 11.167048248799075,
+      "sun_elevation": 2.510498520389783,
+      "earth_azimuth": 87.80472334570834,
+      "earth_elevation": 5.741773866882025,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T14:00:00+00:00",
+      "sun_azimuth": 10.65899328963234,
+      "sun_elevation": 2.5140326392638705,
+      "earth_azimuth": 87.84908721149128,
+      "earth_elevation": 5.7086077293717965,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T15:00:00+00:00",
+      "sun_azimuth": 10.15092518603728,
+      "sun_elevation": 2.517449116633743,
+      "earth_azimuth": 87.89328922446984,
+      "earth_elevation": 5.674813263574898,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T16:00:00+00:00",
+      "sun_azimuth": 9.642843976484407,
+      "sun_elevation": 2.5207477583684588,
+      "earth_azimuth": 87.93732627007107,
+      "earth_elevation": 5.640394560294387,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T17:00:00+00:00",
+      "sun_azimuth": 9.134749701157197,
+      "sun_elevation": 2.5239283794911604,
+      "earth_azimuth": 87.98119529890293,
+      "earth_elevation": 5.605355782010981,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T18:00:00+00:00",
+      "sun_azimuth": 8.626642401827157,
+      "sun_elevation": 2.52699080419264,
+      "earth_azimuth": 88.02489332657908,
+      "earth_elevation": 5.569701162017066,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T19:00:00+00:00",
+      "sun_azimuth": 8.118522121889447,
+      "sun_elevation": 2.5299348658429865,
+      "earth_azimuth": 88.06841743338168,
+      "earth_elevation": 5.533435003568374,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T20:00:00+00:00",
+      "sun_azimuth": 7.610388906393511,
+      "sun_elevation": 2.532760407003088,
+      "earth_azimuth": 88.11176476418228,
+      "earth_elevation": 5.496561679006482,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T21:00:00+00:00",
+      "sun_azimuth": 7.10224280194752,
+      "sun_elevation": 2.5354672794353994,
+      "earth_azimuth": 88.1549325279154,
+      "earth_elevation": 5.459085628907976,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T22:00:00+00:00",
+      "sun_azimuth": 6.594083856643491,
+      "sun_elevation": 2.538055344114498,
+      "earth_azimuth": 88.19791799733639,
+      "earth_elevation": 5.421011361203777,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-02T23:00:00+00:00",
+      "sun_azimuth": 6.0859121203523685,
+      "sun_elevation": 2.5405244712350137,
+      "earth_azimuth": 88.24071850882872,
+      "earth_elevation": 5.382343450313344,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T00:00:00+00:00",
+      "sun_azimuth": 5.577727644230972,
+      "sun_elevation": 2.5428745402221318,
+      "earth_azimuth": 88.2833314616884,
+      "earth_elevation": 5.343086536270168,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T01:00:00+00:00",
+      "sun_azimuth": 5.069530481198312,
+      "sun_elevation": 2.5451054397378132,
+      "earth_azimuth": 88.32575431805786,
+      "earth_elevation": 5.303245323847597,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T02:00:00+00:00",
+      "sun_azimuth": 4.561320685468432,
+      "sun_elevation": 2.547217067689396,
+      "earth_azimuth": 88.36798460218237,
+      "earth_elevation": 5.262824581680314,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T03:00:00+00:00",
+      "sun_azimuth": 4.053098312921016,
+      "sun_elevation": 2.5492093312350943,
+      "earth_azimuth": 88.41001990018555,
+      "earth_elevation": 5.221829141390358,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T04:00:00+00:00",
+      "sun_azimuth": 3.5448634207117986,
+      "sun_elevation": 2.5510821467906806,
+      "earth_azimuth": 88.45185785935149,
+      "earth_elevation": 5.180263896704053,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T05:00:00+00:00",
+      "sun_azimuth": 3.036616067695557,
+      "sun_elevation": 2.552835440033867,
+      "earth_azimuth": 88.49349618792036,
+      "earth_elevation": 5.138133802573435,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T06:00:00+00:00",
+      "sun_azimuth": 2.5283563139511953,
+      "sun_elevation": 2.5544691459092275,
+      "earth_azimuth": 88.53493265414451,
+      "earth_elevation": 5.095443874303096,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T07:00:00+00:00",
+      "sun_azimuth": 2.0200842210604373,
+      "sun_elevation": 2.5559832086319867,
+      "earth_azimuth": 88.5761650860735,
+      "earth_elevation": 5.052199186656483,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T08:00:00+00:00",
+      "sun_azimuth": 1.5117998520356997,
+      "sun_elevation": 2.557377581690594,
+      "earth_azimuth": 88.6171913707833,
+      "earth_elevation": 5.008404872989996,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T09:00:00+00:00",
+      "sun_azimuth": 1.0035032711620635,
+      "sun_elevation": 2.5586522278496036,
+      "earth_azimuth": 88.65800945376952,
+      "earth_elevation": 4.964066124361615,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T10:00:00+00:00",
+      "sun_azimuth": 0.4951945441841884,
+      "sun_elevation": 2.5598071191509097,
+      "earth_azimuth": 88.69861733839042,
+      "earth_elevation": 4.919188188658765,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T11:00:00+00:00",
+      "sun_azimuth": 359.98687373814147,
+      "sun_elevation": 2.560842236914764,
+      "earth_azimuth": 88.73901308511837,
+      "earth_elevation": 4.873776369717302,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T12:00:00+00:00",
+      "sun_azimuth": 359.4785409213844,
+      "sun_elevation": 2.5617575717402845,
+      "earth_azimuth": 88.77919481095135,
+      "earth_elevation": 4.82783602643589,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T13:00:00+00:00",
+      "sun_azimuth": 358.9701961636305,
+      "sun_elevation": 2.562553123504563,
+      "earth_azimuth": 88.81916068866155,
+      "earth_elevation": 4.781372571909795,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T14:00:00+00:00",
+      "sun_azimuth": 358.4618395357779,
+      "sun_elevation": 2.5632289013619056,
+      "earth_azimuth": 88.85890894605483,
+      "earth_elevation": 4.734391472542777,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T15:00:00+00:00",
+      "sun_azimuth": 357.9534711100647,
+      "sun_elevation": 2.563784923741608,
+      "earth_azimuth": 88.8984378652832,
+      "earth_elevation": 4.686898247180208,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T16:00:00+00:00",
+      "sun_azimuth": 357.44509095992726,
+      "sun_elevation": 2.56422121834565,
+      "earth_azimuth": 88.93774578202016,
+      "earth_elevation": 4.638898466231911,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T17:00:00+00:00",
+      "sun_azimuth": 356.93669916006763,
+      "sun_elevation": 2.5645378221454114,
+      "earth_azimuth": 88.97683108482599,
+      "earth_elevation": 4.590397750790258,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T18:00:00+00:00",
+      "sun_azimuth": 356.42829578632524,
+      "sun_elevation": 2.5647347813775374,
+      "earth_azimuth": 89.01569221413752,
+      "earth_elevation": 4.541401771773347,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T19:00:00+00:00",
+      "sun_azimuth": 355.9198809157956,
+      "sun_elevation": 2.5648121515394653,
+      "earth_azimuth": 89.05432766165052,
+      "earth_elevation": 4.491916249045067,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T20:00:00+00:00",
+      "sun_azimuth": 355.4114546266872,
+      "sun_elevation": 2.5647699973841163,
+      "earth_azimuth": 89.09273596942417,
+      "earth_elevation": 4.441946950542986,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T21:00:00+00:00",
+      "sun_azimuth": 354.9030169983232,
+      "sun_elevation": 2.5646083929134824,
+      "earth_azimuth": 89.1309157289519,
+      "earth_elevation": 4.39149969142328,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T22:00:00+00:00",
+      "sun_azimuth": 354.39456811123205,
+      "sun_elevation": 2.564327421372361,
+      "earth_azimuth": 89.16886558046899,
+      "earth_elevation": 4.340580333186163,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-03T23:00:00+00:00",
+      "sun_azimuth": 353.88610804695145,
+      "sun_elevation": 2.5639271752406767,
+      "earth_azimuth": 89.20658421195884,
+      "earth_elevation": 4.2891947828103625,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T00:00:00+00:00",
+      "sun_azimuth": 353.3776368881071,
+      "sun_elevation": 2.563407756225156,
+      "earth_azimuth": 89.24407035825793,
+      "earth_elevation": 4.23734899190159,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T01:00:00+00:00",
+      "sun_azimuth": 352.8691547184773,
+      "sun_elevation": 2.562769275251079,
+      "earth_azimuth": 89.28132280031403,
+      "earth_elevation": 4.185048955821654,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T02:00:00+00:00",
+      "sun_azimuth": 352.3606616227632,
+      "sun_elevation": 2.5620118524521303,
+      "earth_azimuth": 89.31834036402911,
+      "earth_elevation": 4.132300712840201,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T03:00:00+00:00",
+      "sun_azimuth": 351.85215768667945,
+      "sun_elevation": 2.5611356171604163,
+      "earth_azimuth": 89.35512191951946,
+      "earth_elevation": 4.079110343266961,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T04:00:00+00:00",
+      "sun_azimuth": 351.34364299705703,
+      "sun_elevation": 2.560140707895964,
+      "earth_azimuth": 89.39166638019563,
+      "earth_elevation": 4.025483968607151,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T05:00:00+00:00",
+      "sun_azimuth": 350.83511764151547,
+      "sun_elevation": 2.559027272354189,
+      "earth_azimuth": 89.42797270158255,
+      "earth_elevation": 3.9714277507085174,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T06:00:00+00:00",
+      "sun_azimuth": 350.32658170877926,
+      "sun_elevation": 2.557795467394764,
+      "earth_azimuth": 89.4640398806646,
+      "earth_elevation": 3.9169478909062865,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T07:00:00+00:00",
+      "sun_azimuth": 349.81803528842835,
+      "sun_elevation": 2.5564454590277648,
+      "earth_azimuth": 89.49986695476419,
+      "earth_elevation": 3.862050629171809,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T08:00:00+00:00",
+      "sun_azimuth": 349.3094784709984,
+      "sun_elevation": 2.5549774224007176,
+      "earth_azimuth": 89.53545300058117,
+      "earth_elevation": 3.8067422432758184,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T09:00:00+00:00",
+      "sun_azimuth": 348.80091134783555,
+      "sun_elevation": 2.553391541783408,
+      "earth_azimuth": 89.57079713315886,
+      "earth_elevation": 3.7510290479381325,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T10:00:00+00:00",
+      "sun_azimuth": 348.2923340111759,
+      "sun_elevation": 2.5516880105534794,
+      "earth_azimuth": 89.60589850495874,
+      "earth_elevation": 3.6949173939861835,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T11:00:00+00:00",
+      "sun_azimuth": 347.7837465541552,
+      "sun_elevation": 2.5498670311809657,
+      "earth_azimuth": 89.64075630496694,
+      "earth_elevation": 3.638413667503971,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T12:00:00+00:00",
+      "sun_azimuth": 347.27514907062175,
+      "sun_elevation": 2.5479288152109265,
+      "earth_azimuth": 89.67536975741793,
+      "earth_elevation": 3.581524289010488,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T13:00:00+00:00",
+      "sun_azimuth": 346.766541655354,
+      "sun_elevation": 2.545873583247726,
+      "earth_azimuth": 89.7097381210967,
+      "earth_elevation": 3.5242557126063767,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T14:00:00+00:00",
+      "sun_azimuth": 346.25792440382753,
+      "sun_elevation": 2.5437015649361587,
+      "earth_azimuth": 89.74386068809576,
+      "earth_elevation": 3.466614425145557,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T15:00:00+00:00",
+      "sun_azimuth": 345.7492974122426,
+      "sun_elevation": 2.5414129989431586,
+      "earth_azimuth": 89.77773678282824,
+      "earth_elevation": 3.4086069454016434,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T16:00:00+00:00",
+      "sun_azimuth": 345.24066077761,
+      "sun_elevation": 2.5390081329395864,
+      "earth_azimuth": 89.81136576118514,
+      "earth_elevation": 3.3502398232223936,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T17:00:00+00:00",
+      "sun_azimuth": 344.73201459758894,
+      "sun_elevation": 2.536487223579423,
+      "earth_azimuth": 89.84474700926181,
+      "earth_elevation": 3.2915196387158794,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T18:00:00+00:00",
+      "sun_azimuth": 344.22335897057235,
+      "sun_elevation": 2.5338505364799415,
+      "earth_azimuth": 89.87787994250938,
+      "earth_elevation": 3.232453001407865,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T19:00:00+00:00",
+      "sun_azimuth": 343.7146939956348,
+      "sun_elevation": 2.531098346200656,
+      "earth_azimuth": 89.91076400465603,
+      "earth_elevation": 3.1730465494157998,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T20:00:00+00:00",
+      "sun_azimuth": 343.2060197723772,
+      "sun_elevation": 2.5282309362203685,
+      "earth_azimuth": 89.94339866654272,
+      "earth_elevation": 3.1133069486245373,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T21:00:00+00:00",
+      "sun_azimuth": 342.6973364012916,
+      "sun_elevation": 2.5252485989177305,
+      "earth_azimuth": 89.97578342545879,
+      "earth_elevation": 3.053240891851764,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T22:00:00+00:00",
+      "sun_azimuth": 342.1886439831413,
+      "sun_elevation": 2.522151635543452,
+      "earth_azimuth": 90.00791780358418,
+      "earth_elevation": 2.992855098028422,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-04T23:00:00+00:00",
+      "sun_azimuth": 341.67994261944835,
+      "sun_elevation": 2.5189403562005723,
+      "earth_azimuth": 90.03980134735802,
+      "earth_elevation": 2.932156311375068,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T00:00:00+00:00",
+      "sun_azimuth": 341.17123241234293,
+      "sun_elevation": 2.5156150798189043,
+      "earth_azimuth": 90.07143362639052,
+      "earth_elevation": 2.87115130057172,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T01:00:00+00:00",
+      "sun_azimuth": 340.6625134644048,
+      "sun_elevation": 2.512176134128962,
+      "earth_azimuth": 90.10281423227856,
+      "earth_elevation": 2.8098468579408595,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T02:00:00+00:00",
+      "sun_azimuth": 340.15378587871544,
+      "sun_elevation": 2.50862385563668,
+      "earth_azimuth": 90.13394277765141,
+      "earth_elevation": 2.7482497986231342,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T03:00:00+00:00",
+      "sun_azimuth": 339.64504975898706,
+      "sun_elevation": 2.5049585895984126,
+      "earth_azimuth": 90.16481889529629,
+      "earth_elevation": 2.686366959751533,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T04:00:00+00:00",
+      "sun_azimuth": 339.1363052092492,
+      "sun_elevation": 2.5011806899912643,
+      "earth_azimuth": 90.19544223684433,
+      "earth_elevation": 2.624205199637953,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T05:00:00+00:00",
+      "sun_azimuth": 338.62755233402976,
+      "sun_elevation": 2.497290519487094,
+      "earth_azimuth": 90.22581247195467,
+      "earth_elevation": 2.561771396947144,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T06:00:00+00:00",
+      "sun_azimuth": 338.1187912384043,
+      "sun_elevation": 2.493288449424904,
+      "earth_azimuth": 90.25592928735291,
+      "earth_elevation": 2.4990724498766923,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T07:00:00+00:00",
+      "sun_azimuth": 337.61002202763416,
+      "sun_elevation": 2.4891748597787124,
+      "earth_azimuth": 90.28579238555297,
+      "earth_elevation": 2.436115275335867,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T08:00:00+00:00",
+      "sun_azimuth": 337.1012448076266,
+      "sun_elevation": 2.484950139132187,
+      "earth_azimuth": 90.31540148422633,
+      "earth_elevation": 2.3729068081279974,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T09:00:00+00:00",
+      "sun_azimuth": 336.59245968449375,
+      "sun_elevation": 2.480614684644666,
+      "earth_azimuth": 90.34475631485562,
+      "earth_elevation": 2.309454000131434,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T10:00:00+00:00",
+      "sun_azimuth": 336.0836667647317,
+      "sun_elevation": 2.4761689020218722,
+      "earth_azimuth": 90.37385662192455,
+      "earth_elevation": 2.2457638194768843,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T11:00:00+00:00",
+      "sun_azimuth": 335.5748661552179,
+      "sun_elevation": 2.4716132054846796,
+      "earth_azimuth": 90.40270216195053,
+      "earth_elevation": 2.1818432497268057,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T12:00:00+00:00",
+      "sun_azimuth": 335.0660579630775,
+      "sun_elevation": 2.466948017735693,
+      "earth_azimuth": 90.4312927023941,
+      "earth_elevation": 2.1176992890581787,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T13:00:00+00:00",
+      "sun_azimuth": 334.5572422957068,
+      "sun_elevation": 2.462173769926809,
+      "earth_azimuth": 90.45962802073214,
+      "earth_elevation": 2.053338949440808,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T14:00:00+00:00",
+      "sun_azimuth": 334.0484192608476,
+      "sun_elevation": 2.457290901626835,
+      "earth_azimuth": 90.48770790359096,
+      "earth_elevation": 1.9887692558139893,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T15:00:00+00:00",
+      "sun_azimuth": 333.53958896645355,
+      "sun_elevation": 2.452299860786134,
+      "earth_azimuth": 90.51553214567944,
+      "earth_elevation": 1.923997245268187,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T16:00:00+00:00",
+      "sun_azimuth": 333.03075152068647,
+      "sun_elevation": 2.4472011037020365,
+      "earth_azimuth": 90.5431005488613,
+      "earth_elevation": 1.859029966222955,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T17:00:00+00:00",
+      "sun_azimuth": 332.5219070319384,
+      "sun_elevation": 2.4419950949839753,
+      "earth_azimuth": 90.57041292126266,
+      "earth_elevation": 1.7938744776034632,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T18:00:00+00:00",
+      "sun_azimuth": 332.01305560877535,
+      "sun_elevation": 2.4366823075171156,
+      "earth_azimuth": 90.59746907631106,
+      "earth_elevation": 1.7285378480185971,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T19:00:00+00:00",
+      "sun_azimuth": 331.5041973599071,
+      "sun_elevation": 2.431263222425533,
+      "earth_azimuth": 90.62426883181105,
+      "earth_elevation": 1.6630271549376816,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T20:00:00+00:00",
+      "sun_azimuth": 330.99533239426097,
+      "sun_elevation": 2.4257383290362493,
+      "earth_azimuth": 90.65081200913428,
+      "earth_elevation": 1.5973494838636515,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T21:00:00+00:00",
+      "sun_azimuth": 330.4864608208728,
+      "sun_elevation": 2.420108124840293,
+      "earth_azimuth": 90.67709843223828,
+      "earth_elevation": 1.5315119275103861,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T22:00:00+00:00",
+      "sun_azimuth": 329.9775827488039,
+      "sun_elevation": 2.414373115453483,
+      "earth_azimuth": 90.70312792672273,
+      "earth_elevation": 1.4655215849784347,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-05T23:00:00+00:00",
+      "sun_azimuth": 329.4686982873192,
+      "sun_elevation": 2.408533814579735,
+      "earth_azimuth": 90.72890031915861,
+      "earth_elevation": 1.3993855609230694,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T00:00:00+00:00",
+      "sun_azimuth": 328.95980754569933,
+      "sun_elevation": 2.4025907439694594,
+      "earth_azimuth": 90.75441543606412,
+      "earth_elevation": 1.333110964731056,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T01:00:00+00:00",
+      "sun_azimuth": 328.45091063328726,
+      "sun_elevation": 2.3965444333801083,
+      "earth_azimuth": 90.77967310312798,
+      "earth_elevation": 1.2667049096901672,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T02:00:00+00:00",
+      "sun_azimuth": 327.9420076594317,
+      "sun_elevation": 2.390395420534729,
+      "earth_azimuth": 90.80467314434202,
+      "earth_elevation": 1.20017451216079,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T03:00:00+00:00",
+      "sun_azimuth": 327.43309873358555,
+      "sun_elevation": 2.3841442510821693,
+      "earth_azimuth": 90.82941538130295,
+      "earth_elevation": 1.133526890742139,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T04:00:00+00:00",
+      "sun_azimuth": 326.92418396504064,
+      "sun_elevation": 2.377791478551835,
+      "earth_azimuth": 90.85389963218181,
+      "earth_elevation": 1.0667691654443787,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T05:00:00+00:00",
+      "sun_azimuth": 326.4152634632566,
+      "sun_elevation": 2.3713376643154973,
+      "earth_azimuth": 90.87812571121333,
+      "earth_elevation": 0.999908456857816,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T06:00:00+00:00",
+      "sun_azimuth": 325.9063373375234,
+      "sun_elevation": 2.364783377540048,
+      "earth_azimuth": 90.9020934277103,
+      "earth_elevation": 0.9329518853114339,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T07:00:00+00:00",
+      "sun_azimuth": 325.39740569713314,
+      "sun_elevation": 2.358129195146118,
+      "earth_azimuth": 90.92580258542546,
+      "earth_elevation": 0.8659065700440784,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T08:00:00+00:00",
+      "sun_azimuth": 324.8884686512451,
+      "sun_elevation": 2.351375701762107,
+      "earth_azimuth": 90.94925298171009,
+      "earth_elevation": 0.7987796283691732,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T09:00:00+00:00",
+      "sun_azimuth": 324.37952630901,
+      "sun_elevation": 2.3445234896813507,
+      "earth_azimuth": 90.97244440692978,
+      "earth_elevation": 0.7315781748343025,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T10:00:00+00:00",
+      "sun_azimuth": 323.8705787793815,
+      "sun_elevation": 2.337573158813995,
+      "earth_azimuth": 90.99537664358357,
+      "earth_elevation": 0.6643093203882325,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T11:00:00+00:00",
+      "sun_azimuth": 323.36162617126683,
+      "sun_elevation": 2.330525316643494,
+      "earth_azimuth": 91.01804946577745,
+      "earth_elevation": 0.5969801715378772,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T12:00:00+00:00",
+      "sun_azimuth": 322.8526685933898,
+      "sun_elevation": 2.3233805781781327,
+      "earth_azimuth": 91.04046263842801,
+      "earth_elevation": 0.529597829511967,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T13:00:00+00:00",
+      "sun_azimuth": 322.34370615428634,
+      "sun_elevation": 2.316139565904004,
+      "earth_azimuth": 91.0626159166317,
+      "earth_elevation": 0.4621693894177996,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T14:00:00+00:00",
+      "sun_azimuth": 321.83473896237103,
+      "sun_elevation": 2.308802909738389,
+      "earth_azimuth": 91.08450904503508,
+      "earth_elevation": 0.39470193940868914,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T15:00:00+00:00",
+      "sun_azimuth": 321.3257671258606,
+      "sun_elevation": 2.301371246980746,
+      "earth_azimuth": 91.1061417572544,
+      "earth_elevation": 0.3272025598274894,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T16:00:00+00:00",
+      "sun_azimuth": 320.81679075276236,
+      "sun_elevation": 2.2938452222636925,
+      "earth_azimuth": 91.12751377520233,
+      "earth_elevation": 0.25967832237467425,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T17:00:00+00:00",
+      "sun_azimuth": 320.3078099507907,
+      "sun_elevation": 2.2862254875026458,
+      "earth_azimuth": 91.14862480844826,
+      "earth_elevation": 0.19213628926423906,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T18:00:00+00:00",
+      "sun_azimuth": 319.7988248275441,
+      "sun_elevation": 2.278512701848811,
+      "earth_azimuth": 91.1694745538389,
+      "earth_elevation": 0.12458351237492855,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T19:00:00+00:00",
+      "sun_azimuth": 319.2898354902123,
+      "sun_elevation": 2.270707531634212,
+      "earth_azimuth": 91.19006269468633,
+      "earth_elevation": 0.05702703241058078,
+      "sun_visible": true,
+      "earth_visible": true,
+      "simultaneous": true
+    },
+    {
+      "time": "2026-10-06T20:00:00+00:00",
+      "sun_azimuth": 318.78084204585235,
+      "sun_elevation": 2.262810650325429,
+      "earth_azimuth": 91.21038890045365,
+      "earth_elevation": -0.010526121941324955,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-06T21:00:00+00:00",
+      "sun_azimuth": 318.27184460120725,
+      "sun_elevation": 2.254822738469346,
+      "earth_azimuth": 91.23045282617878,
+      "earth_elevation": -0.07806893486627955,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-06T22:00:00+00:00",
+      "sun_azimuth": 317.7628432626685,
+      "sun_elevation": 2.2467444836405055,
+      "earth_azimuth": 91.25025411188508,
+      "earth_elevation": -0.14559440425632467,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-06T23:00:00+00:00",
+      "sun_azimuth": 317.25383813634926,
+      "sun_elevation": 2.238576580390044,
+      "earth_azimuth": 91.26979238220916,
+      "earth_elevation": -0.21309554256023722,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T00:00:00+00:00",
+      "sun_azimuth": 316.74482932800163,
+      "sun_elevation": 2.230319730191263,
+      "earth_azimuth": 91.289067245892,
+      "earth_elevation": -0.2805653776292645,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T01:00:00+00:00",
+      "sun_azimuth": 316.23581694308274,
+      "sun_elevation": 2.2219746413874124,
+      "earth_azimuth": 91.30807829535101,
+      "earth_elevation": -0.3479969535533918,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T02:00:00+00:00",
+      "sun_azimuth": 315.7268010866791,
+      "sun_elevation": 2.213542029136408,
+      "earth_azimuth": 91.32682510630376,
+      "earth_elevation": -0.41538333152011286,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T03:00:00+00:00",
+      "sun_azimuth": 315.21778186349474,
+      "sun_elevation": 2.2050226153560972,
+      "earth_azimuth": 91.34530723730185,
+      "earth_elevation": -0.48271759064784214,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T04:00:00+00:00",
+      "sun_azimuth": 314.70875937787423,
+      "sun_elevation": 2.1964171286697662,
+      "earth_azimuth": 91.36352422942323,
+      "earth_elevation": -0.5499928288355925,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T05:00:00+00:00",
+      "sun_azimuth": 314.19973373371283,
+      "sun_elevation": 2.187726304348972,
+      "earth_azimuth": 91.38147560576749,
+      "earth_elevation": -0.6172021635929328,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T06:00:00+00:00",
+      "sun_azimuth": 313.6907050345896,
+      "sun_elevation": 2.1789508842599776,
+      "earth_azimuth": 91.3991608713679,
+      "earth_elevation": -0.6843387329013347,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T07:00:00+00:00",
+      "sun_azimuth": 313.18167338354715,
+      "sun_elevation": 2.1700916168032833,
+      "earth_azimuth": 91.41657951259646,
+      "earth_elevation": -0.7513956960387627,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T08:00:00+00:00",
+      "sun_azimuth": 312.6726388832458,
+      "sun_elevation": 2.1611492568593493,
+      "earth_azimuth": 91.43373099706743,
+      "earth_elevation": -0.818366234428517,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T09:00:00+00:00",
+      "sun_azimuth": 312.16360163595186,
+      "sun_elevation": 2.152124565731068,
+      "earth_azimuth": 91.45061477329187,
+      "earth_elevation": -0.8852435524665382,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T10:00:00+00:00",
+      "sun_azimuth": 311.6545617434626,
+      "sun_elevation": 2.14301831108449,
+      "earth_azimuth": 91.46723027046215,
+      "earth_elevation": -0.9520208783718663,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T11:00:00+00:00",
+      "sun_azimuth": 311.14551930699264,
+      "sun_elevation": 2.1338312668878507,
+      "earth_azimuth": 91.48357689806286,
+      "earth_elevation": -1.0186914650102001,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T12:00:00+00:00",
+      "sun_azimuth": 310.636474427373,
+      "sun_elevation": 2.124564213356785,
+      "earth_azimuth": 91.49965404581403,
+      "earth_elevation": -1.0852485907239955,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T13:00:00+00:00",
+      "sun_azimuth": 310.12742720500216,
+      "sun_elevation": 2.1152179368939774,
+      "earth_azimuth": 91.51546108354394,
+      "earth_elevation": -1.1516855601773295,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T14:00:00+00:00",
+      "sun_azimuth": 309.6183777396024,
+      "sun_elevation": 2.105793230024444,
+      "earth_azimuth": 91.5309973607313,
+      "earth_elevation": -1.2179957051694605,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T15:00:00+00:00",
+      "sun_azimuth": 309.10932613055036,
+      "sun_elevation": 2.09629089134168,
+      "earth_azimuth": 91.54626220664203,
+      "earth_elevation": -1.284172385460842,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T16:00:00+00:00",
+      "sun_azimuth": 308.60027247656694,
+      "sun_elevation": 2.0867117254408245,
+      "earth_azimuth": 91.56125493000283,
+      "earth_elevation": -1.3502089896032712,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T17:00:00+00:00",
+      "sun_azimuth": 308.09121687599645,
+      "sun_elevation": 2.0770565428630188,
+      "earth_azimuth": 91.57597481912768,
+      "earth_elevation": -1.4160989357583909,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T18:00:00+00:00",
+      "sun_azimuth": 307.5821594265368,
+      "sun_elevation": 2.067326160028245,
+      "earth_azimuth": 91.59042114151698,
+      "earth_elevation": -1.4818356724988866,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T19:00:00+00:00",
+      "sun_azimuth": 307.07310022529634,
+      "sun_elevation": 2.0575213991742562,
+      "earth_azimuth": 91.60459314395935,
+      "earth_elevation": -1.5474126796378262,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T20:00:00+00:00",
+      "sun_azimuth": 306.5640393688378,
+      "sun_elevation": 2.04764308829491,
+      "earth_azimuth": 91.61849005248534,
+      "earth_elevation": -1.612823469030515,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T21:00:00+00:00",
+      "sun_azimuth": 306.05497695327506,
+      "sun_elevation": 2.0376920610791642,
+      "earth_azimuth": 91.63211107239455,
+      "earth_elevation": -1.678061585373827,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T22:00:00+00:00",
+      "sun_azimuth": 305.54591307409476,
+      "sun_elevation": 2.0276691568441216,
+      "earth_azimuth": 91.64545538818419,
+      "earth_elevation": -1.7431206070172718,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-07T23:00:00+00:00",
+      "sun_azimuth": 305.0368478260713,
+      "sun_elevation": 2.017575220469009,
+      "earth_azimuth": 91.65852216343555,
+      "earth_elevation": -1.8079941467484808,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    },
+    {
+      "time": "2026-10-08T00:00:00+00:00",
+      "sun_azimuth": 304.5277813034684,
+      "sun_elevation": 2.007411102335202,
+      "earth_azimuth": 91.67131054100723,
+      "earth_elevation": -1.872675852581658,
+      "sun_visible": true,
+      "earth_visible": false,
+      "simultaneous": false
+    }
+  ],
+  "metrics": {
+    "sun_visible_pct": 100.0,
+    "earth_visible_pct": 83.33333333333333,
+    "simultaneous_pct": 83.33333333333333,
+    "operational_windows": [
+      {
+        "start": "2026-10-01T00:00:00+00:00",
+        "end": "2026-10-06T20:00:00+00:00",
+        "hours": 140.0
+      }
+    ],
+    "longest_darkness_hours": 0,
+    "darkness_windows": [],
+    "longest_blackout_hours": 28.0,
+    "blackout_windows": [
+      {
+        "start": "2026-10-06T20:00:00+00:00",
+        "end": "2026-10-08T00:00:00+00:00",
+        "hours": 28.0
+      }
+    ]
+  },
+  "terrain": {
+    "available": false,
+    "reason": "No LOLA raster configured. Geometry uses a reference sphere; terrain obstruction is unknown.",
+    "elevation_m": null,
+    "slope_deg": null,
+    "horizon": null,
+    "grid": [],
+    "source": null
+  },
+  "mode": "reference_sphere",
+  "cached": true,
+  "provenance": {
+    "algorithm": "1.0.0",
+    "ephemeris": "NASA/JPL DE421",
+    "orientation": "NAIF pck00010 IAU_MOON (IAU 2009 low-precision lunar orientation)",
+    "kernels": {
+      "naif0012.tls": {
+        "sha256": "678e32bdb5a744117a467cd9601cd6b373f0e9bc9bbde1371d5eee39600a039b",
+        "source": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/lsk/naif0012.tls",
+        "distribution": "AndrewAnnex/SpiceyPyTestKernels commit 07c73a7e978e4e7111659a3fb24a012a44c9e8ba"
+      },
+      "pck00010.tpc": {
+        "sha256": "59468328349aa730d18bf1f8d7e86efe6e40b75dfb921908f99321b3a7a701d2",
+        "source": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/pck/pck00010.tpc",
+        "distribution": "AndrewAnnex/SpiceyPyTestKernels commit 07c73a7e978e4e7111659a3fb24a012a44c9e8ba"
+      },
+      "de421.bsp": {
+        "sha256": "a20a7139da04cbc462454634918e9a9ca69127044e2cc9d4f9c16e238d2deedc",
+        "source": "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/de421.bsp",
+        "distribution": "skyfield-data==7.0.0 (PyPI)"
+      }
+    },
+    "sources": [
+      "https://ssd.jpl.nasa.gov/planets/eph_export.html",
+      "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/",
+      "https://pds-geosciences.wustl.edu/missions/lro/lola.htm"
+    ],
+    "assumptions": [
+      "Planetocentric latitude; east-positive longitude; spherical lunar radius 1737.4 km.",
+      "Geometric body centers; no light time, stellar aberration, refraction, solar disk or Earth angular extent.",
+      "IAU_MOON is not a high-precision DE421 lunar principal-axis frame. Near-horizon mission decisions require a compatible binary lunar PCK and validated DEM frame alignment.",
+      "Availability uses left-endpoint samples weighted by interval duration. Transitions and blackout durations are uncertain by up to one sampling interval per boundary.",
+      "No terrain data means reference-sphere geometry only, not terrain clearance. Geometry is not power generation or guaranteed radio communication.",
+      "Sun/Earth directions use SPICE UTC-to-ET conversion; leap-second kernel is current through 2017. Future leap seconds are unknown.",
+      "Site coordinates are exploratory geographic references, not NASA-approved landing points."
+    ]
+  }
+}
