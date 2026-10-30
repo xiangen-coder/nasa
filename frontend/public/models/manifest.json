@@ -1,0 +1,22 @@
+{
+  "attribution": "User-supplied assets. Original authorship/license not independently established. Visual reference only; not terrain, scale, or frame calibration.",
+  "files": {
+    "earth.glb": {
+      "bytes": 12916400,
+      "sha256": "05a5aea99db8ab472487a06debc3b5d0b2cae7636a1a6b9ecfa40b7d1722ba23"
+    },
+    "sun.glb": {
+      "bytes": 4343656,
+      "sha256": "a178f5c43c2c9a6ee6c011c315149a7ab5a2594fd5aa9119ee219625a18da1dd"
+    },
+    "earth.usdz": {
+      "bytes": 709135,
+      "sha256": "20b39ccd4fe024a6957fa4ba10de9335a7dbfc0ca8344bc11a837d59438626d9"
+    },
+    "sun.usdz": {
+      "bytes": 996790,
+      "sha256": "cf95e28e6b67470a683245cee648fb3dedc312ce56f55c0b730523b66d042d1e"
+    }
+  },
+  "moon": "Uploaded Moon_NASA_LRO_23k_Topo.usdz exceeds the 32 MiB environment transfer limit; not bundled. A spherical reference and local import are available."
+}

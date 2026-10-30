@@ -1,5 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import NewsSidebar from "../components/NewsSidebar";
+import MissionPlanner from "../components/MissionPlanner";
+const CelestialViewer = dynamic(() => import("../components/CelestialViewer"), {
+  ssr: false,
+  loading: () => <div className="panel empty">Loading 3D viewer…</div>,
+});
 import {
   Area,
   CartesianGrid,
@@ -34,76 +41,29 @@ import {
   X,
   ZoomIn,
   ZoomOut,
+  Orbit,
+  Rocket,
 } from "lucide-react";
 
-type Site = {
-  id?: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  description?: string;
-};
-type Mission = Site & {
-  start: string;
-  end: string;
-  interval_minutes: number;
-  clearance_deg: number;
-};
-type Row = {
-  time: string;
-  sun_azimuth: number;
-  sun_elevation: number;
-  earth_azimuth: number;
-  earth_elevation: number;
-  sun_visible: boolean;
-  earth_visible: boolean;
-  simultaneous: boolean;
-};
-type Window = { start: string; end: string; hours: number };
-type Metrics = {
-  sun_visible_pct: number;
-  earth_visible_pct: number;
-  simultaneous_pct: number;
-  longest_blackout_hours: number;
-  longest_darkness_hours: number;
-  operational_windows: Window[];
-};
-type Terrain = {
-  available: boolean;
-  reason: string | null;
-  elevation_m: number | null;
-  slope_deg: number | null;
-  horizon: { azimuth: number; elevation: number }[] | null;
-  grid: { east_m: number; north_m: number; elevation_m: number | null }[];
-  resolution_m?: number;
-  method?: string;
-  source?: { source_url: string };
-};
-type Analysis = {
-  mission: Mission;
-  series: Row[];
-  metrics: Metrics;
-  mode: string;
-  terrain: Terrain;
-  provenance: { assumptions: string[]; ephemeris: string; orientation: string };
-  cached: boolean;
-};
-type Ranking = {
-  mission: Mission;
-  metrics: Metrics;
-  slope_deg: number | null;
-  score: number;
-  contributions: Record<string, number>;
-};
-type Comparison = { ranking: Ranking[]; mode: string; explanation: string };
+import type { Site, Mission, Analysis, Comparison } from "./types";
 const views = [
   "Map explorer",
   "Horizon simulator",
   "Terrain analysis",
   "Site comparison",
   "Mission report",
+  "3D observatory",
+  "Mission planner",
 ];
-const icons = [Compass, Activity, Layers, SlidersHorizontal, FileText];
+const icons = [
+  Compass,
+  Activity,
+  Layers,
+  SlidersHorizontal,
+  FileText,
+  Orbit,
+  Rocket,
+];
 const fmt = (x: number | null | undefined, suffix = "", digits = 1) =>
   x == null ? "Unavailable" : `${x.toFixed(digits)}${suffix}`;
 const utc = (time: string) =>
@@ -759,944 +719,1018 @@ export default function Page() {
             <span className="separator" /> <span className="avatar">LN</span>
           </div>
         </header>
-        <main>
-          <div className="page-heading">
-            <div>
-              <div className="eyebrow">LUNAR SOUTH POLE / MISSION PLANNING</div>
-              <h1>
-                {
-                  [
-                    "Find your next horizon.",
-                    "See beyond the horizon.",
-                    "Read the lunar landscape.",
-                    "Compare the possibilities.",
-                    "Your mission, documented.",
-                  ][view]
-                }
-              </h1>
-              <p>
-                {
-                  [
-                    "Explore landing locations. Understand sunlight, communication, and the terrain between.",
-                    "Follow the Sun and Earth across the local sky, one moment at a time.",
-                    "Inspect elevation, slope, and obstructions from a verified lunar DEM.",
-                    "Weigh operational trade-offs across the same mission window.",
-                    "Trace every result back to its data, methods, and assumptions.",
-                  ][view]
-                }
-              </p>
-            </div>
-            <button
-              className="button subtle report-button"
-              onClick={() => setView(4)}
-            >
-              <FileText size={16} /> Mission report <ArrowRight size={15} />
-            </button>
-          </div>
-          <div className="science-notice">
-            <span className="notice-icon">
-              <Satellite size={17} />
-            </span>
-            <p>
-              <strong>Real ephemerides. Transparent limits.</strong> NASA/JPL
-              DE421 + NAIF SPICE. Terrain obstruction remains unknown until a
-              verified LOLA raster is configured.
-            </p>
-            <span className="outline-tag">GEOMETRIC MODEL</span>
-          </div>
-          {error && (
-            <div className="error" role="alert">
-              <span>{error}</span>
-              <button aria-label="Dismiss error" onClick={() => setError("")}>
-                <X size={16} />
+        <div className="workspace-with-news">
+          <main>
+            <div className="page-heading">
+              <div>
+                <div className="eyebrow">
+                  LUNAR SOUTH POLE / MISSION PLANNING
+                </div>
+                <h1>
+                  {
+                    [
+                      "Find your next horizon.",
+                      "See beyond the horizon.",
+                      "Read the lunar landscape.",
+                      "Compare the possibilities.",
+                      "Your mission, documented.",
+                      "A new perspective on space.",
+                      "Plan the journey, explicitly.",
+                    ][view]
+                  }
+                </h1>
+                <p>
+                  {
+                    [
+                      "Explore landing locations. Understand sunlight, communication, and the terrain between.",
+                      "Follow the Sun and Earth across the local sky, one moment at a time.",
+                      "Inspect elevation, slope, and obstructions from a verified lunar DEM.",
+                      "Weigh operational trade-offs across the same mission window.",
+                      "Trace every result back to its data, methods, and assumptions.",
+                      "Explore the supplied 3D models and your computed local sky.",
+                      "Record vehicle assumptions, inspect launch weather, and save your mission plans.",
+                    ][view]
+                  }
+                </p>
+              </div>
+              <button
+                className="button subtle report-button"
+                onClick={() => setView(4)}
+              >
+                <FileText size={16} /> Mission report <ArrowRight size={15} />
               </button>
             </div>
-          )}
-          {notice && (
-            <div className="info" role="status">
-              {notice}
+            <div className="science-notice">
+              <span className="notice-icon">
+                <Satellite size={17} />
+              </span>
+              <p>
+                <strong>Real ephemerides. Transparent limits.</strong> NASA/JPL
+                DE421 + NAIF SPICE. Terrain obstruction remains unknown until a
+                verified LOLA raster is configured.
+              </p>
+              <span className="outline-tag">GEOMETRIC MODEL</span>
             </div>
-          )}
-          <div className="mission-controls">
-            <div className="mission-control-title">
-              <SlidersHorizontal size={16} />
-              <span>Mission window</span>
-              <small>UTC</small>
-            </div>
-            <label>
-              Start date
-              <input
-                type="date"
-                value={start}
-                min="1901-01-01"
-                max="2052-12-30"
-                onChange={(e) => setStart(e.target.value)}
-              />
-            </label>
-            <span className="date-arrow">→</span>
-            <label>
-              End date
-              <input
-                type="date"
-                value={end}
-                min={start}
-                max="2052-12-31"
-                onChange={(e) => setEnd(e.target.value)}
-              />
-            </label>
-            <label>
-              Time step
-              <select
-                value={interval}
-                onChange={(e) => setIntervalMinutes(+e.target.value)}
-              >
-                {[5, 15, 30, 60, 180, 360].map((n) => (
-                  <option key={n} value={n}>
-                    {n < 60
-                      ? `${n} minutes`
-                      : `${n / 60} hour${n > 60 ? "s" : ""}`}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label title="Additional angle above the reference or terrain horizon for the Earth center.">
-              Link clearance
-              <input
-                type="number"
-                min="0"
-                max="20"
-                step="0.1"
-                value={clearance}
-                onChange={(e) => setClearance(+e.target.value)}
-              />
-            </label>
-            <button
-              className="button primary analyze"
-              disabled={busy || !start || !end}
-              onClick={run}
-            >
-              {busy ? <span className="spinner" /> : <Activity size={16} />}{" "}
-              {busy ? "Calculating…" : "Analyze site"}{" "}
-              {!busy && <ArrowRight size={15} />}
-            </button>
-          </div>
-          {view === 0 && (
-            <>
-              <div className="explorer-layout">
-                <section className="panel map-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h2>
-                        <Compass size={17} /> Landing site explorer
-                      </h2>
-                      <p>Click to select · drag to pan · zoom to explore</p>
-                    </div>
-                    <span className="small-label">80°–90° S</span>
-                  </div>
-                  <PolarMap
-                    sites={sites}
-                    selected={selected}
-                    onSelect={setSelected}
-                  />
-                  <div className="map-footer">
-                    <span>
-                      <i className="legend-dot" /> Selected location
-                    </span>
-                    <span>
-                      <i className="legend-dot gray" /> Geographic references
-                    </span>
-                    <a
-                      href="https://trek.nasa.gov/moon/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open NASA Moon Trek <ExternalLink size={11} />
-                    </a>
-                  </div>
-                </section>
-                <section className="panel site-panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h2>Explore a location</h2>
-                      <p>South pole geographic references</p>
-                    </div>
-                    <MapPin size={17} />
-                  </div>
-                  <div className="site-list">
-                    {sites.map((s, i) => (
-                      <button
-                        key={s.id}
-                        className={`site-card ${selected.name === s.name ? "selected" : ""}`}
-                        onClick={() => setSelected(s)}
-                      >
-                        <span className="site-number">0{i + 1}</span>
-                        <div>
-                          <strong>{s.name}</strong>
-                          <span>
-                            {s.latitude.toFixed(2)}° N &nbsp;{" "}
-                            {s.longitude.toFixed(2)}° E
-                          </span>
-                        </div>
-                        {selected.name === s.name ? (
-                          <Check size={16} />
-                        ) : (
-                          <ChevronRight size={15} />
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="coordinates">
-                    <div className="section-label">SELECTED COORDINATES</div>
-                    <div className="coordinate-inputs">
-                      <label>
-                        Latitude (° N)
-                        <input
-                          aria-label="Latitude"
-                          type="number"
-                          min="-90"
-                          max="90"
-                          step="0.001"
-                          value={selected.latitude}
-                          onChange={(e) =>
-                            setSelected({
-                              ...selected,
-                              name: "Custom location",
-                              latitude: +e.target.value,
-                            })
-                          }
-                        />
-                      </label>
-                      <label>
-                        Longitude (° E)
-                        <input
-                          aria-label="Longitude"
-                          type="number"
-                          min="-180"
-                          max="180"
-                          step="0.001"
-                          value={selected.longitude}
-                          onChange={(e) =>
-                            setSelected({
-                              ...selected,
-                              name: "Custom location",
-                              longitude: +e.target.value,
-                            })
-                          }
-                        />
-                      </label>
-                    </div>
-                    <div className="elevation-readout">
-                      <Layers size={15} />
-                      <span>Surface elevation</span>
-                      <strong>
-                        {fmt(analysis?.terrain.elevation_m, " m")}
-                      </strong>
-                    </div>
-                    <p className="muted">
-                      Planetocentric · east-positive longitude.
-                      <br />
-                      References are not approved touchdown sites.
-                    </p>
-                  </div>
-                  <div className="site-insight">
-                    <Sun size={21} />
-                    <div>
-                      <strong>A little elevation. A different horizon.</strong>
-                      <p>
-                        Small terrain changes can alter sunlight and
-                        communication at the lunar poles.
-                      </p>
-                    </div>
-                  </div>
-                </section>
-              </div>
-            </>
-          )}
-          {analysis && (
-            <div className="metrics-grid">
-              {[
-                {
-                  label: "Sunlight availability",
-                  value: fmt(analysis.metrics.sun_visible_pct, "%"),
-                  icon: Sun,
-                  color: "lime",
-                  tip: "Sun center above the threshold, weighted by interval duration.",
-                },
-                {
-                  label: "Earth visibility",
-                  value: fmt(analysis.metrics.earth_visible_pct, "%"),
-                  icon: Earth,
-                  color: "blue",
-                  tip: "Earth center above threshold plus configured link clearance.",
-                },
-                {
-                  label: "Simultaneous visibility",
-                  value: fmt(analysis.metrics.simultaneous_pct, "%"),
-                  icon: Radio,
-                  color: "lime",
-                  tip: "Both Sun and Earth center visible; geometric operational proxy only.",
-                },
-                {
-                  label: "Longest link blackout",
-                  value: fmt(analysis.metrics.longest_blackout_hours, " h"),
-                  icon: Moon,
-                  color: "gray",
-                  tip: "Longest sampled continuous Earth-center nonvisibility within this mission.",
-                },
-              ].map((m) => (
-                <div className="metric panel" key={m.label} title={m.tip}>
-                  <div className="metric-label">
-                    {m.label}
-                    <m.icon size={17} className={m.color} />
-                  </div>
-                  <strong>{m.value}</strong>
-                  <small>
-                    {analysis.mode === "terrain_screened"
-                      ? "Local terrain included"
-                      : "Reference sphere · terrain unknown"}
-                  </small>
-                </div>
-              ))}
-            </div>
-          )}
-          {(view === 0 || view === 1) && (
-            <section className="panel analysis-panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>
-                    <Activity size={17} />{" "}
-                    {view === 1
-                      ? "Sun–Earth horizon simulator"
-                      : "Mission visibility overview"}
-                  </h2>
-                  <p>
-                    {analysis
-                      ? `${analysis.mission.name} · ${mode}`
-                      : "Calculated geometry will appear here after analysis"}
-                  </p>
-                </div>
-                <div className="chart-legend">
-                  <span>
-                    <i className="legend-dot" /> Sun
-                  </span>
-                  <span>
-                    <i className="legend-dot blue-dot" /> Earth
-                  </span>
-                </div>
-              </div>
-              {!analysis ? (
-                empty
-              ) : (
-                <>
-                  <VisibilityChart analysis={analysis} />
-                  <Timeline analysis={analysis} />
-                  {view === 0 ? (
-                    <div className="panel-bottom">
-                      <span>
-                        Approximate IAU_MOON orientation · no light-time
-                        corrections
-                      </span>
-                      <button
-                        className="text-button"
-                        onClick={() => setView(1)}
-                      >
-                        Open horizon simulator <ArrowRight size={14} />
-                      </button>
-                    </div>
-                  ) : (
-                    current && (
-                      <div className="simulator">
-                        <div className="simulator-heading">
-                          <div>
-                            <h3>Local horizon · {utc(current.time)} UTC</h3>
-                            <p>
-                              Azimuth measured clockwise from north. Solid line:{" "}
-                              {analysis.terrain.available
-                                ? "sampled terrain horizon"
-                                : "reference plane (terrain unknown)"}
-                              .
-                            </p>
-                          </div>
-                          <span className="tag">
-                            {index + 1} / {analysis.series.length}
-                          </span>
-                        </div>
-                        <div className="horizon-svg">
-                          <svg
-                            viewBox="0 0 900 280"
-                            role="img"
-                            aria-label="Sun and Earth elevation against azimuth and terrain horizon"
-                          >
-                            <rect
-                              x="50"
-                              y="25"
-                              width="800"
-                              height="210"
-                              fill="#101c22"
-                            />
-                            {[-10, 0, 10, 20].map((el) => (
-                              <g key={el}>
-                                <line
-                                  x1="50"
-                                  x2="850"
-                                  y1={165 - el * 6}
-                                  y2={165 - el * 6}
-                                  stroke="#344142"
-                                  strokeDasharray="3 4"
-                                />
-                                <text
-                                  x="15"
-                                  y={169 - el * 6}
-                                  fill="#96a29c"
-                                  fontSize="11"
-                                >
-                                  {el}°
-                                </text>
-                              </g>
-                            ))}
-                            {[0, 90, 180, 270, 360].map((az, i) => (
-                              <g key={az}>
-                                <line
-                                  x1={50 + (az / 360) * 800}
-                                  x2={50 + (az / 360) * 800}
-                                  y1="25"
-                                  y2="235"
-                                  stroke="#253334"
-                                />
-                                <text
-                                  x={50 + (az / 360) * 800}
-                                  y="260"
-                                  textAnchor="middle"
-                                  fill="#96a29c"
-                                  fontSize="11"
-                                >
-                                  {
-                                    [
-                                      "N · 0°",
-                                      "E · 90°",
-                                      "S · 180°",
-                                      "W · 270°",
-                                      "N · 360°",
-                                    ][i]
-                                  }
-                                </text>
-                              </g>
-                            ))}
-                            <path
-                              d={
-                                analysis.terrain.horizon
-                                  ? analysis.terrain.horizon
-                                      .concat([
-                                        {
-                                          azimuth: 360,
-                                          elevation:
-                                            analysis.terrain.horizon[0]
-                                              .elevation,
-                                        },
-                                      ])
-                                      .map(
-                                        (p, i) =>
-                                          `${i ? "L" : "M"}${50 + (p.azimuth / 360) * 800},${165 - p.elevation * 6}`,
-                                      )
-                                      .join(" ")
-                                  : "M50 165H850"
-                              }
-                              fill="none"
-                              stroke="#8d9c8a"
-                              strokeWidth="2"
-                            />
-                            {[
-                              {
-                                az: current.sun_azimuth,
-                                el: current.sun_elevation,
-                                color: "#d8ed9c",
-                                name: "Sun",
-                              },
-                              {
-                                az: current.earth_azimuth,
-                                el: current.earth_elevation,
-                                color: "#86c1e4",
-                                name: "Earth",
-                              },
-                            ].map((p) => (
-                              <g key={p.name}>
-                                <circle
-                                  cx={50 + (p.az / 360) * 800}
-                                  cy={Math.min(
-                                    230,
-                                    Math.max(30, 165 - p.el * 6),
-                                  )}
-                                  r="7"
-                                  fill={p.color}
-                                />
-                                <text
-                                  x={50 + (p.az / 360) * 800 + 12}
-                                  y={
-                                    Math.min(
-                                      230,
-                                      Math.max(30, 165 - p.el * 6),
-                                    ) + 4
-                                  }
-                                  fill={p.color}
-                                  fontSize="12"
-                                >
-                                  {p.name} {p.el.toFixed(2)}°
-                                  {p.el < -10 || p.el > 22
-                                    ? " (outside plot range)"
-                                    : ""}
-                                </text>
-                              </g>
-                            ))}
-                          </svg>
-                        </div>
-                        <div className="playback">
-                          <button
-                            className="button primary icon-button"
-                            aria-label={
-                              playing ? "Pause animation" : "Play animation"
-                            }
-                            onClick={() => setPlaying(!playing)}
-                          >
-                            {playing ? <Pause size={18} /> : <Play size={18} />}
-                          </button>
-                          <input
-                            aria-label="Simulation time"
-                            type="range"
-                            min={0}
-                            max={analysis.series.length - 1}
-                            value={index}
-                            onChange={(e) => {
-                              setPlaying(false);
-                              setIndex(+e.target.value);
-                            }}
-                          />
-                          <span>{utc(current.time)} UTC</span>
-                        </div>
-                        <div className="sim-status">
-                          <span>
-                            <Sun size={16} />
-                            Sun{" "}
-                            {current.sun_visible
-                              ? "above threshold"
-                              : "below threshold"}{" "}
-                            · Az {current.sun_azimuth.toFixed(1)}°
-                          </span>
-                          <span>
-                            <Earth size={16} />
-                            Earth{" "}
-                            {current.earth_visible
-                              ? "above threshold"
-                              : "below threshold"}{" "}
-                            · Az {current.earth_azimuth.toFixed(1)}°
-                          </span>
-                          <span>
-                            Terrain obstruction:{" "}
-                            {analysis.terrain.available
-                              ? "modeled within 20 km"
-                              : "unknown"}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  )}
-                </>
-              )}
-            </section>
-          )}
-          {view === 2 && (
-            <section className="panel analysis-panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>
-                    <Layers size={18} /> Local terrain assessment
-                  </h2>
-                  <p>LOLA elevations · slopes · horizon obstructions</p>
-                </div>
-                <a
-                  className="text-button"
-                  href="https://pds-geosciences.wustl.edu/missions/lro/lola.htm"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  NASA PDS / LOLA <ExternalLink size={14} />
-                </a>
-              </div>
-              {!analysis ? (
-                empty
-              ) : (
-                <div className="terrain-content">
-                  <div className="terrain-summary">
-                    <div>
-                      <span>Elevation</span>
-                      <strong>{fmt(analysis.terrain.elevation_m, " m")}</strong>
-                    </div>
-                    <div>
-                      <span>Local slope</span>
-                      <strong>{fmt(analysis.terrain.slope_deg, "°")}</strong>
-                    </div>
-                    <div>
-                      <span>Pixel spacing</span>
-                      <strong>
-                        {fmt(analysis.terrain.resolution_m, " m")}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>Horizon coverage</span>
-                      <strong>
-                        {analysis.terrain.available
-                          ? "20 km / 360°"
-                          : "Unavailable"}
-                      </strong>
-                    </div>
-                  </div>
-                  {analysis.terrain.reason && (
-                    <div className="info">{analysis.terrain.reason}</div>
-                  )}
-                  {analysis.terrain.grid.length > 0 && (
-                    <div
-                      className="terrain-grid"
-                      role="img"
-                      aria-label="Local elevation heatmap over 10 by 10 km, north is up"
-                    >
-                      {(() => {
-                        const values = analysis.terrain.grid.flatMap((p) =>
-                          p.elevation_m === null ? [] : [p.elevation_m],
-                        );
-                        const low = Math.min(...values),
-                          high = Math.max(...values);
-                        return [...analysis.terrain.grid]
-                          .sort(
-                            (a, b) =>
-                              b.north_m - a.north_m || a.east_m - b.east_m,
-                          )
-                          .map((p, i) => (
-                            <div
-                              key={i}
-                              title={`${p.east_m} m E, ${p.north_m} m N: ${fmt(p.elevation_m, " m")}`}
-                              style={{
-                                background:
-                                  p.elevation_m === null
-                                    ? "#242e33"
-                                    : `hsl(${75 + ((p.elevation_m - low) / (high - low || 1)) * 50} 25% ${20 + ((p.elevation_m - low) / (high - low || 1)) * 55}%)`,
-                              }}
-                            />
-                          ));
-                      })()}
-                    </div>
-                  )}
-                  <p className="muted">
-                    {analysis.terrain.method ||
-                      "No terrain layer is drawn without measured elevation data. Configure LOLA_MANIFEST on the backend; see the README for the required CRS, vertical datum, provenance, and checksum."}
-                  </p>
-                  <div className="reference-links">
-                    <a
-                      href="https://quickmap.lroc.asu.edu/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      LROC QuickMap <ExternalLink size={14} />
-                    </a>
-                    <a
-                      href="https://trek.nasa.gov/moon/"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      NASA Moon Trek <ExternalLink size={14} />
-                    </a>
-                  </div>
-                  <p className="muted">
-                    External map references only. This app does not assume or
-                    proxy an undocumented imagery API. Subpixel rocks,
-                    roughness, and landing hazards remain unassessed.
-                  </p>
-                </div>
-              )}
-            </section>
-          )}
-          {view === 3 && (
-            <section className="panel analysis-panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>
-                    <SlidersHorizontal size={18} /> Landing site comparison
-                  </h2>
-                  <p>
-                    Two or three sites · one mission window · explicit
-                    priorities
-                  </p>
-                </div>
-              </div>
-              <div className="comparison-controls">
-                <div>
-                  <h3>Locations</h3>
-                  {sites.map((s) => (
-                    <label className="check-row" key={s.id}>
-                      <input
-                        type="checkbox"
-                        checked={checked.includes(s.id!)}
-                        onChange={(e) =>
-                          setChecked(
-                            e.target.checked
-                              ? [...checked, s.id!]
-                              : checked.filter((id) => id !== s.id),
-                          )
-                        }
-                      />
-                      {s.name}
-                    </label>
-                  ))}
-                </div>
-                <div>
-                  <h3>Comparison weights</h3>
-                  {Object.entries(weights).map(([key, value]) => (
-                    <label className="weight-row" key={key}>
-                      <span>
-                        {key === "earth"
-                          ? "Earth visibility"
-                          : key === "simultaneous"
-                            ? "Simultaneous"
-                            : "Sunlight"}
-                      </span>
-                      <input
-                        aria-label={`${key} weight`}
-                        type="range"
-                        min="0"
-                        max="10"
-                        step="1"
-                        value={value}
-                        onChange={(e) =>
-                          setWeights({ ...weights, [key]: +e.target.value })
-                        }
-                      />
-                      <b>{value}</b>
-                    </label>
-                  ))}
-                </div>
-                <button
-                  className="button primary"
-                  disabled={
-                    busy ||
-                    checked.length < 2 ||
-                    Object.values(weights).every((w) => w === 0)
-                  }
-                  onClick={compare}
-                >
-                  {busy ? "Calculating…" : "Compare sites"}
-                  <ArrowRight size={16} />
+            {error && (
+              <div className="error" role="alert">
+                <span>{error}</span>
+                <button aria-label="Dismiss error" onClick={() => setError("")}>
+                  <X size={16} />
                 </button>
               </div>
-              {comparison ? (
-                <>
-                  <div className="info">
-                    {comparison.mode === "reference_sphere"
-                      ? "Reference-sphere ranking: local terrain obstruction and landing hazards are unknown."
-                      : "Terrain-screened geometric ranking; terrain hazards are not scored."}
-                  </div>
-                  <div className="table-scroll">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Site / rank</th>
-                          <th>Sunlight</th>
-                          <th>Earth link</th>
-                          <th>Both visible</th>
-                          <th>Blackout</th>
-                          <th>Darkness</th>
-                          <th>Slope</th>
-                          <th>Score / 100</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {comparison.ranking.map((r, i) => (
-                          <tr key={r.mission.name}>
-                            <td>
-                              <span className="rank">0{i + 1}</span>
-                              {r.mission.name}
-                            </td>
-                            <td>{fmt(r.metrics.sun_visible_pct, "%")}</td>
-                            <td>{fmt(r.metrics.earth_visible_pct, "%")}</td>
-                            <td className="lime">
-                              {fmt(r.metrics.simultaneous_pct, "%")}
-                            </td>
-                            <td>
-                              {fmt(r.metrics.longest_blackout_hours, " h")}
-                            </td>
-                            <td>
-                              {fmt(r.metrics.longest_darkness_hours, " h")}
-                            </td>
-                            <td>{fmt(r.slope_deg, "°")}</td>
-                            <td>
-                              <strong>{r.score.toFixed(1)}</strong>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="ranking-explanation">
-                    <h3>What drives the ranking?</h3>
-                    <p>{comparison.explanation}</p>
-                    {comparison.ranking.map((r) => (
-                      <div className="score-breakdown" key={r.mission.name}>
-                        <span>{r.mission.name}</span>
-                        <div>
-                          {Object.entries(r.contributions).map(([k, v], i) => (
-                            <i
-                              key={k}
-                              title={`${k}: ${v.toFixed(2)} score points`}
-                              style={{
-                                width: `${v}%`,
-                                background: ["#cce69c", "#89bbdc", "#84bda5"][
-                                  i
-                                ],
-                              }}
-                            />
-                          ))}
-                        </div>
-                        <small>
-                          {Object.entries(r.contributions)
-                            .map(([k, v]) => `${k}: ${v.toFixed(1)}`)
-                            .join(" · ")}
-                        </small>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="comparison-empty">
-                  <SlidersHorizontal size={24} />
-                  <p>
-                    Select your sites and priorities, then calculate the
-                    trade-offs.
-                  </p>
-                </div>
-              )}
-            </section>
-          )}
-          {view === 4 && (
-            <section className="panel analysis-panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>
-                    <FileText size={18} /> Mission analysis report
-                  </h2>
-                  <p>
-                    {analysis
-                      ? `${analysis.mission.name} · ${utc(analysis.mission.start)} — ${utc(analysis.mission.end)} UTC`
-                      : "Run an analysis to prepare your report"}
-                  </p>
-                </div>
-                {analysis && (
-                  <div className="export-buttons">
-                    <button
-                      className="button subtle"
-                      disabled={busy}
-                      onClick={() => download("csv")}
-                    >
-                      <ArrowDownToLine size={14} /> CSV
-                    </button>
-                    <button
-                      className="button subtle"
-                      disabled={busy}
-                      onClick={() => download("json")}
-                    >
-                      <ArrowDownToLine size={14} /> JSON
-                    </button>
-                    <button
-                      className="button subtle"
-                      onClick={() => window.print()}
-                    >
-                      Print / PDF
-                    </button>
-                  </div>
-                )}
+            )}
+            {notice && (
+              <div className="info" role="status">
+                {notice}
               </div>
-              {!analysis ? (
-                empty
-              ) : (
-                <>
-                  <div className="report-body">
-                    <h3>{mode}</h3>
+            )}
+            <div className="mission-controls">
+              <div className="mission-control-title">
+                <SlidersHorizontal size={16} />
+                <span>Mission window</span>
+                <small>UTC</small>
+              </div>
+              <label>
+                Start date
+                <input
+                  type="date"
+                  value={start}
+                  min="1901-01-01"
+                  max="2052-12-30"
+                  onChange={(e) => setStart(e.target.value)}
+                />
+              </label>
+              <span className="date-arrow">→</span>
+              <label>
+                End date
+                <input
+                  type="date"
+                  value={end}
+                  min={start}
+                  max="2052-12-31"
+                  onChange={(e) => setEnd(e.target.value)}
+                />
+              </label>
+              <label>
+                Time step
+                <select
+                  value={interval}
+                  onChange={(e) => setIntervalMinutes(+e.target.value)}
+                >
+                  {[5, 15, 30, 60, 180, 360].map((n) => (
+                    <option key={n} value={n}>
+                      {n < 60
+                        ? `${n} minutes`
+                        : `${n / 60} hour${n > 60 ? "s" : ""}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label title="Additional angle above the reference or terrain horizon for the Earth center.">
+                Link clearance
+                <input
+                  type="number"
+                  min="0"
+                  max="20"
+                  step="0.1"
+                  value={clearance}
+                  onChange={(e) => setClearance(+e.target.value)}
+                />
+              </label>
+              <button
+                className="button primary analyze"
+                disabled={busy || !start || !end}
+                onClick={run}
+              >
+                {busy ? <span className="spinner" /> : <Activity size={16} />}{" "}
+                {busy ? "Calculating…" : "Analyze site"}{" "}
+                {!busy && <ArrowRight size={15} />}
+              </button>
+            </div>
+            {view === 0 && (
+              <>
+                <div className="explorer-layout">
+                  <section className="panel map-panel">
+                    <div className="panel-heading">
+                      <div>
+                        <h2>
+                          <Compass size={17} /> Landing site explorer
+                        </h2>
+                        <p>Click to select · drag to pan · zoom to explore</p>
+                      </div>
+                      <span className="small-label">80°–90° S</span>
+                    </div>
+                    <PolarMap
+                      sites={sites}
+                      selected={selected}
+                      onSelect={setSelected}
+                    />
+                    <div className="map-footer">
+                      <span>
+                        <i className="legend-dot" /> Selected location
+                      </span>
+                      <span>
+                        <i className="legend-dot gray" /> Geographic references
+                      </span>
+                      <a
+                        href="https://trek.nasa.gov/moon/"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open NASA Moon Trek <ExternalLink size={11} />
+                      </a>
+                    </div>
+                  </section>
+                  <section className="panel site-panel">
+                    <div className="panel-heading">
+                      <div>
+                        <h2>Explore a location</h2>
+                        <p>South pole geographic references</p>
+                      </div>
+                      <MapPin size={17} />
+                    </div>
+                    <div className="site-list">
+                      {sites.map((s, i) => (
+                        <button
+                          key={s.id}
+                          className={`site-card ${selected.name === s.name ? "selected" : ""}`}
+                          onClick={() => setSelected(s)}
+                        >
+                          <span className="site-number">0{i + 1}</span>
+                          <div>
+                            <strong>{s.name}</strong>
+                            <span>
+                              {s.latitude.toFixed(2)}° N &nbsp;{" "}
+                              {s.longitude.toFixed(2)}° E
+                            </span>
+                          </div>
+                          {selected.name === s.name ? (
+                            <Check size={16} />
+                          ) : (
+                            <ChevronRight size={15} />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="coordinates">
+                      <div className="section-label">SELECTED COORDINATES</div>
+                      <div className="coordinate-inputs">
+                        <label>
+                          Latitude (° N)
+                          <input
+                            aria-label="Latitude"
+                            type="number"
+                            min="-90"
+                            max="90"
+                            step="0.001"
+                            value={selected.latitude}
+                            onChange={(e) =>
+                              setSelected({
+                                ...selected,
+                                name: "Custom location",
+                                latitude: +e.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                        <label>
+                          Longitude (° E)
+                          <input
+                            aria-label="Longitude"
+                            type="number"
+                            min="-180"
+                            max="180"
+                            step="0.001"
+                            value={selected.longitude}
+                            onChange={(e) =>
+                              setSelected({
+                                ...selected,
+                                name: "Custom location",
+                                longitude: +e.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                      </div>
+                      <div className="elevation-readout">
+                        <Layers size={15} />
+                        <span>Surface elevation</span>
+                        <strong>
+                          {fmt(analysis?.terrain.elevation_m, " m")}
+                        </strong>
+                      </div>
+                      <p className="muted">
+                        Planetocentric · east-positive longitude.
+                        <br />
+                        References are not approved touchdown sites.
+                      </p>
+                    </div>
+                    <div className="site-insight">
+                      <Sun size={21} />
+                      <div>
+                        <strong>
+                          A little elevation. A different horizon.
+                        </strong>
+                        <p>
+                          Small terrain changes can alter sunlight and
+                          communication at the lunar poles.
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </>
+            )}
+            {analysis && (
+              <div className="metrics-grid">
+                {[
+                  {
+                    label: "Sunlight availability",
+                    value: fmt(analysis.metrics.sun_visible_pct, "%"),
+                    icon: Sun,
+                    color: "lime",
+                    tip: "Sun center above the threshold, weighted by interval duration.",
+                  },
+                  {
+                    label: "Earth visibility",
+                    value: fmt(analysis.metrics.earth_visible_pct, "%"),
+                    icon: Earth,
+                    color: "blue",
+                    tip: "Earth center above threshold plus configured link clearance.",
+                  },
+                  {
+                    label: "Simultaneous visibility",
+                    value: fmt(analysis.metrics.simultaneous_pct, "%"),
+                    icon: Radio,
+                    color: "lime",
+                    tip: "Both Sun and Earth center visible; geometric operational proxy only.",
+                  },
+                  {
+                    label: "Longest link blackout",
+                    value: fmt(analysis.metrics.longest_blackout_hours, " h"),
+                    icon: Moon,
+                    color: "gray",
+                    tip: "Longest sampled continuous Earth-center nonvisibility within this mission.",
+                  },
+                ].map((m) => (
+                  <div className="metric panel" key={m.label} title={m.tip}>
+                    <div className="metric-label">
+                      {m.label}
+                      <m.icon size={17} className={m.color} />
+                    </div>
+                    <strong>{m.value}</strong>
+                    <small>
+                      {analysis.mode === "terrain_screened"
+                        ? "Local terrain included"
+                        : "Reference sphere · terrain unknown"}
+                    </small>
+                  </div>
+                ))}
+              </div>
+            )}
+            {(view === 0 || view === 1) && (
+              <section className="panel analysis-panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>
+                      <Activity size={17} />{" "}
+                      {view === 1
+                        ? "Sun–Earth horizon simulator"
+                        : "Mission visibility overview"}
+                    </h2>
                     <p>
-                      {analysis.mission.latitude.toFixed(4)}° N,{" "}
-                      {analysis.mission.longitude.toFixed(4)}° E ·{" "}
-                      {analysis.mission.interval_minutes}-minute cadence ·{" "}
-                      {analysis.mission.clearance_deg}° communication clearance
+                      {analysis
+                        ? `${analysis.mission.name} · ${mode}`
+                        : "Calculated geometry will appear here after analysis"}
                     </p>
+                  </div>
+                  <div className="chart-legend">
+                    <span>
+                      <i className="legend-dot" /> Sun
+                    </span>
+                    <span>
+                      <i className="legend-dot blue-dot" /> Earth
+                    </span>
+                  </div>
+                </div>
+                {!analysis ? (
+                  empty
+                ) : (
+                  <>
                     <VisibilityChart analysis={analysis} />
                     <Timeline analysis={analysis} />
-                    <h3>Operational windows</h3>
-                    {analysis.metrics.operational_windows.length ? (
-                      <div className="table-scroll">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Start (UTC)</th>
-                              <th>End (UTC)</th>
-                              <th>Duration</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {analysis.metrics.operational_windows.map((w) => (
-                              <tr key={w.start}>
-                                <td>{utc(w.start)}</td>
-                                <td>{utc(w.end)}</td>
-                                <td>{w.hours.toFixed(2)} h</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    {view === 0 ? (
+                      <div className="panel-bottom">
+                        <span>
+                          Approximate IAU_MOON orientation · no light-time
+                          corrections
+                        </span>
+                        <button
+                          className="text-button"
+                          onClick={() => setView(1)}
+                        >
+                          Open horizon simulator <ArrowRight size={14} />
+                        </button>
                       </div>
                     ) : (
-                      <p>
-                        No simultaneous visibility within the sampled mission
-                        window.
-                      </p>
+                      current && (
+                        <div className="simulator">
+                          <div className="simulator-heading">
+                            <div>
+                              <h3>Local horizon · {utc(current.time)} UTC</h3>
+                              <p>
+                                Azimuth measured clockwise from north. Solid
+                                line:{" "}
+                                {analysis.terrain.available
+                                  ? "sampled terrain horizon"
+                                  : "reference plane (terrain unknown)"}
+                                .
+                              </p>
+                            </div>
+                            <span className="tag">
+                              {index + 1} / {analysis.series.length}
+                            </span>
+                          </div>
+                          <div className="horizon-svg">
+                            <svg
+                              viewBox="0 0 900 280"
+                              role="img"
+                              aria-label="Sun and Earth elevation against azimuth and terrain horizon"
+                            >
+                              <rect
+                                x="50"
+                                y="25"
+                                width="800"
+                                height="210"
+                                fill="#101c22"
+                              />
+                              {[-10, 0, 10, 20].map((el) => (
+                                <g key={el}>
+                                  <line
+                                    x1="50"
+                                    x2="850"
+                                    y1={165 - el * 6}
+                                    y2={165 - el * 6}
+                                    stroke="#344142"
+                                    strokeDasharray="3 4"
+                                  />
+                                  <text
+                                    x="15"
+                                    y={169 - el * 6}
+                                    fill="#96a29c"
+                                    fontSize="11"
+                                  >
+                                    {el}°
+                                  </text>
+                                </g>
+                              ))}
+                              {[0, 90, 180, 270, 360].map((az, i) => (
+                                <g key={az}>
+                                  <line
+                                    x1={50 + (az / 360) * 800}
+                                    x2={50 + (az / 360) * 800}
+                                    y1="25"
+                                    y2="235"
+                                    stroke="#253334"
+                                  />
+                                  <text
+                                    x={50 + (az / 360) * 800}
+                                    y="260"
+                                    textAnchor="middle"
+                                    fill="#96a29c"
+                                    fontSize="11"
+                                  >
+                                    {
+                                      [
+                                        "N · 0°",
+                                        "E · 90°",
+                                        "S · 180°",
+                                        "W · 270°",
+                                        "N · 360°",
+                                      ][i]
+                                    }
+                                  </text>
+                                </g>
+                              ))}
+                              <path
+                                d={
+                                  analysis.terrain.horizon
+                                    ? analysis.terrain.horizon
+                                        .concat([
+                                          {
+                                            azimuth: 360,
+                                            elevation:
+                                              analysis.terrain.horizon[0]
+                                                .elevation,
+                                          },
+                                        ])
+                                        .map(
+                                          (p, i) =>
+                                            `${i ? "L" : "M"}${50 + (p.azimuth / 360) * 800},${165 - p.elevation * 6}`,
+                                        )
+                                        .join(" ")
+                                    : "M50 165H850"
+                                }
+                                fill="none"
+                                stroke="#8d9c8a"
+                                strokeWidth="2"
+                              />
+                              {[
+                                {
+                                  az: current.sun_azimuth,
+                                  el: current.sun_elevation,
+                                  color: "#d8ed9c",
+                                  name: "Sun",
+                                },
+                                {
+                                  az: current.earth_azimuth,
+                                  el: current.earth_elevation,
+                                  color: "#86c1e4",
+                                  name: "Earth",
+                                },
+                              ].map((p) => (
+                                <g key={p.name}>
+                                  <circle
+                                    cx={50 + (p.az / 360) * 800}
+                                    cy={Math.min(
+                                      230,
+                                      Math.max(30, 165 - p.el * 6),
+                                    )}
+                                    r="7"
+                                    fill={p.color}
+                                  />
+                                  <text
+                                    x={50 + (p.az / 360) * 800 + 12}
+                                    y={
+                                      Math.min(
+                                        230,
+                                        Math.max(30, 165 - p.el * 6),
+                                      ) + 4
+                                    }
+                                    fill={p.color}
+                                    fontSize="12"
+                                  >
+                                    {p.name} {p.el.toFixed(2)}°
+                                    {p.el < -10 || p.el > 22
+                                      ? " (outside plot range)"
+                                      : ""}
+                                  </text>
+                                </g>
+                              ))}
+                            </svg>
+                          </div>
+                          <div className="playback">
+                            <button
+                              className="button primary icon-button"
+                              aria-label={
+                                playing ? "Pause animation" : "Play animation"
+                              }
+                              onClick={() => setPlaying(!playing)}
+                            >
+                              {playing ? (
+                                <Pause size={18} />
+                              ) : (
+                                <Play size={18} />
+                              )}
+                            </button>
+                            <input
+                              aria-label="Simulation time"
+                              type="range"
+                              min={0}
+                              max={analysis.series.length - 1}
+                              value={index}
+                              onChange={(e) => {
+                                setPlaying(false);
+                                setIndex(+e.target.value);
+                              }}
+                            />
+                            <span>{utc(current.time)} UTC</span>
+                          </div>
+                          <div className="sim-status">
+                            <span>
+                              <Sun size={16} />
+                              Sun{" "}
+                              {current.sun_visible
+                                ? "above threshold"
+                                : "below threshold"}{" "}
+                              · Az {current.sun_azimuth.toFixed(1)}°
+                            </span>
+                            <span>
+                              <Earth size={16} />
+                              Earth{" "}
+                              {current.earth_visible
+                                ? "above threshold"
+                                : "below threshold"}{" "}
+                              · Az {current.earth_azimuth.toFixed(1)}°
+                            </span>
+                            <span>
+                              Terrain obstruction:{" "}
+                              {analysis.terrain.available
+                                ? "modeled within 20 km"
+                                : "unknown"}
+                            </span>
+                          </div>
+                        </div>
+                      )
                     )}
-                    <h3>Data, assumptions & limitations</h3>
-                    <p>
-                      {analysis.provenance.ephemeris} ·{" "}
-                      {analysis.provenance.orientation}
-                    </p>
-                    <ul>
-                      {analysis.provenance.assumptions.map((a) => (
-                        <li key={a}>{a}</li>
-                      ))}
-                    </ul>
-                    <div className="info">
-                      {analysis.terrain.reason || analysis.terrain.method}
+                  </>
+                )}
+              </section>
+            )}
+            {view === 2 && (
+              <section className="panel analysis-panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>
+                      <Layers size={18} /> Local terrain assessment
+                    </h2>
+                    <p>LOLA elevations · slopes · horizon obstructions</p>
+                  </div>
+                  <a
+                    className="text-button"
+                    href="https://pds-geosciences.wustl.edu/missions/lro/lola.htm"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    NASA PDS / LOLA <ExternalLink size={14} />
+                  </a>
+                </div>
+                {!analysis ? (
+                  empty
+                ) : (
+                  <div className="terrain-content">
+                    <div className="terrain-summary">
+                      <div>
+                        <span>Elevation</span>
+                        <strong>
+                          {fmt(analysis.terrain.elevation_m, " m")}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Local slope</span>
+                        <strong>{fmt(analysis.terrain.slope_deg, "°")}</strong>
+                      </div>
+                      <div>
+                        <span>Pixel spacing</span>
+                        <strong>
+                          {fmt(analysis.terrain.resolution_m, " m")}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Horizon coverage</span>
+                        <strong>
+                          {analysis.terrain.available
+                            ? "20 km / 360°"
+                            : "Unavailable"}
+                        </strong>
+                      </div>
                     </div>
+                    {analysis.terrain.reason && (
+                      <div className="info">{analysis.terrain.reason}</div>
+                    )}
+                    {analysis.terrain.grid.length > 0 && (
+                      <div
+                        className="terrain-grid"
+                        role="img"
+                        aria-label="Local elevation heatmap over 10 by 10 km, north is up"
+                      >
+                        {(() => {
+                          const values = analysis.terrain.grid.flatMap((p) =>
+                            p.elevation_m === null ? [] : [p.elevation_m],
+                          );
+                          const low = Math.min(...values),
+                            high = Math.max(...values);
+                          return [...analysis.terrain.grid]
+                            .sort(
+                              (a, b) =>
+                                b.north_m - a.north_m || a.east_m - b.east_m,
+                            )
+                            .map((p, i) => (
+                              <div
+                                key={i}
+                                title={`${p.east_m} m E, ${p.north_m} m N: ${fmt(p.elevation_m, " m")}`}
+                                style={{
+                                  background:
+                                    p.elevation_m === null
+                                      ? "#242e33"
+                                      : `hsl(${75 + ((p.elevation_m - low) / (high - low || 1)) * 50} 25% ${20 + ((p.elevation_m - low) / (high - low || 1)) * 55}%)`,
+                                }}
+                              />
+                            ));
+                        })()}
+                      </div>
+                    )}
+                    <p className="muted">
+                      {analysis.terrain.method ||
+                        "No terrain layer is drawn without measured elevation data. Configure LOLA_MANIFEST on the backend; see the README for the required CRS, vertical datum, provenance, and checksum."}
+                    </p>
                     <div className="reference-links">
                       <a
-                        href="https://ssd.jpl.nasa.gov/planets/eph_export.html"
+                        href="https://quickmap.lroc.asu.edu/"
                         target="_blank"
                         rel="noreferrer"
                       >
-                        JPL ephemerides <ExternalLink size={13} />
+                        LROC QuickMap <ExternalLink size={14} />
                       </a>
                       <a
-                        href="https://naif.jpl.nasa.gov/naif/"
+                        href="https://trek.nasa.gov/moon/"
                         target="_blank"
                         rel="noreferrer"
                       >
-                        NAIF SPICE <ExternalLink size={13} />
+                        NASA Moon Trek <ExternalLink size={14} />
                       </a>
                     </div>
+                    <p className="muted">
+                      External map references only. This app does not assume or
+                      proxy an undocumented imagery API. Subpixel rocks,
+                      roughness, and landing hazards remain unassessed.
+                    </p>
                   </div>
-                </>
-              )}
-            </section>
-          )}
-          <footer className="footer">
-            <span>
-              <Moon size={13} /> LUNAR LANDING SITE NAVIGATOR <span> / </span>{" "}
-              NASA Space Apps 2026 project
-            </span>
-            <span>
-              Exploration, informed by evidence. <span className="live-dot" />
-            </span>
-          </footer>
-        </main>
+                )}
+              </section>
+            )}
+            {view === 3 && (
+              <section className="panel analysis-panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>
+                      <SlidersHorizontal size={18} /> Landing site comparison
+                    </h2>
+                    <p>
+                      Two or three sites · one mission window · explicit
+                      priorities
+                    </p>
+                  </div>
+                </div>
+                <div className="comparison-controls">
+                  <div>
+                    <h3>Locations</h3>
+                    {sites.map((s) => (
+                      <label className="check-row" key={s.id}>
+                        <input
+                          type="checkbox"
+                          checked={checked.includes(s.id!)}
+                          onChange={(e) =>
+                            setChecked(
+                              e.target.checked
+                                ? [...checked, s.id!]
+                                : checked.filter((id) => id !== s.id),
+                            )
+                          }
+                        />
+                        {s.name}
+                      </label>
+                    ))}
+                  </div>
+                  <div>
+                    <h3>Comparison weights</h3>
+                    {Object.entries(weights).map(([key, value]) => (
+                      <label className="weight-row" key={key}>
+                        <span>
+                          {key === "earth"
+                            ? "Earth visibility"
+                            : key === "simultaneous"
+                              ? "Simultaneous"
+                              : "Sunlight"}
+                        </span>
+                        <input
+                          aria-label={`${key} weight`}
+                          type="range"
+                          min="0"
+                          max="10"
+                          step="1"
+                          value={value}
+                          onChange={(e) =>
+                            setWeights({ ...weights, [key]: +e.target.value })
+                          }
+                        />
+                        <b>{value}</b>
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    className="button primary"
+                    disabled={
+                      busy ||
+                      checked.length < 2 ||
+                      Object.values(weights).every((w) => w === 0)
+                    }
+                    onClick={compare}
+                  >
+                    {busy ? "Calculating…" : "Compare sites"}
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+                {comparison ? (
+                  <>
+                    <div className="info">
+                      {comparison.mode === "reference_sphere"
+                        ? "Reference-sphere ranking: local terrain obstruction and landing hazards are unknown."
+                        : "Terrain-screened geometric ranking; terrain hazards are not scored."}
+                    </div>
+                    <div className="table-scroll">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Site / rank</th>
+                            <th>Sunlight</th>
+                            <th>Earth link</th>
+                            <th>Both visible</th>
+                            <th>Blackout</th>
+                            <th>Darkness</th>
+                            <th>Slope</th>
+                            <th>Score / 100</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {comparison.ranking.map((r, i) => (
+                            <tr key={r.mission.name}>
+                              <td>
+                                <span className="rank">0{i + 1}</span>
+                                {r.mission.name}
+                              </td>
+                              <td>{fmt(r.metrics.sun_visible_pct, "%")}</td>
+                              <td>{fmt(r.metrics.earth_visible_pct, "%")}</td>
+                              <td className="lime">
+                                {fmt(r.metrics.simultaneous_pct, "%")}
+                              </td>
+                              <td>
+                                {fmt(r.metrics.longest_blackout_hours, " h")}
+                              </td>
+                              <td>
+                                {fmt(r.metrics.longest_darkness_hours, " h")}
+                              </td>
+                              <td>{fmt(r.slope_deg, "°")}</td>
+                              <td>
+                                <strong>{r.score.toFixed(1)}</strong>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="ranking-explanation">
+                      <h3>What drives the ranking?</h3>
+                      <p>{comparison.explanation}</p>
+                      {comparison.ranking.map((r) => (
+                        <div className="score-breakdown" key={r.mission.name}>
+                          <span>{r.mission.name}</span>
+                          <div>
+                            {Object.entries(r.contributions).map(
+                              ([k, v], i) => (
+                                <i
+                                  key={k}
+                                  title={`${k}: ${v.toFixed(2)} score points`}
+                                  style={{
+                                    width: `${v}%`,
+                                    background: [
+                                      "#cce69c",
+                                      "#89bbdc",
+                                      "#84bda5",
+                                    ][i],
+                                  }}
+                                />
+                              ),
+                            )}
+                          </div>
+                          <small>
+                            {Object.entries(r.contributions)
+                              .map(([k, v]) => `${k}: ${v.toFixed(1)}`)
+                              .join(" · ")}
+                          </small>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="comparison-empty">
+                    <SlidersHorizontal size={24} />
+                    <p>
+                      Select your sites and priorities, then calculate the
+                      trade-offs.
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
+            {view === 4 && (
+              <section className="panel analysis-panel">
+                <div className="panel-heading">
+                  <div>
+                    <h2>
+                      <FileText size={18} /> Mission analysis report
+                    </h2>
+                    <p>
+                      {analysis
+                        ? `${analysis.mission.name} · ${utc(analysis.mission.start)} — ${utc(analysis.mission.end)} UTC`
+                        : "Run an analysis to prepare your report"}
+                    </p>
+                  </div>
+                  {analysis && (
+                    <div className="export-buttons">
+                      <button
+                        className="button subtle"
+                        disabled={busy}
+                        onClick={() => download("csv")}
+                      >
+                        <ArrowDownToLine size={14} /> CSV
+                      </button>
+                      <button
+                        className="button subtle"
+                        disabled={busy}
+                        onClick={() => download("json")}
+                      >
+                        <ArrowDownToLine size={14} /> JSON
+                      </button>
+                      <button
+                        className="button subtle"
+                        onClick={() => window.print()}
+                      >
+                        Print / PDF
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {!analysis ? (
+                  empty
+                ) : (
+                  <>
+                    <div className="report-body">
+                      <h3>{mode}</h3>
+                      <p>
+                        {analysis.mission.latitude.toFixed(4)}° N,{" "}
+                        {analysis.mission.longitude.toFixed(4)}° E ·{" "}
+                        {analysis.mission.interval_minutes}-minute cadence ·{" "}
+                        {analysis.mission.clearance_deg}° communication
+                        clearance
+                      </p>
+                      <VisibilityChart analysis={analysis} />
+                      <Timeline analysis={analysis} />
+                      <h3>Operational windows</h3>
+                      {analysis.metrics.operational_windows.length ? (
+                        <div className="table-scroll">
+                          <table>
+                            <thead>
+                              <tr>
+                                <th>Start (UTC)</th>
+                                <th>End (UTC)</th>
+                                <th>Duration</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {analysis.metrics.operational_windows.map((w) => (
+                                <tr key={w.start}>
+                                  <td>{utc(w.start)}</td>
+                                  <td>{utc(w.end)}</td>
+                                  <td>{w.hours.toFixed(2)} h</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <p>
+                          No simultaneous visibility within the sampled mission
+                          window.
+                        </p>
+                      )}
+                      <h3>Data, assumptions & limitations</h3>
+                      <p>
+                        {analysis.provenance.ephemeris} ·{" "}
+                        {analysis.provenance.orientation}
+                      </p>
+                      <ul>
+                        {analysis.provenance.assumptions.map((a) => (
+                          <li key={a}>{a}</li>
+                        ))}
+                      </ul>
+                      <div className="info">
+                        {analysis.terrain.reason || analysis.terrain.method}
+                      </div>
+                      <div className="reference-links">
+                        <a
+                          href="https://ssd.jpl.nasa.gov/planets/eph_export.html"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          JPL ephemerides <ExternalLink size={13} />
+                        </a>
+                        <a
+                          href="https://naif.jpl.nasa.gov/naif/"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          NAIF SPICE <ExternalLink size={13} />
+                        </a>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </section>
+            )}
+            {view === 5 && (
+              <>
+                <CelestialViewer sample={current} />
+                {analysis && (
+                  <section className="panel playback-panel">
+                    <div className="panel-heading">
+                      <h2>Computed sample · {utc(current!.time)} UTC</h2>
+                    </div>
+                    <div className="playback">
+                      <button
+                        className="button primary icon-button"
+                        aria-label={
+                          playing ? "Pause 3D animation" : "Play 3D animation"
+                        }
+                        onClick={() => setPlaying(!playing)}
+                      >
+                        {playing ? <Pause size={18} /> : <Play size={18} />}
+                      </button>
+                      <input
+                        type="range"
+                        aria-label="3D simulation time"
+                        min={0}
+                        max={analysis.series.length - 1}
+                        value={index}
+                        onChange={(e) => {
+                          setPlaying(false);
+                          setIndex(+e.target.value);
+                        }}
+                      />
+                    </div>
+                  </section>
+                )}
+                {!analysis && <div className="panel">{empty}</div>}
+              </>
+            )}
+            {view === 6 && (
+              <MissionPlanner
+                mission={mission()}
+                onRestore={(m) => {
+                  setSelected({
+                    name: m.name,
+                    latitude: m.latitude,
+                    longitude: m.longitude,
+                  });
+                  setStart(m.start.slice(0, 10));
+                  setEnd(m.end.slice(0, 10));
+                  setIntervalMinutes(m.interval_minutes);
+                  setClearance(m.clearance_deg);
+                }}
+              />
+            )}
+            <footer className="footer">
+              <span>
+                <Moon size={13} /> LUNAR LANDING SITE NAVIGATOR <span> / </span>{" "}
+                NASA Space Apps 2026 project
+              </span>
+              <span>
+                Exploration, informed by evidence. <span className="live-dot" />
+              </span>
+            </footer>
+          </main>
+          <NewsSidebar />
+        </div>
       </div>
     </div>
   );

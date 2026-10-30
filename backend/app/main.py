@@ -1,5 +1,4 @@
 import hashlib
-import io
 import json
 import os
 import sqlite3
@@ -7,12 +6,14 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from threading import RLock
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import Response, JSONResponse
 from .models import Mission, Location, Comparison, ExportRequest
 from .sites import SITES
 from .science import initialize, ephemeris, visible, metrics, ROOT
 from .terrain import terrain
+from .external import news, weather, PADS
+from datetime import date as Date
 
 CACHE_LOCK = RLock()
 ALGORITHM_VERSION = '1.0.0'
@@ -111,3 +112,17 @@ def export(request: ExportRequest):
         return Response(json.dumps(result, indent=2), media_type='application/json', headers={'Content-Disposition':'attachment; filename="lunar-analysis.json"'})
     rows = [dict(row, site=result['mission']['name'], latitude=request.mission.latitude, longitude=request.mission.longitude, mode=result['mode'], ephemeris='NASA/JPL DE421', frame='IAU_MOON', clearance_deg=request.mission.clearance_deg, interval_minutes=request.mission.interval_minutes) for row in result['series']]
     return Response(pd.DataFrame(rows).to_csv(index=False), media_type='text/csv', headers={'Content-Disposition':'attachment; filename="lunar-analysis.csv"'})
+
+# Public informational feeds are independent of scientific ephemeris calculations.
+
+@app.get('/api/news')
+def news_endpoint():
+    return news(CACHE_PATH)
+
+@app.get('/api/launch-pads')
+def launch_pads():
+    return PADS
+
+@app.get('/api/weather')
+def weather_endpoint(pad: str = Query(pattern='^(kennedy|vandenberg)$'), date: Date = Query()):
+    return weather(CACHE_PATH, pad, date)

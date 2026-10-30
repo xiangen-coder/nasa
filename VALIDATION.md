@@ -14,3 +14,12 @@ Non-failing tooling warnings: the installed Starlette TestClient emits an httpx 
 ## Scientific and delivery gaps
 
 No measured LOLA raster is installed or independently validated. Terrain calculations are tested on synthetic analytic fixtures only. The shipped map is a coordinate graticule with external Moon Trek / QuickMap links; no lunar imagery tiles are integrated. IAU_MOON is approximate and has not been aligned to a precision lunar terrain frame. No Horizons angular validation was possible because the NASA API host is blocked by the current network policy. No flight-quality hazard, radio link, solar power, eclipse or disk-extent model is claimed. No public deployment or domain is provisioned. GitHub CI is configured but has not run remotely.
+
+## 3D / news / planner update — 30 October 2026
+
+- Backend: **42 tests passed** (the original 32 plus RSS filtering, safe links/dates, invalid/oversized/entity XML rejection, caching/deduplication, stale/unavailable states, forecast date limits, forecast units/null values and new API validation).
+- Frontend: **9 browser tests passed** against real backend/Next.js services. New coverage includes NASA excerpt UI with clearly synthetic test fixtures; unavailable/stale feed states; WebGL loading of both uploaded Earth and Sun GLBs; local model import; computed-sky time changes; vehicle formulas; ETA inputs; out-of-range forecasts; and browser-local saved-plan restore/deletion. Tests use software WebGL through installed Chromium; this does not establish support for every device or USDZ variant.
+- Type checking, ESLint and the production build passed. Existing scientific tests still pass unchanged.
+- Live NASA RSS and Open-Meteo requests returned proxy policy denials. Tests validate adapters using representative source-format fixtures, not a claimed successful live retrieval. Required domains are saved in the draft, not applied or published.
+- The large Moon USDZ could not be downloaded because it exceeds the tool's 32 MiB transfer limit. A reference sphere and browser-local model import are provided; the uploaded Moon itself has not been inspected or verified.
+- Updated Docker images built successfully and both services reached healthy state. Runtime smoke checks served all four bundled GLB/USDZ assets, preserved the 169-sample scientific analysis / three-site comparison / CSV export workflow, returned an explicit news-unavailable response under the current policy, rejected past-date forecasts and returned both launch-area references.

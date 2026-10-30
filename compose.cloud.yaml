@@ -1,6 +1,10 @@
 # Overlay for this managed cloud's HTTPS inspection CA. Do not disable TLS checks.
 services:
   backend:
+    environment:
+      SSL_CERT_FILE: /run/proxy-ca.pem
+    volumes:
+      - /etc/ssl/certs/ca-certificates.crt:/run/proxy-ca.pem:ro
     build:
       secrets:
         - proxy_ca
