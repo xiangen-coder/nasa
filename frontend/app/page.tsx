@@ -1,8 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { CalculationDetails, Uncertainty } from "../components/ResultExplanation";
 import NewsSidebar from "../components/NewsSidebar";
 import MissionPlanner from "../components/MissionPlanner";
+import type { RouteMemory } from "../components/LunarRouteViewer";
+const LunarRouteViewer = dynamic(() => import("../components/LunarRouteViewer"), { ssr: false, loading: () => <div className="panel empty">Loading lunar route viewer…</div> });
 const CelestialViewer = dynamic(() => import("../components/CelestialViewer"), {
   ssr: false,
   loading: () => <div className="panel empty">Loading 3D viewer…</div>,
@@ -54,6 +57,7 @@ const views = [
   "Mission report",
   "3D observatory",
   "Mission planner",
+  "Lunar surface route",
 ];
 const icons = [
   Compass,
@@ -63,6 +67,7 @@ const icons = [
   FileText,
   Orbit,
   Rocket,
+  MapPin,
 ];
 const fmt = (x: number | null | undefined, suffix = "", digits = 1) =>
   x == null ? "Unavailable" : `${x.toFixed(digits)}${suffix}`;
@@ -134,8 +139,16 @@ function PolarMap({
     };
   };
   const point = project(selected.latitude, selected.longitude);
+  const [inspected, setInspected] = useState<Site | null>(null);
+  const detail = inspected || selected;
+  const theta = ((detail.longitude % 360) + 360) % 360;
+  const rho = 2 * 1737.4 * Math.tan((90 + detail.latitude) * Math.PI / 360);
   return (
     <div className="map-shell">
+      <div className="polar-definition">
+        <strong>South-pole polar map</strong>
+        <p>Centre: 90° S. Radius r is stereographic distance from the pole (km); rings show angular distance 2°, 4°, 6°, 8°, 10°. θ is east longitude: 0° at top, increasing clockwise to 360° = 0°.</p><p>Ring radii: 2° ≈ 61 km; 4° ≈ 121 km; 6° ≈ 182 km; 8° ≈ 243 km; 10° ≈ 304 km.</p>
+      </div>
       <div className="map-overlay">
         <span className="tag">
           <span className="live-dot" /> SOUTH POLAR REGION
@@ -230,8 +243,8 @@ function PolarMap({
                   strokeOpacity=".22"
                   strokeDasharray="2 5"
                 />
-                <text x={325 + r} y="296" fill="#829185" fontSize="9">
-                  {lat}°
+                <text x={320+r*0.15} y={300+r*0.85} fill="#829185" fontSize="16">
+                  {90+lat}°
                 </text>
               </g>
             );
@@ -253,15 +266,15 @@ function PolarMap({
                   y={303 + (p.y - 300) * 1.065}
                   textAnchor="middle"
                   fill="#8f9d91"
-                  fontSize="10"
+                  fontSize="16"
                 >
-                  {lon > 180 ? lon - 360 : lon}°
+                  {lon}°
                 </text>
               </g>
             );
           })}
           <path d="M310 300h20M320 290v20" stroke="#a0af9c" strokeWidth=".6" />
-          <text x="328" y="317" fill="#b5c1ac" fontSize="9">
+          <text x="130" y="320" fill="#b5c1ac" fontSize="16">
             SOUTH POLE
           </text>
           {sites.map((s, i) => {
@@ -269,6 +282,10 @@ function PolarMap({
             return (
               <g
                 key={s.id}
+                onFocus={() => setInspected(s)}
+                onMouseEnter={() => setInspected(s)}
+                onMouseLeave={() => setInspected(null)}
+                onBlur={() => setInspected(null)}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -276,7 +293,7 @@ function PolarMap({
                 }}
                 role="button"
                 tabIndex={0}
-                aria-label={`Select ${s.name}`}
+                aria-label={`Select ${s.name}; polar radius ${(2*1737.4*Math.tan((90+s.latitude)*Math.PI/360)).toFixed(2)} km; east longitude ${((s.longitude+360)%360).toFixed(2)} degrees; uncertainty not supplied`}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
@@ -296,18 +313,18 @@ function PolarMap({
                   x={p.x}
                   y={p.y + 3}
                   fill="#d7dfcc"
-                  fontSize="8"
+                  fontSize="16"
                   textAnchor="middle"
                 >
                   {i + 1}
                 </text>
                 <text
-                  x={p.x + 13}
-                  y={p.y + (i % 2 ? 22 : -12)}
+                  x={390}
+                  y={380 + i * 28}
                   fill="#d0dac5"
-                  fontSize="10"
+                  fontSize="16"
                 >
-                  {s.name.replace(" vicinity", "").replace(" reference", "")}
+                  {i+1}. {s.name.replace(" vicinity", "").replace(" reference", "")}
                 </text>
               </g>
             );
@@ -328,6 +345,12 @@ function PolarMap({
           )}
         </g>
       </svg>
+      <div className="polar-detail" aria-live="polite">
+        <strong>{detail.name}</strong>
+        <p>{detail.latitude <= -80 ? `r = ${rho.toFixed(2)} km; θ = ${theta.toFixed(2)}° E` : "Outside the displayed 80°–90° S region"} · latitude {detail.latitude.toFixed(4)}°, longitude {detail.longitude.toFixed(4)}° E.</p>
+        <p>Coordinate uncertainty not supplied. Overlapping sites remain individually selectable in the location list.</p>
+        <details><summary>Polar scale and coordinate method</summary><p>r = 2R tan((90° + latitude)/2), R = 1737.4 km. Domain: 0–{(2*1737.4*Math.tan(5*Math.PI/180)).toFixed(2)} km. Screen radius = 250 × r / outer radius. This projection distance is not surface travel distance. θ is undefined exactly at the pole; the entered longitude is retained. Signed east longitude −180°…180° is normalized to 0°…360°. No Cartesian source conversion is needed.</p></details>
+      </div>
       <div className="map-tools">
         <button
           aria-label="Zoom in"
@@ -382,10 +405,10 @@ function VisibilityChart({ analysis }: { analysis: Analysis }) {
                 month: "short",
               })
             }
-            tick={{ fill: "#84918e", fontSize: 10 }}
+            tick={{ fill: "#84918e", fontSize: 16 }}
             minTickGap={60}
           />
-          <YAxis unit="°" tick={{ fill: "#84918e", fontSize: 10 }} width={35} />
+          <YAxis unit="°" tick={{ fill: "#84918e", fontSize: 16 }} width={55} />
           <Tooltip
             contentStyle={{
               background: "#172326",
@@ -457,6 +480,40 @@ function Timeline({ analysis }: { analysis: Analysis }) {
 
 export default function Page() {
   const [view, setView] = useState(0);
+  const [routeMemory, setRouteMemory] = useState<RouteMemory | null>(null);
+  const [full, setFull] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [newsOpen, setNewsOpen] = useState(false);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const sidebarToggle = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    try {
+      setFull(localStorage.getItem("lunar-view") === "full");
+      setSidebarOpen(window.innerWidth > 850 && localStorage.getItem("lunar-sidebar") !== "closed");
+      setNewsOpen(localStorage.getItem("lunar-news") === "open");
+    } catch { /* Storage is optional. */ }
+  }, []);
+  const closeSidebar = () => {
+    setSidebarOpen(false);
+    try { localStorage.setItem("lunar-sidebar", "closed"); } catch {}
+    sidebarToggle.current?.focus();
+  };
+  useEffect(() => {
+    if (!sidebarOpen || window.innerWidth > 850) return;
+    const sidebar = sidebarRef.current;
+    sidebar?.querySelector<HTMLButtonElement>("button")?.focus();
+    const handle = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); closeSidebar(); }
+      if (event.key !== "Tab") return;
+      const nodes = sidebar?.querySelectorAll<HTMLElement>('button, a[href]');
+      if (!nodes?.length) return;
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handle);
+    return () => document.removeEventListener("keydown", handle);
+  }, [sidebarOpen]);
   const [sites, setSites] = useState<Site[]>([]);
   const [selected, setSelected] = useState<Site>({
     name: "Shackleton vicinity",
@@ -656,8 +713,10 @@ export default function Page() {
       ? "Terrain-screened geometry"
       : "Reference-sphere geometry";
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
+    <div className={`app-shell ${full ? "full-view" : "simple-view"} ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
+      {sidebarOpen && <button className="sidebar-scrim" aria-label="Dismiss navigation overlay" tabIndex={-1} onClick={closeSidebar} />}
+      <aside className="sidebar" id="workspace-navigation" aria-label="Workspace navigation" ref={sidebarRef} hidden={!sidebarOpen}>
+        <button className="button subtle close-sidebar" onClick={closeSidebar}>Close sidebar ×</button>
         <a className="brand" href="/" aria-label="Lunar Navigator home">
           <div className="brand-mark">
             <Moon size={22} />
@@ -674,7 +733,7 @@ export default function Page() {
               <button
                 aria-label={label}
                 className={view === i ? "active" : ""}
-                onClick={() => setView(i)}
+                onClick={() => { setView(i); if (window.innerWidth <= 850) closeSidebar(); }}
                 key={label}
               >
                 <Icon size={18} />
@@ -708,6 +767,20 @@ export default function Page() {
       </aside>
       <div className="main-shell">
         <header className="topbar">
+          <div className="workspace-toolbar">
+          <button ref={sidebarToggle} className="button subtle" aria-expanded={sidebarOpen} aria-controls="workspace-navigation" onClick={() => {
+            const next = !sidebarOpen; setSidebarOpen(next);
+            try { localStorage.setItem("lunar-sidebar", next ? "open" : "closed"); } catch {}
+          }}>{sidebarOpen ? "Close sidebar" : "Open sidebar"}</button>
+          <div className="view-switch" role="group" aria-label="Detail view">
+            {[false, true].map(value => <button key={String(value)} aria-pressed={full === value} onClick={() => {
+              setFull(value); try { localStorage.setItem("lunar-view", value ? "full" : "simple"); } catch {}
+            }}>{value ? "Full" : "Simple"}</button>)}
+          </div>
+          <button className="button subtle" aria-expanded={newsOpen} aria-controls="news-panel" onClick={() => {
+            setNewsOpen(!newsOpen); try { localStorage.setItem("lunar-news", !newsOpen ? "open" : "closed"); } catch {}
+          }}>{newsOpen ? "Hide news" : "Show news"}</button>
+          </div>
           <div className="breadcrumb">
             Workspace <ChevronRight size={13} /> <span>{views[view]}</span>
           </div>
@@ -719,7 +792,7 @@ export default function Page() {
             <span className="separator" /> <span className="avatar">LN</span>
           </div>
         </header>
-        <div className="workspace-with-news">
+        <div className={`workspace-with-news ${newsOpen ? "" : "news-closed"}`}>
           <main>
             <div className="page-heading">
               <div>
@@ -736,6 +809,7 @@ export default function Page() {
                       "Your mission, documented.",
                       "A new perspective on space.",
                       "Plan the journey, explicitly.",
+                      "Follow a route across the Moon.",
                     ][view]
                   }
                 </h1>
@@ -749,6 +823,7 @@ export default function Page() {
                       "Trace every result back to its data, methods, and assumptions.",
                       "Explore the supplied 3D models and your computed local sky.",
                       "Record vehicle assumptions, inspect launch weather, and save your mission plans.",
+                      "Inspect imported waypoints on a 3D reference sphere and select a point for analysis.",
                     ][view]
                   }
                 </p>
@@ -760,7 +835,20 @@ export default function Page() {
                 <FileText size={16} /> Mission report <ArrowRight size={15} />
               </button>
             </div>
-            <div className="science-notice">
+            <section className="task-intro panel">
+              <h2>Which location and mission window should I investigate?</h2>
+              <p>Choose a site and dates, calculate how often the Sun and Earth are both visible, then compare alternatives. These exploratory results do not establish landing safety.</p>
+            </section>
+            <Uncertainty analysis={analysis} />
+            {analysis && <section className="result-summary panel" aria-label="Main result">
+              <span>Calculated simultaneous visibility · {analysis.mission.name}</span>
+              <strong>{fmt(analysis.metrics.simultaneous_pct, "%")}</strong>
+              <p>of {analysis.mission.start.slice(0,10)} to {analysis.mission.end.slice(0,10)} UTC, in {analysis.mode === "terrain_screened" ? "terrain-screened" : "reference-sphere"} geometry.</p>
+              <p>Uncertainty not yet quantified. {analysis.terrain.available ? "Terrain sampling and model limitations apply." : "Local terrain obstruction is unknown."}</p>
+              <CalculationDetails analysis={analysis} />
+              <button className="button primary" onClick={() => setView(3)}>Next: compare locations <ArrowRight size={16}/></button>
+            </section>}
+            <div className="science-notice full-only">
               <span className="notice-icon">
                 <Satellite size={17} />
               </span>
@@ -811,7 +899,7 @@ export default function Page() {
                   onChange={(e) => setEnd(e.target.value)}
                 />
               </label>
-              <label>
+              <label className="full-only">
                 Time step
                 <select
                   value={interval}
@@ -826,7 +914,7 @@ export default function Page() {
                   ))}
                 </select>
               </label>
-              <label title="Additional angle above the reference or terrain horizon for the Earth center.">
+              <label className="full-only" title="Additional angle above the reference or terrain horizon for the Earth center.">
                 Link clearance
                 <input
                   type="number"
@@ -847,6 +935,7 @@ export default function Page() {
                 {!busy && <ArrowRight size={15} />}
               </button>
             </div>
+            {!full && <p className="active-settings">Current settings: {interval}-minute sampling · {clearance}° Earth clearance. Adjust in Full View.</p>}
             {view === 0 && (
               <>
                 <div className="explorer-layout">
@@ -1019,6 +1108,8 @@ export default function Page() {
                       <m.icon size={17} className={m.color} />
                     </div>
                     <strong>{m.value}</strong>
+                    <small>Uncertainty not yet quantified</small>
+                    <CalculationDetails analysis={analysis} metric={m.label} />
                     <small>
                       {analysis.mode === "terrain_screened"
                         ? "Local terrain included"
@@ -1057,7 +1148,7 @@ export default function Page() {
                   empty
                 ) : (
                   <>
-                    <VisibilityChart analysis={analysis} />
+                    <div className="full-only"><VisibilityChart analysis={analysis} /></div>
                     <Timeline analysis={analysis} />
                     {view === 0 ? (
                       <div className="panel-bottom">
@@ -1118,7 +1209,7 @@ export default function Page() {
                                     x="15"
                                     y={169 - el * 6}
                                     fill="#96a29c"
-                                    fontSize="11"
+                                    fontSize="16"
                                   >
                                     {el}°
                                   </text>
@@ -1138,7 +1229,7 @@ export default function Page() {
                                     y="260"
                                     textAnchor="middle"
                                     fill="#96a29c"
-                                    fontSize="11"
+                                    fontSize="16"
                                   >
                                     {
                                       [
@@ -1325,6 +1416,7 @@ export default function Page() {
                         </strong>
                       </div>
                     </div>
+                    <CalculationDetails analysis={analysis} metric="Terrain" />
                     {analysis.terrain.reason && (
                       <div className="info">{analysis.terrain.reason}</div>
                     )}
@@ -1509,7 +1601,13 @@ export default function Page() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="ranking-explanation">
+                    <div className="uncertainty-banner">Uncertainty not yet quantified. Scores apply only to the displayed mission dates; small differences may not be meaningful.</div>
+                    <details className="explanation"><summary>How was this calculated? — ranking</summary>
+                    <p>{comparison.explanation}</p>
+                    <p>User weights: sunlight {weights.sunlight}, Earth {weights.earth}, simultaneous {weights.simultaneous}. Score = (sunlight % × sunlight weight + Earth % × Earth weight + simultaneous % × simultaneous weight) / total weight. No hazard or safety score is included.</p>
+                    {comparison.ranking.map(r => <p key={r.mission.name}>{r.mission.name}: {r.mission.start} to {r.mission.end}; {Object.entries(r.contributions).map(([k,v]) => `${k}: ${v.toFixed(3)} points`).join(" + ")} = {r.score.toFixed(3)} / 100.</p>)}
+                    </details>
+                    <div className="ranking-explanation full-only">
                       <h3>What drives the ranking?</h3>
                       <p>{comparison.explanation}</p>
                       {comparison.ranking.map((r) => (
@@ -1604,7 +1702,7 @@ export default function Page() {
                         {analysis.mission.clearance_deg}° communication
                         clearance
                       </p>
-                      <VisibilityChart analysis={analysis} />
+                      <div className="full-only"><VisibilityChart analysis={analysis} /></div>
                       <Timeline analysis={analysis} />
                       <h3>Operational windows</h3>
                       {analysis.metrics.operational_windows.length ? (
@@ -1670,6 +1768,7 @@ export default function Page() {
             )}
             {view === 5 && (
               <>
+                <button className="button primary" onClick={() => setView(7)}>Open lunar surface route →</button>
                 <CelestialViewer sample={current} />
                 {analysis && (
                   <section className="panel playback-panel">
@@ -1719,6 +1818,7 @@ export default function Page() {
                 }}
               />
             )}
+            {view === 7 && <LunarRouteViewer initial={routeMemory} onChange={setRouteMemory} onSelect={(site) => { setSelected(site); setView(0); }} />}
             <footer className="footer">
               <span>
                 <Moon size={13} /> LUNAR LANDING SITE NAVIGATOR <span> / </span>{" "}
@@ -1729,7 +1829,7 @@ export default function Page() {
               </span>
             </footer>
           </main>
-          <NewsSidebar />
+          <div id="news-panel" hidden={!newsOpen}><NewsSidebar /></div>
         </div>
       </div>
     </div>
