@@ -24,7 +24,6 @@ import {
 } from "recharts";
 import {
   Activity,
-  ArrowDownToLine,
   ArrowRight,
   Check,
   ChevronRight,

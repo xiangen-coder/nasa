@@ -152,7 +152,7 @@ test("mobile map selection, navigation, and layout", async ({ page }) => {
     .getByRole("button", { name: "Lunar mission archive", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Your mission, documented." }),
+    page.getByRole("heading", { name: "Explore the missions before us." }),
   ).toBeVisible();
 });
 
