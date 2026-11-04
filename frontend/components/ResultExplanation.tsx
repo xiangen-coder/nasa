@@ -23,7 +23,7 @@ export function CalculationDetails({ analysis: a, metric = "Simultaneous visibil
     <details><summary>Returned assumptions and supporting samples</summary>
       <ul>{a.provenance.assumptions.map(x => <li key={x}>{x}</li>)}</ul>
       <div className="table-scroll"><table><thead><tr><th>UTC</th><th>Sun elevation °</th><th>Earth elevation °</th><th>Sun / Earth / Both</th></tr></thead><tbody>{a.series.slice(0,8).map(r => <tr key={r.time}><td>{r.time}</td><td>{r.sun_elevation.toFixed(4)}</td><td>{r.earth_elevation.toFixed(4)}</td><td>{[r.sun_visible,r.earth_visible,r.simultaneous].map(v=>v?"Yes":"No").join(" / ")}</td></tr>)}</tbody></table></div>
-      <p>First {Math.min(8,a.series.length)} of {a.series.length} returned samples. Export the complete series from Mission report.</p>
+      <p>First {Math.min(8,a.series.length)} of {a.series.length} returned samples. Export the complete series from Lunar mission archive.</p>
     </details>
   </details>;
 }

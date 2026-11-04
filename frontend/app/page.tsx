@@ -56,7 +56,7 @@ const views = [
   "Horizon simulator",
   "Terrain analysis",
   "Site comparison",
-  "Mission report",
+  "Lunar mission archive",
   "3D observatory",
   "Mission planner",
   "Lunar surface route",
@@ -812,7 +812,7 @@ export default function Page() {
                       "See beyond the horizon.",
                       "Read the lunar landscape.",
                       "Compare the possibilities.",
-                      "Your mission, documented.",
+                      "Explore the missions before us.",
                       "A new perspective on space.",
                       "Plan the journey, explicitly.",
                       "Follow a route across the Moon.",
@@ -827,7 +827,7 @@ export default function Page() {
                       "Follow the Sun and Earth across the local sky, one moment at a time.",
                       "Inspect elevation, slope, and obstructions from a verified lunar DEM.",
                       "Weigh operational trade-offs across the same mission window.",
-                      "Trace every result back to its data, methods, and assumptions.",
+                      "Search historical lunar missions and replay their documented stages in 3D.",
                       "Explore the supplied 3D models and your computed local sky.",
                       "Record vehicle assumptions, inspect launch weather, and save your mission plans.",
                       "Inspect imported waypoints on a 3D reference sphere and select a point for analysis.",
@@ -840,10 +840,10 @@ export default function Page() {
                 className="button subtle report-button"
                 onClick={() => setView(4)}
               >
-                <FileText size={16} /> Mission report <ArrowRight size={15} />
+                <FileText size={16} /> Lunar mission archive <ArrowRight size={15} />
               </button>
             </div>
-            <div hidden={view === 8}>
+            <div hidden={view === 8 || view === 4}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>
               <p>Choose a site and dates, calculate how often the Sun and Earth are both visible, then compare alternatives. These exploratory results do not establish landing safety.</p>
@@ -1080,7 +1080,7 @@ export default function Page() {
                 </div>
               </>
             )}
-            {analysis && view !== 8 && (
+            {analysis && view !== 8 && view !== 4 && (
               <div className="metrics-grid">
                 {[
                   {
@@ -1662,118 +1662,9 @@ export default function Page() {
               </section>
             )}
             {view === 4 && (
-              <section className="panel analysis-panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>
-                      <FileText size={18} /> Mission analysis report
-                    </h2>
-                    <p>
-                      {analysis
-                        ? `${analysis.mission.name} · ${utc(analysis.mission.start)} — ${utc(analysis.mission.end)} UTC`
-                        : "Run an analysis to prepare your report"}
-                    </p>
-                  </div>
-                  {analysis && (
-                    <div className="export-buttons">
-                      <button
-                        className="button subtle"
-                        disabled={busy}
-                        onClick={() => download("csv")}
-                      >
-                        <ArrowDownToLine size={14} /> CSV
-                      </button>
-                      <button
-                        className="button subtle"
-                        disabled={busy}
-                        onClick={() => download("json")}
-                      >
-                        <ArrowDownToLine size={14} /> JSON
-                      </button>
-                      <button
-                        className="button subtle"
-                        onClick={() => window.print()}
-                      >
-                        Print / PDF
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {!analysis ? (
-                  empty
-                ) : (
-                  <>
-                    <div className="report-body">
-                      <h3>{mode}</h3>
-                      <p>
-                        {analysis.mission.latitude.toFixed(4)}° N,{" "}
-                        {analysis.mission.longitude.toFixed(4)}° E ·{" "}
-                        {analysis.mission.interval_minutes}-minute cadence ·{" "}
-                        {analysis.mission.clearance_deg}° communication
-                        clearance
-                      </p>
-                      <div className="full-only"><VisibilityChart analysis={analysis} /></div>
-                      <Timeline analysis={analysis} />
-                      <h3>Operational windows</h3>
-                      {analysis.metrics.operational_windows.length ? (
-                        <div className="table-scroll">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Start (UTC)</th>
-                                <th>End (UTC)</th>
-                                <th>Duration</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {analysis.metrics.operational_windows.map((w) => (
-                                <tr key={w.start}>
-                                  <td>{utc(w.start)}</td>
-                                  <td>{utc(w.end)}</td>
-                                  <td>{w.hours.toFixed(2)} h</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p>
-                          No simultaneous visibility within the sampled mission
-                          window.
-                        </p>
-                      )}
-                      <h3>Data, assumptions & limitations</h3>
-                      <p>
-                        {analysis.provenance.ephemeris} ·{" "}
-                        {analysis.provenance.orientation}
-                      </p>
-                      <ul>
-                        {analysis.provenance.assumptions.map((a) => (
-                          <li key={a}>{a}</li>
-                        ))}
-                      </ul>
-                      <div className="info">
-                        {analysis.terrain.reason || analysis.terrain.method}
-                      </div>
-                      <div className="reference-links">
-                        <a
-                          href="https://ssd.jpl.nasa.gov/planets/eph_export.html"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          JPL ephemerides <ExternalLink size={13} />
-                        </a>
-                        <a
-                          href="https://naif.jpl.nasa.gov/naif/"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          NAIF SPICE <ExternalLink size={13} />
-                        </a>
-                      </div>
-                    </div>
-                  </>
-                )}
+              <section className="panel" aria-label="Historical lunar missions">
+                {analysis && <div className="panel-heading" style={{padding:20}}><span>Current site analysis exports</span><div className="export-buttons"><button className="button subtle" disabled={busy} onClick={() => download("csv")}>CSV</button><button className="button subtle" disabled={busy} onClick={() => download("json")}>JSON</button></div></div>}
+                <iframe title="Lunar mission archive and interactive 3D paths" src="/mission-archive/index.html" style={{width:"100%",height:"min(1200px, 85vh)",minHeight:640,border:0,borderRadius:12,display:"block"}} />
               </section>
             )}
             {view === 5 && (
