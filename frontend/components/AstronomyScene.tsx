@@ -14,7 +14,9 @@ const sceneVector = (v: Vector3) => new THREE.Vector3(v[0], v[2], -v[1]).divideS
 
 export default function AstronomyScene({ data, frame }: { data: AstronomyData; frame: AstroFrame }) {
   const host = useRef<HTMLDivElement>(null);
-  const [focus, setFocus] = useState<Focus>("earth");
+  const [focus, setFocus] = useState<Focus>("overview");
+  const [movementView, setMovementView] = useState(true);
+  const [moonScale, setMoonScale] = useState(60);
   const [perspective, setPerspective] = useState("oblique");
   const [sizeScale, setSizeScale] = useState(10);
   const [paths, setPaths] = useState(true);
@@ -35,10 +37,12 @@ export default function AstronomyScene({ data, frame }: { data: AstronomyData; f
     catch { setError("WebGL is unavailable. All NASA coordinates, distances and timeline controls remain available below."); return; }
     setError(""); setTextureNotice("");
     let active = true;
+    const lunarScale = movementView ? moonScale : 1;
+    const radiusScale = (body: AstroBody) => sizeScale * (movementView ? { sun: 1, earth: 80, moon: 120 }[body] : 1);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.domElement.setAttribute("role", "img");
-    renderer.domElement.setAttribute("aria-label", "NASA ephemeris positions of the Sun, Earth and Moon. Body sizes may be enlarged; centre distances share one uniform scale. Focus buttons provide keyboard camera access.");
+    renderer.domElement.setAttribute("aria-label", movementView ? "NASA-driven movement view, not to scale. Earth and Moon sizes and lunar separation are enlarged." : "NASA ephemeris positions with uniformly scaled centre distances and adjustable body sizes.");
     container.appendChild(renderer.domElement);
     const scene = new THREE.Scene(); scene.background = new THREE.Color("#0b141c");
     const camera = new THREE.PerspectiveCamera(45, 1, 0.00001, 4000);
@@ -53,7 +57,7 @@ export default function AstronomyScene({ data, frame }: { data: AstronomyData; f
         ? new THREE.MeshBasicMaterial({ color: COLORS[body] })
         : new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 });
       const mesh = new THREE.Mesh(new THREE.SphereGeometry(RADII[body] / KM_PER_UNIT, 64, 48), material);
-      mesh.scale.setScalar(sizeScale); scene.add(mesh); meshes.current[body] = mesh;
+      mesh.scale.setScalar(radiusScale(body)); scene.add(mesh); meshes.current[body] = mesh;
       if (body === "earth") {
         new GLTFLoader().load("/models/earth.glb", gltf => {
           if (!active) {
@@ -85,11 +89,15 @@ export default function AstronomyScene({ data, frame }: { data: AstronomyData; f
     glow.scale.setScalar(sizeScale); scene.add(glow);
     const earthPath = new THREE.Line(new THREE.BufferGeometry().setFromPoints(data.earth_path.map(p => sceneVector(p.relative_km))), new THREE.LineBasicMaterial({ color: 0x89bbdc, transparent: true, opacity: .65 }));
     const moonPath = new THREE.Line(new THREE.BufferGeometry().setFromPoints(data.moon_path.map(p => sceneVector(p.relative_km))), new THREE.LineBasicMaterial({ color: 0xd5edac, transparent: true, opacity: .8 }));
+    moonPath.scale.setScalar(lunarScale);
     earthPath.visible = paths; moonPath.visible = paths; scene.add(earthPath, moonPath);
     let priorAnchor: THREE.Vector3 | null = null;
     const positions = (f: AstroFrame) => Object.fromEntries(BODIES.map(b => [b, sceneVector(f.bodies[b].position_km)])) as Record<AstroBody, THREE.Vector3>;
     const move = (f: AstroFrame) => {
       const barycentric = positions(f);
+      // Display-only magnification about Earth preserves each sampled lunar direction
+      // and timing. Never mutate NASA vectors or the numerical measurements.
+      barycentric.moon.sub(barycentric.earth).multiplyScalar(lunarScale).add(barycentric.earth);
       const origin = focus === "overview" ? barycentric.sun : barycentric[focus];
       // One translation and one uniform distance scale for all centres and paths.
       BODIES.forEach(b => meshes.current[b]!.position.copy(barycentric[b]).sub(origin));
@@ -103,8 +111,8 @@ export default function AstronomyScene({ data, frame }: { data: AstronomyData; f
       light.target.position.copy(meshes.current.earth!.position);
     };
     drawState.current = move; move(current.current);
-    const earthMoon = current.current.earth_moon_km / KM_PER_UNIT;
-    let distance = focus === "overview" ? 430 : focus === "sun" ? Math.max(10, RADII.sun / KM_PER_UNIT * sizeScale * 5) : focus === "moon" ? Math.max(.025, RADII.moon / KM_PER_UNIT * sizeScale * 8) : Math.max(earthMoon * 2.5, RADII.earth / KM_PER_UNIT * sizeScale * 8);
+    const earthMoon = current.current.earth_moon_km / KM_PER_UNIT * lunarScale;
+    let distance = focus === "overview" ? 430 : focus === "sun" ? Math.max(10, RADII.sun / KM_PER_UNIT * radiusScale("sun") * 5) : focus === "moon" ? Math.max(.025, RADII.moon / KM_PER_UNIT * radiusScale("moon") * 8) : Math.max(earthMoon * 2.5, RADII.earth / KM_PER_UNIT * radiusScale("earth") * 8);
     if (!Number.isFinite(distance)) distance = 2;
     const target = focus === "overview" ? meshes.current.sun!.position : new THREE.Vector3();
     controls.target.copy(target);
@@ -129,10 +137,15 @@ export default function AstronomyScene({ data, frame }: { data: AstronomyData; f
       scene.traverse(object => { if (object instanceof THREE.Mesh || object instanceof THREE.Line) { object.geometry.dispose(); for (const m of Array.isArray(object.material) ? object.material : [object.material]) m.dispose(); } });
       ownedTextures.forEach(t => t.dispose()); renderer.dispose(); renderer.domElement.remove(); meshes.current = {};
     };
-  }, [data, focus, perspective, sizeScale, paths, reset]);
+  }, [data, focus, perspective, sizeScale, paths, reset, movementView, moonScale]);
   useEffect(() => { drawState.current?.(frame); }, [frame]);
 
   return <>
+    <div className="astro-camera-controls" role="group" aria-label="Display scale mode">
+      <button className={`button ${movementView ? "primary" : "subtle"}`} aria-pressed={movementView} onClick={() => setMovementView(true)}>Movement view · not to scale</button>
+      <button className={`button ${!movementView ? "primary" : "subtle"}`} aria-pressed={!movementView} onClick={() => setMovementView(false)}>Uniform distance scale</button>
+      {movementView && <label>Moon separation ×{moonScale}<input aria-label="Moon separation enlargement" type="range" min={20} max={100} step={5} value={moonScale} onChange={e => setMoonScale(+e.target.value)} /></label>}
+    </div>
     <div className="astro-camera-controls" role="group" aria-label="Astronomy camera controls">
       {(["overview", "sun", "earth", "moon"] as Focus[]).map(b => <button className={`button ${focus === b ? "primary" : "subtle"}`} key={b} aria-pressed={focus === b} onClick={() => setFocus(b)}>{b === "overview" ? "Whole system" : `Focus ${b[0].toUpperCase() + b.slice(1)}`}</button>)}
       <label>Perspective<select value={perspective} onChange={e => setPerspective(e.target.value)}><option value="oblique">Oblique</option><option value="top">Ecliptic north</option><option value="edge">Ecliptic edge</option></select></label>
@@ -141,15 +154,15 @@ export default function AstronomyScene({ data, frame }: { data: AstronomyData; f
     <div className="astro-render-stage">
       <div className="astro-canvas" ref={host} />
       {BODIES.map(b => <span className={`astro-body-label astro-label-${b}`} key={b} ref={el => { labels.current[b] = el; }}>{b[0].toUpperCase() + b.slice(1)}</span>)}
-      <div className="astro-stage-caption">{focus === "overview" ? "Sun-centred display" : `${focus[0].toUpperCase() + focus.slice(1)}-centred display`} · uniform distance scale<br />Body radii ×{sizeScale}; glow and labels are visual aids</div>
+      <div className="astro-stage-caption">{focus === "overview" ? "Sun-centred display" : `${focus[0].toUpperCase() + focus.slice(1)}-centred display`} · {movementView ? "NOT TO SCALE" : "uniform distance scale"}<br />{movementView ? `Moon separation ×${moonScale}; radii Sun ×${sizeScale}, Earth ×${sizeScale * 80}, Moon ×${sizeScale * 120}` : `Body radii ×${sizeScale}`}</div>
     </div>
     {error && <p className="info" role="alert">{error}</p>}
     {textureNotice && <p className="info" role="status">{textureNotice}</p>}
     <div className="astro-visual-controls">
       <label>Body radius enlargement ×{sizeScale}<input aria-label="Body radius enlargement" type="range" min={1} max={50} step={1} value={sizeScale} onChange={e => setSizeScale(+e.target.value)} /></label>
-      <button className="button subtle" onClick={() => setSizeScale(1)}>Use physical body sizes</button>
+      <button className="button subtle" onClick={() => { setMovementView(false); setSizeScale(1); }}>Use physical body sizes</button>
       <label className="check-row"><input type="checkbox" checked={paths} onChange={e => setPaths(e.target.checked)} /> Show ephemeris orbital paths</label>
     </div>
-    <p className="muted">Rotate by dragging; pan with right-drag or two-finger drag; zoom with the wheel or pinch. Focus Earth or Moon to inspect their separation. At whole-system scale they may overlap visually. Positions retain one common scale; enlarging radii can make the visual spheres overlap. Textures do not represent computed body rotation.</p>
+    <p className="muted">Rotate by dragging; pan with right-drag or two-finger drag; zoom with the wheel or pinch. Movement view enlarges the NASA Moon-minus-Earth vector and the bodies so both orbits are visible; it preserves sampled directions and timing but is not a physical distance or eclipse view. Uniform distance scale restores the true relative centre geometry. All coordinates, distances and phases below always use the original NASA vectors. Textures do not represent computed body rotation.</p>
   </>;
 }
