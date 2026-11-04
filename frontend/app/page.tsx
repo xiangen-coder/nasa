@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { CalculationDetails, Uncertainty } from "../components/ResultExplanation";
 import NewsSidebar from "../components/NewsSidebar";
 import MissionPlanner from "../components/MissionPlanner";
+import LandingResearch from "../components/LandingResearch";
 import type { RouteMemory } from "../components/LunarRouteViewer";
 const AstronomySimulation = dynamic(() => import("../components/AstronomySimulation"), { ssr: false, loading: () => <div className="panel empty">Loading astronomical simulation…</div> });
 const LunarRouteViewer = dynamic(() => import("../components/LunarRouteViewer"), { ssr: false, loading: () => <div className="panel empty">Loading lunar route viewer…</div> });
@@ -1828,6 +1829,7 @@ export default function Page() {
               />
             )}
             {view === 7 && <LunarRouteViewer initial={routeMemory} onChange={setRouteMemory} onSelect={(site) => { setSelected(site); setView(0); }} />}
+            {(view === 0 || view === 3) && <LandingResearch mission={mission()} sites={sites} onSelect={site => { setSelected(site); setView(0); }} />}
             <div hidden={view !== 8}>{astronomyVisited && <AstronomySimulation active={view === 8} />}</div>
             <footer className="footer">
               <span>

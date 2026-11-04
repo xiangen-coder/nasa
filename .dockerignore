@@ -13,5 +13,7 @@ data/*.sqlite*
 work
 **/work
 outputs
+data/lunar
+**/.next-research
 **/.next-preview
 **/.next-ux

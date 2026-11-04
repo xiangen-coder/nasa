@@ -185,3 +185,6 @@ Open **Sun–Earth–Moon** in the existing sidebar. Select a date, time and tim
 The section includes an ephemeris timeline, play/pause/reset/step controls, camera focus and perspectives, sampled Earth and Moon orbital tracks, Cartesian coordinates, distances and geometric Moon phase. Body-size enlargement is labelled and never changes centre distances. Real Horizons data is required; unavailable upstream data produces an error rather than an artificial orbit.
 
 No new runtime packages are required. Outbound HTTPS to `ssd.jpl.nasa.gov` is necessary. See [integration, scientific conventions, sources and validation](docs/ASTRONOMY_SIMULATION.md). The test command is `python -m pytest backend/tests -q`; the new astronomy tests can be selected using `backend/tests/test_astronomy.py`.
+# NASA landing research extension
+
+The existing Map explorer and Site comparison now include a five-factor research panel using lunar-surface JPL Horizons observations, native-resolution LOLA and Diviner subsets, and LROC imagery. Scores show missing data, provisional weights and hard-limit failures. This is not landing certification. See [data setup, scoring and limitations](docs/LUNAR_RESEARCH.md).

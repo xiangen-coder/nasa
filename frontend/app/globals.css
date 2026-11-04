@@ -2119,3 +2119,13 @@ button:focus-visible, a:focus-visible, summary:focus-visible, [tabindex]:focus-v
  .astro-camera-controls > .button, .astro-playback > .button { flex:1 1 130px; }
  .astro-stage-caption { font-size:14px; left:8px; right:8px; bottom:8px; }
 }
+.research-panel { margin-top: 24px; }
+.research-body { padding: 22px; display: grid; gap: 16px; min-width: 0; }
+.research-body p { overflow-wrap: anywhere; }
+.research-body .explanation { min-width: 0; }
+.research-body input[type="range"] { display: block; width: 100%; }
+.research-chart { height: 270px; min-width: 0; }
+.research-image { width: 100%; max-width: 512px; height: auto; border-radius: 12px; }
+.research-terrain { width: 100%; max-width: 420px; background: #0b141c; border-radius: 12px; }
+.research-body figure { margin: 0; }
+@media(max-width: 600px) { .research-body { padding: 14px; } }
