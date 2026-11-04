@@ -1,0 +1,13 @@
+{
+  "earth": {
+    "source": "Existing user-supplied frontend/public/models/earth.glb, embedded earth_diff.jpg",
+    "upstream_glb_sha256": "05a5aea99db8ab472487a06debc3b5d0b2cae7636a1a6b9ecfa40b7d1722ba23",
+    "note": "Existing textured GLB reused directly, preserving its own UV coordinates. No extracted image is mapped onto a different sphere."
+  },
+  "moon": {
+    "source": "https://svs.gsfc.nasa.gov/4720/",
+    "image": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg",
+    "credit": "NASA Scientific Visualization Studio / LRO / Ernie Wright"
+  },
+  "orientation": "Texture orientation and surface spin are illustrative. Neither texture is an elevation dataset."
+}

@@ -2078,3 +2078,44 @@ button:focus-visible, a:focus-visible, summary:focus-visible, [tabindex]:focus-v
 .route-selection label { display:block; }
 .route-selection input[type=range] { width:100%; display:block; margin:12px 0; }
 @media(max-width:600px) { .route-body { padding:14px; } .route-stage { height:380px; } .route-controls > button { width:100%; } .route-controls input[type=file] { max-width:100%; } }
+/* Additive astronomy section: existing workspace tokens and panel conventions. */
+.astronomy-body { padding:24px; }
+.astro-inputs, .astro-camera-controls, .astro-visual-controls, .astro-playback { display:flex; flex-wrap:wrap; gap:14px; align-items:end; margin-bottom:20px; }
+.astronomy-simulation label { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.astro-inputs label { flex:1 1 180px; }
+.astro-inputs input, .astro-inputs select { width:100%; }
+.astro-inputs .button { min-height:46px; }
+.astronomy-simulation .uncertainty-banner { margin-top:20px; }
+.astro-current { border-left:3px solid var(--lime); padding:16px 20px; margin:24px 0; background:#192a2e; overflow-wrap:anywhere; }
+.astro-current strong { display:block; font-size:clamp(20px,2vw,28px); margin:8px 0; }
+.astro-current p { font-size:16px; color:var(--muted); }
+.astro-render-stage { position:relative; height:560px; background:#0b141c; border:1px solid #53636a; border-radius:10px; overflow:hidden; margin-bottom:18px; }
+.astro-canvas { width:100%; height:100%; }
+.astro-canvas canvas { width:100%; height:100%; display:block; touch-action:none; }
+.astro-body-label { position:absolute; padding:5px 9px; border:1px solid #8eab9b; border-radius:5px; color:#eff6e8; background:#101b22da; transform:translate(10px,-50%); pointer-events:none; font-size:16px; }
+.astro-label-sun { border-color:#e7be64; color:#ffe4a5; }
+.astro-label-earth { border-color:#89bbdc; }
+.astro-label-moon { transform:translate(10px,-130%); }
+.astro-label-earth { transform:translate(10px,15%); }
+.astro-stage-caption { position:absolute; bottom:14px; left:14px; right:14px; pointer-events:none; background:#0b141cd9; padding:10px; font-size:16px; color:#e0e6dd; border-radius:6px; }
+.astro-visual-controls { align-items:center; }
+.astro-visual-controls > label:first-child { flex:1 1 260px; }
+.astro-visual-controls .check-row { flex-direction:row; align-items:center; }
+.astro-playback { margin-top:24px; }
+.astro-timeline-label { margin:18px 0 8px; }
+.astro-timeline-label input { width:100%; }
+.astro-time-bounds { display:flex; flex-wrap:wrap; gap:12px; justify-content:space-between; font-size:16px; color:var(--muted); }
+.astro-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin:24px 0; }
+.astro-metrics > div { padding:20px; min-width:0; }
+.astro-metrics strong { display:block; font-size:clamp(21px,2.2vw,30px); color:var(--lime); margin-top:8px; overflow-wrap:anywhere; }
+.astro-metrics span, .astro-metrics p { color:var(--muted); font-size:16px; }
+.astronomy-simulation .table-scroll { margin:16px 0; }
+.astronomy-simulation th, .astronomy-simulation td { white-space:nowrap; }
+@media(max-width:700px) {
+ .astronomy-body { padding:16px; }
+ .astro-render-stage { height:400px; }
+ .astro-inputs label { flex-basis:100%; }
+ .astro-metrics { grid-template-columns:1fr; }
+ .astro-camera-controls > .button, .astro-playback > .button { flex:1 1 130px; }
+ .astro-stage-caption { font-size:14px; left:8px; right:8px; bottom:8px; }
+}

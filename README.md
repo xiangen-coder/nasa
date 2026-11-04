@@ -177,3 +177,11 @@ Earth launch-area forecasts use `/api/weather?pad=kennedy&date=YYYY-MM-DD` (or `
 The required outbound domains were saved in the environment draft: `www.nasa.gov`, `blogs.nasa.gov`, `api.open-meteo.com`. Review/save them in environment settings and publish to retain the configuration. Draft saving does not activate access. When running Docker Desktop locally, ordinary internet access to these hosts is needed; no cloud-specific overlay is required. Rebuild an existing installation with `docker compose up --build -d` after updating the source.
 
 The attached PDF was treated as feature ideas, not authoritative scientific evidence or deployment instructions. Automated alternate landing-site certification, research-value ranking and moving-body rocket trajectories remain deferred until their data, constraints and dynamics are defined. The worksheet, local-sky animation and launch-weather display do not claim those capabilities.
+
+## Sun–Earth–Moon astronomical simulation
+
+Open **Sun–Earth–Moon** in the existing sidebar. Select a date, time and time zone, then use **Show Position**. The new FastAPI `/api/astronomy` endpoint retrieves geometric NASA JPL Horizons vectors in one common J2000 ecliptic / solar-system-barycentric frame. The existing landing-site calculations remain independent.
+
+The section includes an ephemeris timeline, play/pause/reset/step controls, camera focus and perspectives, sampled Earth and Moon orbital tracks, Cartesian coordinates, distances and geometric Moon phase. Body-size enlargement is labelled and never changes centre distances. Real Horizons data is required; unavailable upstream data produces an error rather than an artificial orbit.
+
+No new runtime packages are required. Outbound HTTPS to `ssd.jpl.nasa.gov` is necessary. See [integration, scientific conventions, sources and validation](docs/ASTRONOMY_SIMULATION.md). The test command is `python -m pytest backend/tests -q`; the new astronomy tests can be selected using `backend/tests/test_astronomy.py`.

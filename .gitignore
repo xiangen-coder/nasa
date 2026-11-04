@@ -10,3 +10,7 @@ data/terrain/
 playwright-report/
 test-results/
 *.tsbuildinfo
+work/
+outputs/
+frontend/.next-preview/
+frontend/.next-ux/

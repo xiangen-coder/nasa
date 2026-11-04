@@ -4,3 +4,6 @@ test-results
 playwright-report
 .env*
 *.tsbuildinfo
+work
+.next-preview
+.next-ux

@@ -10,3 +10,8 @@ data/terrain
 data/examples
 data/*.sqlite*
 .env*
+work
+**/work
+outputs
+**/.next-preview
+**/.next-ux

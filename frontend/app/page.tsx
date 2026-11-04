@@ -5,6 +5,7 @@ import { CalculationDetails, Uncertainty } from "../components/ResultExplanation
 import NewsSidebar from "../components/NewsSidebar";
 import MissionPlanner from "../components/MissionPlanner";
 import type { RouteMemory } from "../components/LunarRouteViewer";
+const AstronomySimulation = dynamic(() => import("../components/AstronomySimulation"), { ssr: false, loading: () => <div className="panel empty">Loading astronomical simulation…</div> });
 const LunarRouteViewer = dynamic(() => import("../components/LunarRouteViewer"), { ssr: false, loading: () => <div className="panel empty">Loading lunar route viewer…</div> });
 const CelestialViewer = dynamic(() => import("../components/CelestialViewer"), {
   ssr: false,
@@ -58,6 +59,7 @@ const views = [
   "3D observatory",
   "Mission planner",
   "Lunar surface route",
+  "Sun–Earth–Moon",
 ];
 const icons = [
   Compass,
@@ -68,6 +70,7 @@ const icons = [
   Orbit,
   Rocket,
   MapPin,
+  Orbit,
 ];
 const fmt = (x: number | null | undefined, suffix = "", digits = 1) =>
   x == null ? "Unavailable" : `${x.toFixed(digits)}${suffix}`;
@@ -480,6 +483,8 @@ function Timeline({ analysis }: { analysis: Analysis }) {
 
 export default function Page() {
   const [view, setView] = useState(0);
+  const [astronomyVisited, setAstronomyVisited] = useState(false);
+  useEffect(() => { if (view === 8) setAstronomyVisited(true); }, [view]);
   const [routeMemory, setRouteMemory] = useState<RouteMemory | null>(null);
   const [full, setFull] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -810,6 +815,7 @@ export default function Page() {
                       "A new perspective on space.",
                       "Plan the journey, explicitly.",
                       "Follow a route across the Moon.",
+                      "A moment in the solar system.",
                     ][view]
                   }
                 </h1>
@@ -824,6 +830,7 @@ export default function Page() {
                       "Explore the supplied 3D models and your computed local sky.",
                       "Record vehicle assumptions, inspect launch weather, and save your mission plans.",
                       "Inspect imported waypoints on a 3D reference sphere and select a point for analysis.",
+                      "Explore actual NASA ephemerides for the Sun, Earth and Moon at a time you choose.",
                     ][view]
                   }
                 </p>
@@ -835,6 +842,7 @@ export default function Page() {
                 <FileText size={16} /> Mission report <ArrowRight size={15} />
               </button>
             </div>
+            <div hidden={view === 8}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>
               <p>Choose a site and dates, calculate how often the Sun and Earth are both visible, then compare alternatives. These exploratory results do not establish landing safety.</p>
@@ -936,6 +944,7 @@ export default function Page() {
               </button>
             </div>
             {!full && <p className="active-settings">Current settings: {interval}-minute sampling · {clearance}° Earth clearance. Adjust in Full View.</p>}
+            </div>
             {view === 0 && (
               <>
                 <div className="explorer-layout">
@@ -1070,7 +1079,7 @@ export default function Page() {
                 </div>
               </>
             )}
-            {analysis && (
+            {analysis && view !== 8 && (
               <div className="metrics-grid">
                 {[
                   {
@@ -1819,6 +1828,7 @@ export default function Page() {
               />
             )}
             {view === 7 && <LunarRouteViewer initial={routeMemory} onChange={setRouteMemory} onSelect={(site) => { setSelected(site); setView(0); }} />}
+            <div hidden={view !== 8}>{astronomyVisited && <AstronomySimulation active={view === 8} />}</div>
             <footer className="footer">
               <span>
                 <Moon size={13} /> LUNAR LANDING SITE NAVIGATOR <span> / </span>{" "}
