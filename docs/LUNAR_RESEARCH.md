@@ -109,3 +109,5 @@ Modified: `backend/app/main.py` (router registration), `frontend/app/page.tsx` (
 Apollo LM uncertainty layers and backup-point screening are documented in [APOLLO_RELIABILITY.md](APOLLO_RELIABILITY.md).
 
 The separate [wide terrain integration](WIDE_TERRAIN.md) now supplies a native 20 m regional horizon DEM. Its coverage and finite-horizon limitations are distinct from the 4 km local 5 m terrain crop.
+
+The dedicated Terrain analysis page now reads the verified research raster registry through GET /api/research/terrain. The legacy SPICE API retains its separate LOLA_MANIFEST configuration. See [the integration audit](NASA_INTEGRATION_AUDIT.md) for the current dataset coverage, page controls, setup and validation.

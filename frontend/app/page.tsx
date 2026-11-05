@@ -9,6 +9,7 @@ import LandingSearch from "../components/LandingSearch";
 import Navigation, {viewPaths} from "../components/Navigation";
 import PreferencesControls, {type Preferences} from "../components/Preferences";
 import ResearchOverview from "../components/ResearchOverview";
+import TerrainAssessment from "../components/TerrainAssessment";
 import {AlternativeCards} from "../components/AssessmentOverview";
 const CinematicHero = dynamic(() => import("../components/CinematicHero"), { ssr: false });
 const AstronomySimulation = dynamic(() => import("../components/AstronomySimulation"), { ssr: false, loading: () => <div className="panel empty">Loading astronomical simulation…</div> });
@@ -697,7 +698,7 @@ export default function Page() {
             <LandingSearch selected={selected} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{void researchActions.current?.evaluate();setView(8);}} onMap={()=>setView(0)}/><NewsSidebar/>
           </section>}
           {view===8&&<ResearchOverview result={researchResult} onNavigate={setView} busy={researchBusy}/>}
-          <div hidden={![0,1,2,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
+          <div hidden={![0,1,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>
               <p>Choose a site and dates, calculate how often the Sun and Earth are both visible, then compare alternatives. These exploratory results do not establish landing safety.</p>
@@ -1232,119 +1233,7 @@ export default function Page() {
                 )}
               </section>
             )}
-            {view === 2 && (
-              <section className="panel analysis-panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>
-                      <Layers size={18} /> Local terrain assessment
-                    </h2>
-                    <p>LOLA elevations · slopes · horizon obstructions</p>
-                  </div>
-                  <a
-                    className="text-button"
-                    href="https://pds-geosciences.wustl.edu/missions/lro/lola.htm"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    NASA PDS / LOLA <ExternalLink size={14} />
-                  </a>
-                </div>
-                {!analysis ? (
-                  empty
-                ) : (
-                  <div className="terrain-content">
-                    <div className="terrain-summary">
-                      <div>
-                        <span>Elevation</span>
-                        <strong>
-                          {fmt(analysis.terrain.elevation_m, " m")}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Local slope</span>
-                        <strong>{fmt(analysis.terrain.slope_deg, "°")}</strong>
-                      </div>
-                      <div>
-                        <span>Pixel spacing</span>
-                        <strong>
-                          {fmt(analysis.terrain.resolution_m, " m")}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Horizon coverage</span>
-                        <strong>
-                          {analysis.terrain.available
-                            ? "20 km / 360°"
-                            : "Unavailable"}
-                        </strong>
-                      </div>
-                    </div>
-                    <CalculationDetails analysis={analysis} metric="Terrain" />
-                    {analysis.terrain.reason && (
-                      <div className="info">{analysis.terrain.reason}</div>
-                    )}
-                    {analysis.terrain.grid.length > 0 && (
-                      <div
-                        className="terrain-grid"
-                        role="img"
-                        aria-label="Local elevation heatmap over 10 by 10 km, north is up"
-                      >
-                        {(() => {
-                          const values = analysis.terrain.grid.flatMap((p) =>
-                            p.elevation_m === null ? [] : [p.elevation_m],
-                          );
-                          const low = Math.min(...values),
-                            high = Math.max(...values);
-                          return [...analysis.terrain.grid]
-                            .sort(
-                              (a, b) =>
-                                b.north_m - a.north_m || a.east_m - b.east_m,
-                            )
-                            .map((p, i) => (
-                              <div
-                                key={i}
-                                title={`${p.east_m} m E, ${p.north_m} m N: ${fmt(p.elevation_m, " m")}`}
-                                style={{
-                                  background:
-                                    p.elevation_m === null
-                                      ? "#242e33"
-                                      : `hsl(${75 + ((p.elevation_m - low) / (high - low || 1)) * 50} 25% ${20 + ((p.elevation_m - low) / (high - low || 1)) * 55}%)`,
-                                }}
-                              />
-                            ));
-                        })()}
-                      </div>
-                    )}
-                    <p className="muted">
-                      {analysis.terrain.method ||
-                        "No terrain layer is drawn without measured elevation data. Configure LOLA_MANIFEST on the backend; see the README for the required CRS, vertical datum, provenance, and checksum."}
-                    </p>
-                    <div className="reference-links">
-                      <a
-                        href="https://quickmap.lroc.asu.edu/"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        LROC QuickMap <ExternalLink size={14} />
-                      </a>
-                      <a
-                        href="https://trek.nasa.gov/moon/"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        NASA Moon Trek <ExternalLink size={14} />
-                      </a>
-                    </div>
-                    <p className="muted">
-                      External map references only. This app does not assume or
-                      proxy an undocumented imagery API. Subpixel rocks,
-                      roughness, and landing hazards remain unassessed.
-                    </p>
-                  </div>
-                )}
-              </section>
-            )}
+            {view === 2 && <TerrainAssessment location={selected} onSelect={setSelected}/> }
             {view === 3 && (
               <section className="panel analysis-panel">
                 <div className="panel-heading">

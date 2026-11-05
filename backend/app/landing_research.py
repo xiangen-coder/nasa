@@ -131,6 +131,18 @@ def evaluate(request:ResearchRequest):
         raise HTTPException(422,'Research evaluation allows 400 intervals per site. Increase the time step.')
     return research(request)
 
+@router.get('/terrain')
+def terrain(latitude:float=Query(ge=-90,le=90),longitude:float=Query(ge=-180,le=180),radius_m:int=Query(default=100,ge=25,le=500)):
+    """Bounded local raster window; no Horizons requests or scientific downloads."""
+    location=Location(latitude=latitude,longitude=longitude)
+    local=rasters.local_terrain(location,radius_m)
+    elevation={'available':True,'value':local['elevation_m'],'source':local['source']} if local.get('available') else rasters.measurement('horizon_dem',location)
+    return {'location':location.model_dump(),'radius_m':radius_m,'terrain':local,'regional_elevation':elevation,
+            'coordinate_note':'Diagnostic offsets follow projected raster axes, centred on the nearest pixel; grid up is not necessarily geographic north.',
+            'limitations':['Elevation is metres above the 1737400 m lunar reference sphere in MOON_ME/DE421.',
+                'Slope, relief and detrended roughness use the native-resolution neighbourhood; the displayed grid is subsampled.',
+                'Regional elevation alone cannot establish footprint slope or landing safety. No horizon or hazard assessment is implied.']}
+
 @router.get('/datasets')
 def datasets():
     return {'datasets':rasters.status(),'preparation_command':'python scripts/prepare_lunar_research.py',

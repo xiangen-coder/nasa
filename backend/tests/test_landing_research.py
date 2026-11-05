@@ -104,3 +104,29 @@ def test_api_validation():
     assert client.post('/api/research/evaluate',json={'mission':{'latitude':float(100),'longitude':0,'start':'2026-11-05T00:00:00Z','end':'2026-11-06T00:00:00Z'}}).status_code==422
     assert client.get('/api/research/imagery?latitude=0&longitude=0').status_code==422
     assert client.get('/api/research/datasets').status_code==200
+
+def test_terrain_endpoint_native_window_no_horizons(raster_registry,monkeypatch):
+    from app.main import app
+    import app.landing_research as module
+    raster_registry(np.tile(np.arange(61)*5*np.tan(np.deg2rad(10)),(61,1)))
+    def forbidden(*args,**kwargs): raise AssertionError('Terrain endpoint must not call Horizons')
+    monkeypatch.setattr(module,'surface_observations',forbidden)
+    r=TestClient(app).get('/api/research/terrain?latitude=-90&longitude=0&radius_m=100')
+    assert r.status_code==200
+    data=r.json();assert data['terrain']['slope_p95_deg']==pytest.approx(10,abs=.001)
+    assert data['regional_elevation']['value']==data['terrain']['elevation_m']
+    assert data['terrain']['resolution_m']==5
+    assert 'projected raster axes' in data['coordinate_note']
+
+def test_terrain_endpoint_missing_footprint_keeps_elevation_separate(monkeypatch):
+    from app.main import app
+    monkeypatch.setattr(lunar_rasters,'local_terrain',lambda *args:{'available':False,'reason':'Outside footprint coverage','grid':[]})
+    monkeypatch.setattr(lunar_rasters,'measurement',lambda kind,loc:{'available':True,'value':1240.,'source':{'name':'TEST REGIONAL DEM'}})
+    data=TestClient(app).get('/api/research/terrain?latitude=-89&longitude=0').json()
+    assert not data['terrain']['available'];assert 'slope_p95_deg' not in data['terrain']
+    assert data['regional_elevation']['value']==1240
+
+@pytest.mark.parametrize('query',['latitude=91&longitude=0','latitude=-90&longitude=181','latitude=nan&longitude=0','latitude=-90&longitude=0&radius_m=0','latitude=-90&longitude=0&radius_m=501'])
+def test_terrain_endpoint_rejects_invalid_requests(query):
+    from app.main import app
+    assert TestClient(app).get('/api/research/terrain?'+query).status_code==422
