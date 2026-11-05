@@ -15,6 +15,7 @@ SOURCES={'lola':'https://pgda.gsfc.nasa.gov/products/78',
 
 for _kind in ['height_uncertainty','slope_uncertainty','sample_count']:
     SOURCES[_kind]='https://pgda.gsfc.nasa.gov/products/78'
+SOURCES['horizon_dem']='https://pgda.gsfc.nasa.gov/products/90'
 
 def registry():
     default=ROOT/'data/lunar/manifest.json'
@@ -28,7 +29,7 @@ def registry():
 
 def status():
     root,products,missing=registry()
-    return [{'kind':k,'name':products.get(k,{}).get('name',k),'status':'configured' if k in products and (root/products[k]['path']).is_file() else 'unavailable',
+    return [{'kind':k,'name':products.get(k,{}).get('name',k),'status':'configured' if k in products and ((root/products[k]['path']).is_file() or bool(products[k].get('parts')) and all((root/p['path']).is_file() for p in products[k]['parts'])) else 'unavailable',
              'source_url':products.get(k,{}).get('source_url',v),'resolution_m':products.get(k,{}).get('resolution_m'),
              'observation_period':products.get(k,{}).get('observation_period'),'quality':products.get(k,{}).get('quality'),
              'reason':missing.get(k,'Run the offline preparation command or register a validated regional product.' if k not in products else None)} for k,v in SOURCES.items()]
@@ -36,14 +37,16 @@ def status():
 def opened(kind):
     root,products,_=registry()
     if kind not in products: raise ValueError(f'{kind} product is not configured.')
-    meta=products[kind];path=root/meta['path']
+    meta=products[kind]
+    from .large_raster import product_path
+    path=product_path(root,meta)
     verify(str(path),path.stat().st_mtime_ns,meta['sha256'])
     ds=rasterio.open(path)
     crs=CRS(ds.crs) if ds.crs else None
-    expected='K' if kind.startswith('temperature') else 'm' if kind=='lola' else 'fraction'
+    expected='K' if kind.startswith('temperature') else 'm' if kind in ('lola','horizon_dem') else 'fraction'
     if not crs or abs(crs.ellipsoid.semi_major_metre-RADIUS)>1 or abs(crs.ellipsoid.semi_minor_metre-RADIUS)>1 or meta.get('units')!=expected:
         ds.close();raise ValueError('Product requires a spherical lunar CRS and declared physical units.')
-    if kind=='lola' and (meta.get('reference')!='radius_minus_1737400m' or meta.get('frame')!='MOON_ME_DE421'):
+    if kind in ('lola','horizon_dem') and (meta.get('reference')!='radius_minus_1737400m' or meta.get('frame')!='MOON_ME_DE421'):
         ds.close();raise ValueError('LOLA vertical datum / mean-Earth frame not confirmed.')
     return ds,meta
 
@@ -106,7 +109,10 @@ def local_terrain(location,radius_m=100):
 def horizon(location,height):
     """Finite 20 km terrain screening; missing rays never imply a flat horizon."""
     try:
-        ds,meta=opened('lola')
+        try:
+            ds,meta=opened('horizon_dem')
+        except (OSError,ValueError,KeyError,rasterio.errors.RasterioError):
+            ds,meta=opened('lola')
         with ds:
             transform=Transformer.from_crs(GEO,ds.crs,always_xy=True)
             azimuths=np.arange(0,360,5); distances=np.arange(max(25,max(ds.res)),20001,max(25,max(ds.res)))
@@ -121,6 +127,6 @@ def horizon(location,height):
             angle=dist/RADIUS
             angles=np.degrees(np.arctan2((RADIUS+heights)*np.cos(angle)-(RADIUS+height),(RADIUS+heights)*np.sin(angle)))
             return {'available':True,'profile':[{'azimuth':int(a),'elevation':float(e)} for a,e in zip(azimuths,angles.max(axis=1))],
-                    'method':'5 degree azimuth spacing; nearest-neighbour rays to 20 km; farther terrain and subpixel obstacles excluded.','source':meta}
+                    'method':f'5 degree azimuth spacing; nearest-neighbour rays to 20 km using {max(ds.res):g} m DEM; farther terrain and subpixel obstacles excluded. Reference-frame alignment and DEM errors remain unquantified.','source':meta}
     except (OSError,ValueError,KeyError,rasterio.errors.RasterioError) as exc:
         return {'available':False,'profile':None,'reason':str(exc)}

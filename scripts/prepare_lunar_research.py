@@ -54,6 +54,10 @@ def prepare(output):
     output.mkdir(parents=True,exist_ok=True)
     raw=output/'raw';raw.mkdir(exist_ok=True)
     manifest={'version':1,'products':{},'missing':{}}
+    old=output/'manifest.json'
+    if old.exists():
+        previous=json.loads(old.read_text(encoding='utf-8'))
+        manifest['products']={k:v for k,v in previous.get('products',{}).items() if k not in PRODUCTS}
     for kind,meta in PRODUCTS.items():
         try:
             print('Preparing',kind,flush=True)

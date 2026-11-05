@@ -107,3 +107,5 @@ New: `backend/app/surface_horizons.py`, `lunar_rasters.py`, `landing_research.py
 Modified: `backend/app/main.py` (router registration), `frontend/app/page.tsx` (panel integration), `frontend/app/globals.css` (scoped styles), `Dockerfile.public` and `backend/Dockerfile` (small data bundle), `.gitignore`, `.dockerignore` and `frontend/.dockerignore` (large local files/build artifacts), `README.md` (feature guide). Original API semantics and dependencies are unchanged.
 
 Apollo LM uncertainty layers and backup-point screening are documented in [APOLLO_RELIABILITY.md](APOLLO_RELIABILITY.md).
+
+The separate [wide terrain integration](WIDE_TERRAIN.md) now supplies a native 20 m regional horizon DEM. Its coverage and finite-horizon limitations are distinct from the 4 km local 5 m terrain crop.

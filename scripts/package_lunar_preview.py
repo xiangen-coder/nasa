@@ -7,6 +7,10 @@ ROOT=Path(__file__).resolve().parents[1]
 source=ROOT/'data/lunar';output=ROOT/'data/lunar_preview';output.mkdir(exist_ok=True)
 manifest=json.loads((source/'manifest.json').read_text())
 for kind,meta in manifest['products'].items():
+    if kind=='horizon_dem':
+        meta['path']=Path(meta['path']).name
+        for item in meta.get('parts',[]):item['path']=Path(item['path']).name
+        continue
     with rasterio.open(source/meta['path']) as ds:
         # One native 5 m regional crop, and native 240 m thermal coverage of the existing polar points.
         bounds=(-13000,-14000,-9000,-10000) if kind in ('lola','height_uncertainty','slope_uncertainty','sample_count') else (-60000,-60000,60000,60000)

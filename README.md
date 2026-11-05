@@ -191,3 +191,5 @@ The existing Map explorer and Site comparison now include a five-factor research
 
 ### Apollo LM uncertainty and backup-point screening
 The NASA landing research panel includes a separate Apollo-reference uncertainty assessment, bounded backup terrain search and mitigation report. See [the reliability guide](docs/APOLLO_RELIABILITY.md) for datasets, assumptions and limitations.
+
+The NASA research panel also uses a [wider 20 m terrain subset](docs/WIDE_TERRAIN.md) for finite-horizon screening and displays terrain thresholds on its elevation chart.

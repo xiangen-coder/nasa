@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 import httpx
+import numpy as np
 from .models import Mission, Location
 from .surface_horizons import surface_observations
 from .astronomy import HorizonsUnavailable
@@ -92,15 +93,19 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
 def research(request):
     mission=request.mission;limits=request.limits
     t=rasters.local_terrain(mission,limits.radius_m)
-    screening=rasters.horizon(mission,t['elevation_m']) if t.get('available') else {'available':False,'profile':None,'reason':'Observer terrain height unavailable.'}
+    observer_height={'available':True,'value':t['elevation_m'],'source':t['source']} if t.get('available') else rasters.measurement('horizon_dem',mission)
+    screening=rasters.horizon(mission,observer_height['value']) if observer_height.get('available') else {'available':False,'profile':None,'reason':'Observer terrain height unavailable.'}
     hazards=rasters.measurement('hazards',mission);ice=rasters.measurement('ice',mission)
     lo=rasters.measurement('temperature_min',mission);hi=rasters.measurement('temperature_max',mission)
     thermal={'available':False,'minimum':lo,'maximum':hi}
     if lo['available'] and hi['available'] and lo['value']<=hi['value'] and lo['source'].get('observation_period')==hi['source'].get('observation_period'):
         thermal.update(available=True,minimum_k=lo['value'],maximum_k=hi['value'],source=lo['source'])
     try:
-        geometry=surface_observations(mission,t.get('elevation_m',0) if t.get('available') else 0)
+        geometry=surface_observations(mission,observer_height['value'] if observer_height.get('available') else 0)
         for row in geometry['series']:
+            profile=screening['profile']
+            for body in ['sun','earth']:
+                row[body+'_horizon_deg']=float(np.interp(row[body+'_azimuth']%360,[p['azimuth'] for p in profile]+[360],[p['elevation'] for p in profile]+[profile[0]['elevation']]))+(mission.clearance_deg if body=='earth' else 0) if profile else None
             row['sun_visible']=visible(row['sun_elevation'],row['sun_azimuth'],screening['profile'])
             row['earth_visible']=visible(row['earth_elevation'],row['earth_azimuth'],screening['profile'],mission.clearance_deg)
             row['simultaneous']=row['sun_visible'] and row['earth_visible']
@@ -111,7 +116,7 @@ def research(request):
         geometry['sunlight_hours']=sum(w['hours'] for w in geometry['sunlight_windows'])
     except HorizonsUnavailable as exc:
         geometry={'available':False,'reason':str(exc)}
-    return {'mission':mission.model_dump(mode='json'),'limits':limits.model_dump(),'terrain':t,'horizon':screening,
+    return {'mission':mission.model_dump(mode='json'),'limits':limits.model_dump(),'terrain':t,'horizon':screening,'observer_height':observer_height,
             'geometry':geometry,'temperature':thermal,'hazards':hazards,'ice':ice,
             **score_factors(t,geometry,thermal,hazards,ice,limits),
             'limitations':['Research ranking only; never a NASA landing certification or a safe-site recommendation.',
