@@ -3,6 +3,7 @@ import "./globals.css";
 import "./canva.css";
 import "./cinematic-hero.css";
 import "./integration-latest.css";
+import "./canva-reference.css";
 export const metadata: Metadata = {
   title: "Lunar Landing Site Navigator",
   description:
