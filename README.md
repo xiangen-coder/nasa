@@ -188,3 +188,6 @@ No new runtime packages are required. Outbound HTTPS to `ssd.jpl.nasa.gov` is ne
 # NASA landing research extension
 
 The existing Map explorer and Site comparison now include a five-factor research panel using lunar-surface JPL Horizons observations, native-resolution LOLA and Diviner subsets, and LROC imagery. Scores show missing data, provisional weights and hard-limit failures. This is not landing certification. See [data setup, scoring and limitations](docs/LUNAR_RESEARCH.md).
+
+### Apollo LM uncertainty and backup-point screening
+The NASA landing research panel includes a separate Apollo-reference uncertainty assessment, bounded backup terrain search and mitigation report. See [the reliability guide](docs/APOLLO_RELIABILITY.md) for datasets, assumptions and limitations.

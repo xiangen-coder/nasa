@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import LandingReliability from "./LandingReliability";
 import type { Site, Mission } from "../app/types";
 
 type Source = { name?: string; source_url?: string; resolution_m?: number; observation_period?: string; quality?: string };
@@ -84,6 +85,7 @@ export default function LandingResearch({mission,sites,onSelect}:{mission:Missio
         <div className="astro-camera-controls"><button className="button subtle" disabled={result.mission.latitude> -85.5} onClick={()=>{setImagery("nac");setImageError(false);}}>Load LROC regional image</button><button className="button subtle" disabled={result.mission.latitude> -85.5} onClick={()=>{setImagery("psr");setImageError(false);}}>Inspect PSR imagery</button><a href="https://quickmap.lroc.im-ldi.com/" target="_blank" rel="noreferrer">Open LROC QuickMap</a></div>
         {imagery&&!imageError&&<figure><img className="research-image" src={`/api/research/imagery?latitude=${result.mission.latitude}&longitude=${result.mission.longitude}&layer=${imagery}`} alt={`LROC ${imagery} image centred on ${result.mission.name}. Dark or blank areas do not imply hazard-free terrain.`} onError={()=>setImageError(true)}/><figcaption>NASA/GSFC/LROC · centre {result.mission.latitude}°, {result.mission.longitude}° · 4 km square; no automatic hazard detections.</figcaption></figure>}{imageError&&<p className="info">LROC preview unavailable. Use QuickMap and enter the coordinates above.</p>}
       </>}
+      <LandingReliability mission={mission} limits={limits} onSelect={onSelect} />
       <details className="explanation"><summary>Dataset availability and activation</summary><p>Large scientific files are downloaded and processed offline once. Clicks read bounded local windows. New regional files can be registered without changing the UI.</p><div className="table-scroll"><table><thead><tr><th>Dataset</th><th>Status / resolution</th><th>Observation period / quality</th></tr></thead><tbody>{catalog?.datasets.map(d=><tr key={d.kind}><td><a href={d.source_url} target="_blank" rel="noreferrer">{d.name}</a></td><td>{d.status} · {num(d.resolution_m," m")}</td><td>{d.observation_period||"Not supplied"}<br/>{d.quality||d.reason}</td></tr>)}</tbody></table></div><p>Preparation command: <code>{catalog?.preparation_command}</code></p><a href={catalog?.documentation_url||"https://github.com/xiangen-coder/nasa"} target="_blank" rel="noreferrer">Dataset setup, scoring methods and limitations</a></details>
     </div>
   </section>;

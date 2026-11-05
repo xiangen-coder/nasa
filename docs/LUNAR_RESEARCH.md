@@ -36,7 +36,7 @@ Downloaded NASA PGDA [Site01 Connecting Ridge product](https://pgda.gsfc.nasa.go
 
 Local terrain evaluation uses all native pixels inside a configurable circular neighbourhood (default radius 100 m), with complete coverage and at least nine samples. Slopes use projected metre central differences; the 95th percentile and maximum are reported. Roughness is RMS residual from a least-squares plane; relief is maximum minus minimum elevation. Any missing data in the derivative stencil rejects the neighbourhood. Raster CRS, units, vertical reference, frame and file hash are checked. The public diagnostic layer is decimated for display only; calculations retain native values. Coordinates in that layer are projected grid X/Y offsets, not a compass orientation at arbitrary polar longitude.
 
-**Public coverage:** a 1 km × 1 km native-resolution crop around the Site01 raster centre. Full offline source covers 16 km × 16 km; neither alone supplies all 20 km horizon rays. It is deliberately reported as incomplete horizon coverage. A wider, frame-compatible mosaic is needed for terrain-screened lighting. The three pre-existing exploratory map locations are not represented as having LOLA coverage when they fall outside this crop.
+**Public coverage:** a 4 km × 4 km native-resolution crop around the Site01 raster centre. Full offline source covers 16 km × 16 km; neither alone supplies all 20 km horizon rays. It is deliberately reported as incomplete horizon coverage. A wider, frame-compatible mosaic is needed for terrain-screened lighting. The three pre-existing exploratory map locations are not represented as having LOLA coverage when they fall outside this crop.
 
 ### LROC
 
@@ -82,7 +82,7 @@ python -m venv .venv
 .\.venv\Scripts\python -m pip install -r backend/requirements.txt
 .\.venv\Scripts\python scripts/prepare_lunar_research.py
 ```
-The downloader retrieves fixed official products (about 90 MB once), bounds each file to 100 MB, validates readability and lunar CRS, applies scale/offset, masks invalid temperatures, and writes tiled compressed GeoTIFFs plus SHA-256 manifests. Processing is offline so it does not occupy a user's map request; run it in a separate terminal/background batch when adding data. Partial downloads use a distinct `.download` suffix. It reports failures in `manifest.json` and can reuse completed valid raw files. It does not overwrite app code or silently fabricate a product.
+The downloader retrieves fixed official products (about 210 MB once), bounds each file to 100 MB, validates readability and lunar CRS, applies scale/offset, masks invalid temperatures, and writes tiled compressed GeoTIFFs plus SHA-256 manifests. Processing is offline so it does not occupy a user's map request; run it in a separate terminal/background batch when adding data. Partial downloads use a distinct `.download` suffix. It reports failures in `manifest.json` and can reuse completed valid raw files. It does not overwrite app code or silently fabricate a product.
 
 If the Diviner server presents an incomplete TLS certificate chain to Python, **do not disable certificate verification**. Obtain the exact numeric files through a normal verified browser download or Windows `curl.exe`, place them at `data/lunar/raw/temperature_min.tif` and `temperature_max.tif`, then rerun preparation. The direct URLs and original SHA-256 values are in `data/lunar_preview/manifest.json`. No credentials or NASA API key is needed.
 
@@ -105,3 +105,5 @@ Validation on 5 November 2026 (Malaysia): all 91 backend tests passed, including
 New: `backend/app/surface_horizons.py`, `lunar_rasters.py`, `landing_research.py`; `backend/tests/test_landing_research.py` and authentic observer fixture; `frontend/components/LandingResearch.tsx`; `scripts/prepare_lunar_research.py`, `package_lunar_preview.py`; `data/lunar_preview/{manifest.json,lola.tif,temperature_min.tif,temperature_max.tif}`; this document.
 
 Modified: `backend/app/main.py` (router registration), `frontend/app/page.tsx` (panel integration), `frontend/app/globals.css` (scoped styles), `Dockerfile.public` and `backend/Dockerfile` (small data bundle), `.gitignore`, `.dockerignore` and `frontend/.dockerignore` (large local files/build artifacts), `README.md` (feature guide). Original API semantics and dependencies are unchanged.
+
+Apollo LM uncertainty layers and backup-point screening are documented in [APOLLO_RELIABILITY.md](APOLLO_RELIABILITY.md).

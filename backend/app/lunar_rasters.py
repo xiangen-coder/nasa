@@ -13,6 +13,9 @@ SOURCES={'lola':'https://pgda.gsfc.nasa.gov/products/78',
  'temperature_min':'https://www.diviner.ucla.edu/data','temperature_max':'https://www.diviner.ucla.edu/data',
  'hazards':'https://pds.lroc.im-ldi.com/data/', 'ice':'https://pds-geosciences.wustl.edu/missions/lro/lend.htm'}
 
+for _kind in ['height_uncertainty','slope_uncertainty','sample_count']:
+    SOURCES[_kind]='https://pgda.gsfc.nasa.gov/products/78'
+
 def registry():
     default=ROOT/'data/lunar/manifest.json'
     if not default.exists(): default=ROOT/'data/lunar_preview/manifest.json'
@@ -95,7 +98,7 @@ def local_terrain(location,radius_m=100):
             stride=max(1,int(np.ceil((2*n+1)/25)))
             grid=[{'east_m':float(xx[i,j]),'north_m':float(-yy[i,j]),'elevation_m':float(z[i,j]),'slope_deg':float(np.degrees(np.arctan(np.hypot(dzdx[i,j],dzdy[i,j]))))} for i in range(0,2*n+1,stride) for j in range(0,2*n+1,stride) if circle[i,j]]
             return {'available':True,'elevation_m':float(z[n,n]),'slope_p95_deg':float(np.percentile(slopes,95)),
-                    'slope_max_deg':float(slopes.max()),'roughness_m':float(np.sqrt(np.mean(residual**2))),
+                    'slope_mean_deg':float(slopes.mean()),'slope_max_deg':float(slopes.max()),'roughness_m':float(np.sqrt(np.mean(residual**2))),
                     'relief_m':float(np.ptp(heights)),'resolution_m':resolution,'radius_m':radius_m,'coverage':coverage,'samples':int(valid.sum()),'source':meta,'grid':grid}
     except (OSError,ValueError,KeyError,rasterio.errors.RasterioError) as exc:
         return {'available':False,'reason':str(exc),'grid':[]}

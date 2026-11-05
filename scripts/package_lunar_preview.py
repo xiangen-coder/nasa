@@ -9,7 +9,7 @@ manifest=json.loads((source/'manifest.json').read_text())
 for kind,meta in manifest['products'].items():
     with rasterio.open(source/meta['path']) as ds:
         # One native 5 m regional crop, and native 240 m thermal coverage of the existing polar points.
-        bounds=(-11500,-12500,-10500,-11500) if kind=='lola' else (-60000,-60000,60000,60000)
+        bounds=(-13000,-14000,-9000,-10000) if kind in ('lola','height_uncertainty','slope_uncertainty','sample_count') else (-60000,-60000,60000,60000)
         w=from_bounds(*bounds,ds.transform).round_offsets().round_lengths()
         w=w.intersection(Window(0,0,ds.width,ds.height))
         profile=ds.profile.copy();profile.update(width=int(w.width),height=int(w.height),transform=ds.window_transform(w))

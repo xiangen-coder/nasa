@@ -11,18 +11,18 @@
       "documentation": "https://pgda.gsfc.nasa.gov/products/78",
       "quality": "Interpolated altimetry; approximately 90% of 5 m pixels interpolated. Not boulder-scale certification.",
       "path": "lola.tif",
-      "sha256": "5a0855568917fe797262ca904b2ea9c851b113ddf4fd828a7ef78d01cd2edf11",
+      "sha256": "3bb4c33a1a1267dc4714e2c5e1a707d657a613e389f799daf120966c217c99d8",
       "source_sha256": "3ba7b97cb00a2bcf21189c3aeb535f65afc21207154ab9f0d43c5bdc1f7e747e",
       "source_url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_surf.tif",
       "resolution_m": 5.0,
-      "retrieved_at": "2026-11-04T18:47:30.389461+00:00",
+      "retrieved_at": "2026-11-05T07:43:28.424931+00:00",
       "status": "processed",
       "coverage_note": "Native-resolution subset for public demo; outside coverage is unavailable. Run prepare_lunar_research.py for full source products.",
       "projected_bounds_m": [
-        -11500,
-        -12500,
-        -10500,
-        -11500
+        -13000,
+        -14000,
+        -9000,
+        -10000
       ]
     },
     "temperature_min": {
@@ -38,7 +38,7 @@
       "source_sha256": "793d4a83c111b8a603f7b726ce5f7efae02e21e19f2589595922b348286d7721",
       "source_url": "https://luna1.diviner.ucla.edu/~jpierre/diviner/level4_polar/additional_maps/polar_south_80_summer_min-float.tif",
       "resolution_m": 240.03595736281088,
-      "retrieved_at": "2026-11-04T18:47:32.038621+00:00",
+      "retrieved_at": "2026-11-05T07:43:30.907664+00:00",
       "status": "processed",
       "coverage_note": "Native-resolution subset for public demo; outside coverage is unavailable. Run prepare_lunar_research.py for full source products.",
       "projected_bounds_m": [
@@ -61,7 +61,7 @@
       "source_sha256": "ba4a1b6275402d6b0c1000ceb0208ad63d37665afaeb902ab6f108c67c0a0c67",
       "source_url": "https://luna1.diviner.ucla.edu/~jpierre/diviner/level4_polar/additional_maps/polar_south_80_summer_max-float.tif",
       "resolution_m": 240.03595736281088,
-      "retrieved_at": "2026-11-04T18:47:33.863392+00:00",
+      "retrieved_at": "2026-11-05T07:43:33.461820+00:00",
       "status": "processed",
       "coverage_note": "Native-resolution subset for public demo; outside coverage is unavailable. Run prepare_lunar_research.py for full source products.",
       "projected_bounds_m": [
@@ -69,6 +69,75 @@
         -60000,
         60000,
         60000
+      ]
+    },
+    "height_uncertainty": {
+      "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_toterr.tif",
+      "name": "LOLA Site01 height uncertainty",
+      "units": "m RMS",
+      "frame": "MOON_ME_DE421",
+      "observation_period": "See Barker et al. 2021 product documentation",
+      "documentation": "https://pgda.gsfc.nasa.gov/products/78",
+      "quality": "Published RMS uncertainty or native laser shot counts; no calibrated landing probability.",
+      "path": "height_uncertainty.tif",
+      "sha256": "d00cc8dc55dbab0d3fd77d039f605aef762528947d7e36420e97bd66cfd1e277",
+      "source_sha256": "cf2cf52f52d2aa51e60d058010d10b0ebfb1d3e920f5a2b9a46eb6c51054ab1c",
+      "source_url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_toterr.tif",
+      "resolution_m": 5.0,
+      "retrieved_at": "2026-11-05T07:43:38.129872+00:00",
+      "status": "processed",
+      "coverage_note": "Native-resolution subset for public demo; outside coverage is unavailable. Run prepare_lunar_research.py for full source products.",
+      "projected_bounds_m": [
+        -13000,
+        -14000,
+        -9000,
+        -10000
+      ]
+    },
+    "slope_uncertainty": {
+      "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_slperr.tif",
+      "name": "LOLA Site01 slope uncertainty",
+      "units": "degree RMS",
+      "frame": "MOON_ME_DE421",
+      "observation_period": "See Barker et al. 2021 product documentation",
+      "documentation": "https://pgda.gsfc.nasa.gov/products/78",
+      "quality": "Published RMS uncertainty or native laser shot counts; no calibrated landing probability.",
+      "path": "slope_uncertainty.tif",
+      "sha256": "e951278ce59dae4cba44b3c4215aca17451e5bdeac22b22ea38092d88ecf7686",
+      "source_sha256": "52bc3b239f61605e6bb98bab6d6b17acd22389c59e57336862157f2fbd643a33",
+      "source_url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_slperr.tif",
+      "resolution_m": 5.0,
+      "retrieved_at": "2026-11-05T07:43:43.685254+00:00",
+      "status": "processed",
+      "coverage_note": "Native-resolution subset for public demo; outside coverage is unavailable. Run prepare_lunar_research.py for full source products.",
+      "projected_bounds_m": [
+        -13000,
+        -14000,
+        -9000,
+        -10000
+      ]
+    },
+    "sample_count": {
+      "url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_ldec.tif",
+      "name": "LOLA Site01 sample count",
+      "units": "count",
+      "frame": "MOON_ME_DE421",
+      "observation_period": "See Barker et al. 2021 product documentation",
+      "documentation": "https://pgda.gsfc.nasa.gov/products/78",
+      "quality": "Published RMS uncertainty or native laser shot counts; no calibrated landing probability.",
+      "path": "sample_count.tif",
+      "sha256": "33d1ac6214f6b54a0fa041e7cdb11113af9fbc5435ceb044e91abb5b5c29bc53",
+      "source_sha256": "16d6ed21020ad48fa71d94e7437492acf5bf04118f52bcd292f57f22ead4cd23",
+      "source_url": "https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_ldec.tif",
+      "resolution_m": 5.0,
+      "retrieved_at": "2026-11-05T07:43:46.997708+00:00",
+      "status": "processed",
+      "coverage_note": "Native-resolution subset for public demo; outside coverage is unavailable. Run prepare_lunar_research.py for full source products.",
+      "projected_bounds_m": [
+        -13000,
+        -14000,
+        -9000,
+        -10000
       ]
     }
   },

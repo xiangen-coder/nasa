@@ -1,7 +1,7 @@
 """Offline NASA product download/registration. Never runs on a map click.
 
 Run: python scripts/prepare_lunar_research.py [--output data/lunar]
-Downloads about 90 MB once, converts verified numeric GeoTIFFs to compressed tiles.
+Downloads about 210 MB once, converts verified numeric GeoTIFFs to compressed tiles.
 """
 import argparse
 import hashlib
@@ -22,6 +22,9 @@ PRODUCTS={
  'temperature_min': {'url':DIV+'polar_south_80_summer_min-float.tif','name':'Diviner south-pole summer minimum','units':'K','frame':'MOON_ME','observation_period':'2009-07-05 to 2019-02-17','documentation':'https://www.diviner.ucla.edu/data','quality':'Historical summer bolometric brightness-temperature composite; not a mission forecast.'},
  'temperature_max': {'url':DIV+'polar_south_80_summer_max-float.tif','name':'Diviner south-pole summer maximum','units':'K','frame':'MOON_ME','observation_period':'2009-07-05 to 2019-02-17','documentation':'https://www.diviner.ucla.edu/data','quality':'Historical summer bolometric brightness-temperature composite; not a mission forecast.'}
 }
+
+for kind,suffix,units in [('height_uncertainty','toterr','m RMS'),('slope_uncertainty','slperr','degree RMS'),('sample_count','ldec','count')]:
+    PRODUCTS[kind]={'url':f'https://pgda.gsfc.nasa.gov/data/LOLA_5mpp/Site01/Site01_final_adj_5mpp_{suffix}.tif','name':f'LOLA Site01 {kind.replace("_"," ")}','units':units,'frame':'MOON_ME_DE421','observation_period':'See Barker et al. 2021 product documentation','documentation':'https://pgda.gsfc.nasa.gov/products/78','quality':'Published RMS uncertainty or native laser shot counts; no calibrated landing probability.'}
 
 def digest(path):
     with path.open('rb') as handle:
