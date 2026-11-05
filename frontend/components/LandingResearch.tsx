@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import LandingReliability from "./LandingReliability";
+import type { ResearchPriority } from "./SearchConsole";
 import type { Site, Mission } from "../app/types";
 
 type Source = { name?: string; source_url?: string; resolution_m?: number; observation_period?: string; quality?: string };
@@ -28,7 +29,7 @@ async function api<T>(path:string,body?:unknown,signal?:AbortSignal):Promise<T>{
   return r.json();
 }
 
-export default function LandingResearch({mission,sites,onSelect}:{mission:Mission;sites:Site[];onSelect:(site:Site)=>void}){
+export default function LandingResearch({mission,sites,onSelect,actionRef,priority="T",onBusyChange}:{mission:Mission;sites:Site[];onSelect:(site:Site)=>void;actionRef?:Ref<{evaluate:()=>Promise<void>}>;priority?:ResearchPriority;onBusyChange?:(busy:boolean)=>void}){
   const [catalog,setCatalog]=useState<Catalog|null>(null),[saved,setSaved]=useState<Site[]>([]);
   const [limits,setLimits]=useState(DEFAULTS),[results,setResults]=useState<Research[]>([]),[detail,setDetail]=useState(0);
   const [busy,setBusy]=useState(false),[progress,setProgress]=useState(""),[error,setError]=useState("");
@@ -58,10 +59,13 @@ export default function LandingResearch({mission,sites,onSelect}:{mission:Missio
     }catch(e){if(gen===generation.current)setError(controller.signal.aborted?"Evaluation cancelled or timed out. Completed results remain available; retry the missing site.":(e as Error).message);}
     finally{if(gen===generation.current){setBusy(false);setProgress("");}}
   };
-  return <section className="panel research-panel" aria-label="NASA landing research">
+  useImperativeHandle(actionRef,()=>({evaluate:()=>run(false)}));
+  useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
+  return <section id="landing-assessment" className="panel research-panel" aria-label="NASA landing research">
     <div className="panel-heading"><div><h2>NASA landing research</h2><p>Five-factor screening · existing map selection and mission dates</p></div><span className="tag">RESEARCH MODEL v1</span></div>
     <div className="research-body">
       <p><strong>{mission.name}</strong> · {mission.latitude.toFixed(5)}° N, {mission.longitude.toFixed(5)}° E<br/>{mission.start} → {mission.end} · {mission.interval_minutes}-minute samples</p>
+      <p className="priority-label">Your focus: {priority==="T"?"Terrain safety":priority==="S"?"Sunlight availability":"Earth communication"}. Highlighted below; all five factors retain their published weights.</p>
       <p className="muted">0.35 Terrain + 0.25 Sunlight + 0.20 Communication + 0.15 Temperature + 0.05 Ice. A high score never establishes landing safety. Unknown factors remain unavailable.</p>
       <div className="astro-inputs"><label>Saved point name<input value={name} maxLength={100} onChange={e=>setName(e.target.value)}/></label><label>Historical NASA region association<select value={region} onChange={e=>setRegion(e.target.value)}><option value="">Custom / unverified region</option>{catalog?.regions.map(r=><option key={r.name}>{r.name}</option>)}</select></label><button className="button subtle" onClick={save}>Save selected point</button></div>
       <p className="muted">Points are stored in this browser. Region names are from NASA’s 19 August 2022 release, not a current mission shortlist or exact touchdown coordinates. Selecting a name does not prove that your point lies within its boundary.</p>
@@ -75,7 +79,7 @@ export default function LandingResearch({mission,sites,onSelect}:{mission:Missio
         <h3>{result.mission.name}: {num(result.score," / 100")} · {result.provisional?"provisional":"complete"}</h3>
         <p>Available weight: {num(result.available_weight*100,"%")} · Missing factors: {result.missing.join(", ")||"none"}. Safety: <strong>{result.safety_status.replaceAll("_"," ")}</strong>.</p>
         {result.constraints_failed.map(w=><p className="error" key={w}>{w}</p>)}{result.warnings.map(w=><p className="info" key={w}>{w}</p>)}
-        <div className="table-scroll"><table><thead><tr><th>Factor</th><th>Score / 100</th><th>Nominal → used weight</th><th>Contribution</th><th>Quality</th></tr></thead><tbody>{Object.entries(result.factors).map(([k,f])=><tr key={k}><th>{k} · {f.name}</th><td>{num(f.score)}</td><td>{num(f.weight*100,"%")} → {num(f.effective_weight*100,"%")}</td><td>{num(f.contribution," points")}</td><td>{f.quality}</td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table><thead><tr><th>Factor</th><th>Score / 100</th><th>Nominal → used weight</th><th>Contribution</th><th>Quality</th></tr></thead><tbody>{Object.entries(result.factors).map(([k,f])=><tr key={k} className={priority===k?"priority-factor":undefined}><th>{k} · {f.name}</th><td>{num(f.score)}</td><td>{num(f.weight*100,"%")} → {num(f.effective_weight*100,"%")}</td><td>{num(f.contribution," points")}</td><td>{f.quality}</td></tr>)}</tbody></table></div>
         <details className="explanation"><summary>Score calculation and sources</summary>{Object.entries(result.factors).map(([k,f])=><p key={k}><strong>{k}: </strong>{f.explanation} {f.source?.source_url&&<a href={f.source.source_url} target="_blank" rel="noreferrer">Source: {f.source.name||k}</a>}</p>)}{result.limitations.map(l=><p key={l}>{l}</p>)}</details>
         <div className="astro-metrics"><div className="panel"><span>Neighbourhood slope · p95 / max</span><strong>{num(result.terrain.slope_p95_deg,"°")} / {num(result.terrain.slope_max_deg,"°")}</strong><p>{num(result.terrain.resolution_m," m pixels")} · {num(result.terrain.radius_m," m radius")}</p></div><div className="panel"><span>Detrended roughness / relief</span><strong>{num(result.terrain.roughness_m," m")} / {num(result.terrain.relief_m," m")}</strong><p>Elevation: {num(result.terrain.elevation_m," m")}</p></div><div className="panel"><span>Diviner historical summer range</span><strong>{num(result.temperature.minimum_k," K")} – {num(result.temperature.maximum_k," K")}</strong><p>{result.temperature.source?.observation_period||"No valid paired temperature observations"}</p></div><div className="panel"><span>Estimated sunlight duration</span><strong>{num(result.geometry.sunlight_hours," hours")}</strong><p>{result.geometry.mode||"Unavailable"}</p></div></div>
         {!result.terrain.available&&<p className="muted">Fine-footprint terrain unavailable: {result.terrain.reason}</p>}
