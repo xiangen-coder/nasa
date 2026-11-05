@@ -306,7 +306,7 @@ export default function ResearchOverview({
         </article>
       </div>
       <div className="outlook-footer">
-        <button className="text-button" onClick={() => onNavigate(3)}>
+        <button className="text-button" onClick={() => onNavigate(11)}>
           Explore alternative coordinates <ArrowUpRight size={16} />
         </button>
         <span>NASA JPL HORIZONS · LOLA · HISTORICAL DIVINER</span>

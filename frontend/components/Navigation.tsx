@@ -16,14 +16,63 @@ import {
 } from "lucide-react";
 import PreferencesControls, { type Preferences } from "./Preferences";
 
-export const viewPaths = ["map-explorer","horizon-simulator","terrain-analysis","site-comparison","mission-archive","3d-observatory","reserved","search","result","about","settings"];
+export const viewPaths = [
+  "map-explorer",
+  "horizon-simulator",
+  "terrain-analysis",
+  "site-comparison",
+  "mission-archive",
+  "3d-observatory",
+  "reserved",
+  "search",
+  "result",
+  "about",
+  "settings",
+  "pre-results",
+];
 export const toolItems = [
- {view:0,label:"Map explorer",icon:Compass,detail:"Coordinates & geographic references"},
- {view:1,label:"Horizon simulator",icon:Activity,detail:"Sun, Earth & time playback"},
- {view:2,label:"Terrain analysis",icon:Layers,detail:"Elevation, slope & obstructions"},
- {view:3,label:"Site comparison",icon:SlidersHorizontal,detail:"Alternatives & weighted ranking"},
- {view:4,label:"Lunar mission archive",icon:Archive,detail:"Historical missions & documented 3D paths"},
- {view:5,label:"3D observatory",icon:Orbit,detail:"NASA positions & computed local sky"},
+  {
+    view: 11,
+    label: "Pre-result comparison",
+    icon: Layers,
+    detail: "Selected point & two research alternatives",
+  },
+  {
+    view: 0,
+    label: "Map explorer",
+    icon: Compass,
+    detail: "Coordinates & geographic references",
+  },
+  {
+    view: 1,
+    label: "Horizon simulator",
+    icon: Activity,
+    detail: "Sun, Earth & time playback",
+  },
+  {
+    view: 2,
+    label: "Terrain analysis",
+    icon: Layers,
+    detail: "Elevation, slope & obstructions",
+  },
+  {
+    view: 3,
+    label: "Site comparison",
+    icon: SlidersHorizontal,
+    detail: "Alternatives & weighted ranking",
+  },
+  {
+    view: 4,
+    label: "Lunar mission archive",
+    icon: Archive,
+    detail: "Historical missions & documented 3D paths",
+  },
+  {
+    view: 5,
+    label: "3D observatory",
+    icon: Orbit,
+    detail: "NASA positions & computed local sky",
+  },
 ];
 
 export default function Navigation({
@@ -79,7 +128,11 @@ export default function Navigation({
           <a
             key={item.view}
             href={`#${viewPaths[item.view]}`}
-            aria-current={view === item.view ? "page" : undefined}
+            aria-current={
+              view === item.view || (item.view === 7 && view === 11)
+                ? "page"
+                : undefined
+            }
             onClick={(e) => {
               e.preventDefault();
               navigate(item.view);
@@ -122,7 +175,7 @@ export default function Navigation({
         >
           <button
             ref={moreButton}
-            className={view < 7 || view === 11 ? "active" : ""}
+            className={view < 7 ? "active" : ""}
             aria-haspopup="menu"
             aria-expanded={more}
             aria-controls="more-tools"

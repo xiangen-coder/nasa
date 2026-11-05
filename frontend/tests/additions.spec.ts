@@ -23,6 +23,12 @@ test("news sidebar displays source, date, excerpt and external article link", as
     route.fulfill({ json: newsFixture }),
   );
   await page.goto("/");
+  await expect(
+    page.getByRole("complementary", { name: "Lunar exploration news" }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Open Lunar Dispatch", exact: true })
+    .click();
   const sidebar = page.getByRole("complementary", {
     name: "Lunar exploration news",
   });
@@ -54,6 +60,9 @@ test("unavailable and stale news are explicitly labeled", async ({ page }) => {
     }),
   );
   await page.goto("/");
+  await page
+    .getByRole("button", { name: "Open Lunar Dispatch", exact: true })
+    .click();
   const side = page.getByRole("complementary", {
     name: "Lunar exploration news",
   });
@@ -63,6 +72,9 @@ test("unavailable and stale news are explicitly labeled", async ({ page }) => {
     route.fulfill({ json: { ...newsFixture, status: "stale" } }),
   );
   await page.reload();
+  await page
+    .getByRole("button", { name: "Open Lunar Dispatch", exact: true })
+    .click();
   await expect(side).toContainText("Cached headlines");
   await expect(side).toContainText("STALE");
 });
@@ -77,7 +89,9 @@ test("uploaded models load, local import works, and sky follows computed samples
   );
   await page.goto("/");
   await nav(page, "3D observatory").click();
-  await page.getByRole("button", { name: "Reference models & local sky", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Reference models & local sky", exact: true })
+    .click();
   await expect(
     page.getByRole("status", { name: "3D model status" }),
   ).toContainText("Reference Moon");
@@ -120,16 +134,30 @@ test("uploaded models load, local import works, and sky follows computed samples
   expect(errors).toEqual([]);
 });
 
-
-test("observatory combines system simulation and models; removed tools are absent", async ({page}) => {
+test("observatory combines system simulation and models; removed tools are absent", async ({
+  page,
+}) => {
   await page.goto("/");
-  await expect(nav(page,"Mission planner")).toHaveCount(0);
-  await expect(nav(page,"Lunar surface route")).toHaveCount(0);
-  await expect(nav(page,"Sun–Earth–Moon")).toHaveCount(0);
-  await nav(page,"3D observatory").click();
-  await expect(page.getByRole("heading",{name:"Sun–Earth–Moon simulation",exact:true})).toBeVisible();
-  await page.getByRole("button",{name:"Reference models & local sky",exact:true}).click();
-  await expect(page.getByRole("button",{name:"Computed local sky",exact:true})).toBeVisible();
-  await page.getByRole("button",{name:"Sun–Earth–Moon simulation",exact:true}).click();
-  await expect(page.getByLabel("Astronomy date",{exact:true})).toBeVisible();
+  await expect(nav(page, "Mission planner")).toHaveCount(0);
+  await expect(nav(page, "Lunar surface route")).toHaveCount(0);
+  await expect(nav(page, "Sun–Earth–Moon")).toHaveCount(0);
+  await nav(page, "3D observatory").click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Sun–Earth–Moon simulation",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Reference models & local sky", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Computed local sky", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Sun–Earth–Moon simulation", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Astronomy date", { exact: true }),
+  ).toBeVisible();
 });

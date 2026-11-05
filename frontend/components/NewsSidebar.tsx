@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink, Minus, Newspaper, RefreshCw, X } from "lucide-react";
+import { ExternalLink, Newspaper, RefreshCw, X } from "lucide-react";
 type Article = {
   title: string;
   summary: string;
@@ -15,19 +15,45 @@ type Feed = {
   message: string;
   warnings?: string[];
 };
+const clamp = (n: number, lo: number, hi: number) =>
+  Math.max(lo, Math.min(Math.max(lo, hi), n));
 export default function NewsSidebar() {
   const [feed, setFeed] = useState<Feed | null>(null),
-    [loading, setLoading] = useState(true),
+    [loading, setLoading] = useState(false),
     [open, setOpen] = useState<Article | null>(null);
-  const [minimized, setMinimized] = useState(false);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [panelOpen, setPanelOpen] = useState(false),
+    [position, setPosition] = useState<{ x: number; y: number } | null>(null),
+    [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const launcher = useRef<HTMLButtonElement>(null),
+    suppressClick = useRef(false);
   const drag = useRef<{
     x: number;
     y: number;
-    origin: { x: number; y: number };
-    bounds: DOMRect;
+    left: number;
+    top: number;
+    moved: boolean;
   } | null>(null);
   useEffect(() => {
+    const resize = () => {
+      setViewport({
+        width: document.documentElement.clientWidth,
+        height: window.innerHeight,
+      });
+      setPosition((p) =>
+        p
+          ? {
+              x: clamp(p.x, 12, document.documentElement.clientWidth - 68),
+              y: clamp(p.y, 12, window.innerHeight - 68),
+            }
+          : null,
+      );
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+  useEffect(() => {
+    if (!panelOpen) return;
     const controller = new AbortController();
     const update = async () => {
       setLoading(true);
@@ -36,7 +62,8 @@ export default function NewsSidebar() {
           signal: controller.signal,
         });
         if (!response.ok) throw Error();
-        setFeed(await response.json());
+        const data = await response.json();
+        if (!controller.signal.aborted) setFeed(data);
       } catch {
         if (!controller.signal.aborted)
           setFeed({
@@ -52,94 +79,183 @@ export default function NewsSidebar() {
     };
     void update();
     const timer = window.setInterval(update, 15 * 60 * 1000);
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPanelOpen(false);
+        setOpen(null);
+        launcher.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", escape);
     return () => {
       controller.abort();
       window.clearInterval(timer);
+      window.removeEventListener("keydown", escape);
     };
-  }, []);
+  }, [panelOpen]);
+  const width = viewport.width || 1024,
+    height = viewport.height || 768;
+  const icon = position ?? { x: width - 80, y: height - 156 };
+  const panelWidth = Math.min(380, width - 24),
+    panelHeight = Math.min(520, height - 100);
+  const panelStyle = {
+    width: panelWidth,
+    maxHeight: panelHeight,
+    left: clamp(
+      icon.x > width / 2 ? icon.x + 56 - panelWidth : icon.x,
+      12,
+      width - panelWidth - 12,
+    ),
+    top: clamp(
+      icon.y > height / 2 ? icon.y - panelHeight - 12 : icon.y + 68,
+      12,
+      height - panelHeight - 12,
+    ),
+  };
   return (
-    <aside
-      className={`news-sidebar panel glass ${minimized ? "minimized" : ""}`}
-      aria-label="Lunar exploration news"
-      style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
-    >
-      <div
-        className="panel-heading news-drag-handle"
+    <>
+      <button
+        ref={launcher}
+        className="news-launcher"
+        aria-label={panelOpen ? "Close Lunar Dispatch" : "Open Lunar Dispatch"}
+        title="Lunar Dispatch · drag to move"
+        aria-expanded={panelOpen}
+        aria-controls="lunar-news-popover"
+        style={
+          position
+            ? {
+                left: position.x,
+                top: position.y,
+                right: "auto",
+                bottom: "auto",
+              }
+            : undefined
+        }
         onPointerDown={(e) => {
-          if (
-            (e.target as HTMLElement).closest("button") ||
-            window.innerWidth < 700
-          )
-            return;
-          e.currentTarget.setPointerCapture(e.pointerId);
+          if (e.button !== 0) return;
+          suppressClick.current = false;
+          const r = e.currentTarget.getBoundingClientRect();
           drag.current = {
             x: e.clientX,
             y: e.clientY,
-            origin: offset,
-            bounds: e.currentTarget.parentElement!.getBoundingClientRect(),
+            left: r.left,
+            top: r.top,
+            moved: false,
           };
+          e.currentTarget.setPointerCapture(e.pointerId);
         }}
         onPointerMove={(e) => {
           const start = drag.current;
           if (!start) return;
-          setOffset({
-            x:
-              start.origin.x +
-              Math.max(
-                -start.bounds.left + 12,
-                Math.min(
-                  window.innerWidth - start.bounds.right - 12,
-                  e.clientX - start.x,
-                ),
+          if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 5)
+            start.moved = true;
+          if (start.moved)
+            setPosition({
+              x: clamp(
+                start.left + e.clientX - start.x,
+                12,
+                document.documentElement.clientWidth - 68,
               ),
-            y:
-              start.origin.y +
-              Math.max(
-                80 - start.bounds.top,
-                Math.min(
-                  window.innerHeight - 60 - start.bounds.top,
-                  e.clientY - start.y,
-                ),
+              y: clamp(
+                start.top + e.clientY - start.y,
+                12,
+                window.innerHeight - 68,
               ),
-          });
+            });
         }}
-        onPointerUp={() => {
+        onPointerUp={(e) => {
+          suppressClick.current = drag.current?.moved ?? false;
           drag.current = null;
+          if (e.currentTarget.hasPointerCapture(e.pointerId))
+            e.currentTarget.releasePointerCapture(e.pointerId);
         }}
         onPointerCancel={() => {
           drag.current = null;
+          suppressClick.current = false;
+        }}
+        onLostPointerCapture={() => {
+          drag.current = null;
+        }}
+        onClick={(e) => {
+          if (e.detail > 0 && suppressClick.current) {
+            suppressClick.current = false;
+            return;
+          }
+          setPanelOpen((v) => !v);
+          setOpen(null);
+        }}
+        onKeyDown={(e) => {
+          const delta = 10;
+          if (
+            ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)
+          ) {
+            e.preventDefault();
+            const r = e.currentTarget.getBoundingClientRect();
+            setPosition({
+              x: clamp(
+                r.left +
+                  (e.key === "ArrowRight"
+                    ? delta
+                    : e.key === "ArrowLeft"
+                      ? -delta
+                      : 0),
+                12,
+                document.documentElement.clientWidth - 68,
+              ),
+              y: clamp(
+                r.top +
+                  (e.key === "ArrowDown"
+                    ? delta
+                    : e.key === "ArrowUp"
+                      ? -delta
+                      : 0),
+                12,
+                window.innerHeight - 68,
+              ),
+            });
+          }
         }}
       >
-        <div>
-          <h2>
-            <Newspaper size={17} /> Lunar dispatch
-          </h2>
-          <p>Moon exploration · NASA sources</p>
-        </div>
-        <span
-          className={`news-state ${feed?.status === "stale" ? "stale" : ""}`}
-        >
-          {loading ? (
-            <RefreshCw size={12} className="spin" />
-          ) : feed?.status === "live" ? (
-            "RSS"
-          ) : (
-            "OFFLINE"
-          )}
+        <Newspaper size={22} />
+        <span className="sr-only">
+          Drag to move, or use arrow keys when focused.
         </span>
-        <button
-          className="news-minimize"
-          aria-label={
-            minimized ? "Expand Lunar Dispatch" : "Minimize Lunar Dispatch"
-          }
-          aria-expanded={!minimized}
-          onClick={() => setMinimized(!minimized)}
+      </button>
+      {panelOpen && (
+        <aside
+          id="lunar-news-popover"
+          className="news-sidebar news-popover panel glass"
+          aria-label="Lunar exploration news"
+          style={panelStyle}
         >
-          {minimized ? <Newspaper size={17} /> : <Minus size={17} />}
-        </button>
-      </div>
-      {!minimized && (
-        <>
+          <div className="panel-heading">
+            <div>
+              <h2>
+                <Newspaper size={17} /> Lunar dispatch
+              </h2>
+              <p>Moon exploration · NASA sources</p>
+            </div>
+            <span className="news-state">
+              {loading ? (
+                <RefreshCw size={12} className="spin" />
+              ) : feed?.status === "live" ? (
+                "RSS"
+              ) : (
+                "OFFLINE"
+              )}
+            </span>
+            <button
+              className="news-minimize"
+              aria-label="Close news panel"
+              onClick={() => {
+                setPanelOpen(false);
+                setOpen(null);
+                launcher.current?.focus();
+              }}
+            >
+              <X size={17} />
+            </button>
+          </div>
           <div
             className="news-inner"
             style={{ display: open ? "none" : undefined }}
@@ -250,8 +366,8 @@ export default function NewsSidebar() {
               </a>
             </div>
           )}
-        </>
+        </aside>
       )}
-    </aside>
+    </>
   );
 }
