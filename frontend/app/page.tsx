@@ -3,11 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { CalculationDetails, Uncertainty } from "../components/ResultExplanation";
 import NewsSidebar from "../components/NewsSidebar";
-import MissionPlanner from "../components/MissionPlanner";
 import LandingResearch from "../components/LandingResearch";
-import type { RouteMemory } from "../components/LunarRouteViewer";
 const AstronomySimulation = dynamic(() => import("../components/AstronomySimulation"), { ssr: false, loading: () => <div className="panel empty">Loading astronomical simulation…</div> });
-const LunarRouteViewer = dynamic(() => import("../components/LunarRouteViewer"), { ssr: false, loading: () => <div className="panel empty">Loading lunar route viewer…</div> });
 const CelestialViewer = dynamic(() => import("../components/CelestialViewer"), {
   ssr: false,
   loading: () => <div className="panel empty">Loading 3D viewer…</div>,
@@ -46,7 +43,6 @@ import {
   ZoomIn,
   ZoomOut,
   Orbit,
-  Rocket,
 } from "lucide-react";
 
 import type { Site, Mission, Analysis, Comparison } from "./types";
@@ -57,21 +53,8 @@ const views = [
   "Site comparison",
   "Lunar mission archive",
   "3D observatory",
-  "Mission planner",
-  "Lunar surface route",
-  "Sun–Earth–Moon",
 ];
-const icons = [
-  Compass,
-  Activity,
-  Layers,
-  SlidersHorizontal,
-  FileText,
-  Orbit,
-  Rocket,
-  MapPin,
-  Orbit,
-];
+const icons = [Compass, Activity, Layers, SlidersHorizontal, FileText, Orbit];
 const fmt = (x: number | null | undefined, suffix = "", digits = 1) =>
   x == null ? "Unavailable" : `${x.toFixed(digits)}${suffix}`;
 const utc = (time: string) =>
@@ -484,8 +467,8 @@ function Timeline({ analysis }: { analysis: Analysis }) {
 export default function Page() {
   const [view, setView] = useState(0);
   const [astronomyVisited, setAstronomyVisited] = useState(false);
-  useEffect(() => { if (view === 8) setAstronomyVisited(true); }, [view]);
-  const [routeMemory, setRouteMemory] = useState<RouteMemory | null>(null);
+  const [observatoryMode, setObservatoryMode] = useState<"system" | "surface">("system");
+  useEffect(() => { if (view === 5 && observatoryMode === "system") setAstronomyVisited(true); }, [view, observatoryMode]);
   const [full, setFull] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newsOpen, setNewsOpen] = useState(false);
@@ -812,10 +795,7 @@ export default function Page() {
                       "Read the lunar landscape.",
                       "Compare the possibilities.",
                       "Explore the missions before us.",
-                      "A new perspective on space.",
-                      "Plan the journey, explicitly.",
-                      "Follow a route across the Moon.",
-                      "A moment in the solar system.",
+                      "Explore the Moon and its celestial neighbours.",
                     ][view]
                   }
                 </h1>
@@ -827,10 +807,7 @@ export default function Page() {
                       "Inspect elevation, slope, and obstructions from a verified lunar DEM.",
                       "Weigh operational trade-offs across the same mission window.",
                       "Search historical lunar missions and replay their documented stages in 3D.",
-                      "Explore the supplied 3D models and your computed local sky.",
-                      "Record vehicle assumptions, inspect launch weather, and save your mission plans.",
-                      "Inspect imported waypoints on a 3D reference sphere and select a point for analysis.",
-                      "Explore actual NASA ephemerides for the Sun, Earth and Moon at a time you choose.",
+                      "Explore NASA Sun–Earth–Moon positions, reference models and your computed local sky.",
                     ][view]
                   }
                 </p>
@@ -842,7 +819,7 @@ export default function Page() {
                 <FileText size={16} /> Lunar mission archive <ArrowRight size={15} />
               </button>
             </div>
-            <div hidden={view === 8 || view === 4}>
+            <div hidden={view === 4 || (view === 5 && observatoryMode === "system")}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>
               <p>Choose a site and dates, calculate how often the Sun and Earth are both visible, then compare alternatives. These exploratory results do not establish landing safety.</p>
@@ -1079,7 +1056,7 @@ export default function Page() {
                 </div>
               </>
             )}
-            {analysis && view !== 8 && view !== 4 && (
+            {analysis && view !== 4 && (view !== 5 || observatoryMode === "surface") && (
               <div className="metrics-grid">
                 {[
                   {
@@ -1668,9 +1645,12 @@ export default function Page() {
             )}
             {view === 5 && (
               <>
-                <button className="button primary" onClick={() => setView(7)}>Open lunar surface route →</button>
-                <CelestialViewer sample={current} />
-                {analysis && (
+                <div className="panel astro-camera-controls" role="group" aria-label="Observatory view" style={{padding:16}}>
+                  <button className={`button ${observatoryMode === "system" ? "primary" : "subtle"}`} aria-pressed={observatoryMode === "system"} onClick={() => setObservatoryMode("system")}>Sun–Earth–Moon simulation</button>
+                  <button className={`button ${observatoryMode === "surface" ? "primary" : "subtle"}`} aria-pressed={observatoryMode === "surface"} onClick={() => setObservatoryMode("surface")}>Reference models & local sky</button>
+                </div>
+                {observatoryMode === "surface" && <CelestialViewer sample={current} />}
+                {observatoryMode === "surface" && analysis && (
                   <section className="panel playback-panel">
                     <div className="panel-heading">
                       <h2>Computed sample · {utc(current!.time)} UTC</h2>
@@ -1699,28 +1679,11 @@ export default function Page() {
                     </div>
                   </section>
                 )}
-                {!analysis && <div className="panel">{empty}</div>}
+                {observatoryMode === "surface" && !analysis && <div className="panel">{empty}</div>}
               </>
             )}
-            {view === 6 && (
-              <MissionPlanner
-                mission={mission()}
-                onRestore={(m) => {
-                  setSelected({
-                    name: m.name,
-                    latitude: m.latitude,
-                    longitude: m.longitude,
-                  });
-                  setStart(m.start.slice(0, 10));
-                  setEnd(m.end.slice(0, 10));
-                  setIntervalMinutes(m.interval_minutes);
-                  setClearance(m.clearance_deg);
-                }}
-              />
-            )}
-            {view === 7 && <LunarRouteViewer initial={routeMemory} onChange={setRouteMemory} onSelect={(site) => { setSelected(site); setView(0); }} />}
             {(view === 0 || view === 3) && <LandingResearch mission={mission()} sites={sites} onSelect={site => { setSelected(site); setView(0); }} />}
-            <div hidden={view !== 8}>{astronomyVisited && <AstronomySimulation active={view === 8} />}</div>
+            <div hidden={view !== 5 || observatoryMode !== "system"}>{astronomyVisited && <AstronomySimulation active={view === 5 && observatoryMode === "system"} />}</div>
             <footer className="footer">
               <span>
                 <Moon size={13} /> LUNAR LANDING SITE NAVIGATOR <span> / </span>{" "}
