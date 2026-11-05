@@ -8,7 +8,7 @@ import type { Site, Mission } from "../app/types";
 type Source = { name?: string; source_url?: string; resolution_m?: number; observation_period?: string; quality?: string };
 type Factor = { name: string; score: number | null; weight: number; effective_weight: number; contribution: number | null; quality: string; explanation: string; source?: Source };
 type Span = {start:string;end:string;hours:number};
-type Research = {
+export type Research = {
   mission: Mission; score: number | null; available_weight: number; missing: string[]; provisional: boolean; safety_status:string; constraints_failed:string[]; warnings:string[]; limitations:string[];
   factors: Record<string,Factor>;
   terrain: {available:boolean;reason?:string;elevation_m?:number;slope_p95_deg?:number;slope_max_deg?:number;roughness_m?:number;relief_m?:number;resolution_m?:number;radius_m?:number;source?:Source;grid:{east_m:number;north_m:number;elevation_m:number;slope_deg:number}[]};
@@ -29,7 +29,7 @@ async function api<T>(path:string,body?:unknown,signal?:AbortSignal):Promise<T>{
   return r.json();
 }
 
-export default function LandingResearch({mission,sites,onSelect,actionRef,priority="T",onBusyChange}:{mission:Mission;sites:Site[];onSelect:(site:Site)=>void;actionRef?:Ref<{evaluate:()=>Promise<void>}>;priority?:ResearchPriority;onBusyChange?:(busy:boolean)=>void}){
+export default function LandingResearch({mission,sites,onSelect,actionRef,priority="T",onBusyChange,onResultChange}:{mission:Mission;sites:Site[];onSelect:(site:Site)=>void;actionRef?:Ref<{evaluate:()=>Promise<void>}>;priority?:ResearchPriority;onBusyChange?:(busy:boolean)=>void;onResultChange?:(result:Research|null)=>void}){
   const [catalog,setCatalog]=useState<Catalog|null>(null),[saved,setSaved]=useState<Site[]>([]);
   const [limits,setLimits]=useState(DEFAULTS),[results,setResults]=useState<Research[]>([]),[detail,setDetail]=useState(0);
   const [busy,setBusy]=useState(false),[progress,setProgress]=useState(""),[error,setError]=useState("");
@@ -59,6 +59,7 @@ export default function LandingResearch({mission,sites,onSelect,actionRef,priori
     }catch(e){if(gen===generation.current)setError(controller.signal.aborted?"Evaluation cancelled or timed out. Completed results remain available; retry the missing site.":(e as Error).message);}
     finally{if(gen===generation.current){setBusy(false);setProgress("");}}
   };
+  useEffect(()=>{onResultChange?.(result??null);},[result,onResultChange]);
   useImperativeHandle(actionRef,()=>({evaluate:()=>run(false)}));
   useEffect(()=>{onBusyChange?.(busy);},[busy,onBusyChange]);
   return <section id="landing-assessment" className="panel research-panel" aria-label="NASA landing research">

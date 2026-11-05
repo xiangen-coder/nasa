@@ -1,0 +1,36 @@
+.lunar-hero.cinematic-hero { position:relative; display:flex; isolation:isolate; overflow:clip; grid-column:1/-1; grid-row:1; margin-bottom:0; }
+.revised-search { grid-template-columns:minmax(0,1fr) 280px; grid-template-rows:auto auto; gap:26px; }
+.revised-search>.landing-search { grid-column:1; grid-row:2; min-width:0; }
+.revised-search>.news-sidebar { grid-column:2; grid-row:2; align-self:start; }
+.cinematic-controls { position:absolute; right:clamp(24px,4.5vw,76px); bottom:25px; z-index:5; display:flex; gap:9px; }
+.cinematic-controls .cinematic-pause { position:static; }
+.cinematic-caption { max-width:calc(100% - 180px); }
+.cinematic-caption [role=status] { color:#d4e6fd; margin-top:3px; }
+.cinematic-hero .hero-copy { max-width:760px; }
+.cinematic-hero .hero-copy h1 { font-family:Fraunces,Georgia,serif; }
+.cinematic-hero .hero-footnote { display:block; color:#b3c5df; letter-spacing:.18em; }
+.research-body { grid-template-columns:minmax(0,1fr); }
+.research-body>* { min-width:0; }
+.research-body .button { max-width:100%; white-space:normal; }
+.research-panel { border-radius:21px; background:var(--glass); border-color:var(--line); margin-top:26px; }
+.research-panel .panel-heading h2 { font-family:Fraunces,Georgia,serif; font-size:25px; }
+.research-body .astro-inputs label { display:flex; flex-direction:column; gap:8px; min-width:0; }
+.research-body .astro-inputs input,.research-body .astro-inputs select { width:100%; }
+.priority-factor { background:#c9dcff13; outline:1px solid #c9dcff44; outline-offset:-1px; }
+.assessment-main>.button { margin-top:22px; }
+.assessment-details .assessment-data p { overflow-wrap:anywhere; }
+.assessment-data>div>strong { font-size:22px; }
+.astro-camera-controls,.astro-playback,.astro-inputs,.astro-visual-controls { gap:12px; }
+.button { font-size:13px; }
+button,input,select,summary { min-height:44px; }
+.task-intro { margin-top:22px; }
+.task-intro h2 { font-family:Fraunces,Georgia,serif; font-size:23px; }
+.task-intro p { font-size:14px; }
+.settings-dialog { max-height:85dvh; overflow:auto; }
+.more-menu { max-height:75dvh; overflow:auto; }
+.lunar-app main { min-width:0; }
+.astro-render-stage,.route-stage { border-color:var(--line); }
+html { scroll-padding-top:110px; }
+@media(max-width:1100px){.revised-search { grid-template-columns:1fr; }.revised-search>.landing-search {grid-column:1;grid-row:2;}.revised-search>.news-sidebar {grid-column:1;grid-row:3;max-height:300px;}}
+@media(max-width:700px){html{scroll-padding-top:175px;}.lunar-hero.cinematic-hero{margin-inline:-22px;}.cinematic-hero .hero-copy{width:100%;}.cinematic-controls{right:20px;bottom:25px;}.cinematic-caption{max-width:calc(100% - 140px);}.revised-search{gap:18px;}.revised-search>.news-sidebar{resize:none;min-width:0;}.research-body{padding:16px;}.button{font-size:13px;}.landing-search input,.landing-search select{font-size:16px;}.assessment-layout{grid-template-columns:minmax(0,1fr);}.assessment-details{min-width:0;}.assessment-data>div{flex-wrap:wrap;gap:12px;}.cinematic-hero .hero-copy h1{font-size:clamp(46px,12vw,65px);}.about-grid{grid-template-columns:minmax(0,1fr);}}
+@media(max-width:600px){.lunar-hero.cinematic-hero{margin-inline:-18px;}}

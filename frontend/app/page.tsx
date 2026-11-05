@@ -1,10 +1,15 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { CalculationDetails, Uncertainty } from "../components/ResultExplanation";
 import NewsSidebar from "../components/NewsSidebar";
-import LandingResearch from "../components/LandingResearch";
-import SearchConsole, { type ResearchPriority } from "../components/SearchConsole";
+import LandingResearch, { type Research } from "../components/LandingResearch";
+import type { ResearchPriority } from "../components/SearchConsole";
+import LandingSearch from "../components/LandingSearch";
+import Navigation, {viewPaths} from "../components/Navigation";
+import PreferencesControls, {type Preferences} from "../components/Preferences";
+import ResearchOverview from "../components/ResearchOverview";
+import {AlternativeCards} from "../components/AssessmentOverview";
 const CinematicHero = dynamic(() => import("../components/CinematicHero"), { ssr: false });
 const AstronomySimulation = dynamic(() => import("../components/AstronomySimulation"), { ssr: false, loading: () => <div className="panel empty">Loading astronomical simulation…</div> });
 const CelestialViewer = dynamic(() => import("../components/CelestialViewer"), {
@@ -26,11 +31,9 @@ import {
   ArrowRight,
   Check,
   ChevronRight,
-  CircleHelp,
   Compass,
   Earth,
   ExternalLink,
-  FileText,
   Layers,
   MapPin,
   Maximize2,
@@ -44,9 +47,6 @@ import {
   X,
   ZoomIn,
   ZoomOut,
-  Orbit,
-  Menu,
-  Newspaper,
 } from "lucide-react";
 
 import type { Site, Mission, Analysis, Comparison } from "./types";
@@ -58,7 +58,7 @@ const views = [
   "Lunar mission archive",
   "3D observatory",
 ];
-const icons = [Compass, Activity, Layers, SlidersHorizontal, FileText, Orbit];
+
 const fmt = (x: number | null | undefined, suffix = "", digits = 1) =>
   x == null ? "Unavailable" : `${x.toFixed(digits)}${suffix}`;
 const utc = (time: string) =>
@@ -471,52 +471,19 @@ function Timeline({ analysis }: { analysis: Analysis }) {
 }
 
 export default function Page() {
-  const [view, setView] = useState(0);
-  const [topSection, setTopSection] = useState("search");
-  const [researchPriority, setResearchPriority] = useState<ResearchPriority>("T");
-  const [researchBusy, setResearchBusy] = useState(false);
-  const researchActions = useRef<{ evaluate: () => Promise<void> } | null>(null);
-  const aboutDialog = useRef<HTMLDialogElement>(null);
-  const goTo = (section: "search" | "result" | "alternative") => {
-    setTopSection(section); setView(section === "alternative" ? 3 : 0);
-    window.requestAnimationFrame(() => document.getElementById(section === "result" ? "landing-assessment" : "lunar-search")?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" }));
-  };
+  const [view, setViewState] = useState(7);
+  const [preferences,setPreferences] = useState<Preferences>({animate:true,scale:1,detailed:true});
+  const [researchPriority,setResearchPriority] = useState<ResearchPriority>("T");
+  const [researchBusy,setResearchBusy] = useState(false);
+  const [researchResult,setResearchResult] = useState<Research|null>(null);
+  const researchActions=useRef<{evaluate:()=>Promise<void>}|null>(null);
+  const setView=(next:number)=>{if(![0,1,2,3,4,5,7,8,9,10].includes(next))return;setViewState(next);if(location.hash!==`#${viewPaths[next]}`)location.hash=viewPaths[next];window.scrollTo({top:0,behavior:"instant"});};
+  useEffect(()=>{const sync=()=>{const n=viewPaths.indexOf(location.hash.slice(1));if([0,1,2,3,4,5,7,8,9,10].includes(n))setViewState(n);};sync();window.addEventListener("hashchange",sync);try{const p=JSON.parse(localStorage.getItem("lunar-preferences-v1")||"null");if(p&&typeof p.animate==="boolean"&&typeof p.scale==="number")setPreferences({animate:p.animate,scale:Math.max(.95,Math.min(1.08,p.scale)),detailed:p.detailed!==false});}catch{}return()=>window.removeEventListener("hashchange",sync);},[]);
+  const updatePreferences=(p:Preferences)=>{setPreferences(p);try{localStorage.setItem("lunar-preferences-v1",JSON.stringify(p));}catch{}};
+  const full=preferences.detailed??true;
   const [astronomyVisited, setAstronomyVisited] = useState(false);
   const [observatoryMode, setObservatoryMode] = useState<"system" | "surface">("system");
   useEffect(() => { if (view === 5 && observatoryMode === "system") setAstronomyVisited(true); }, [view, observatoryMode]);
-  const [full, setFull] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [newsOpen, setNewsOpen] = useState(false);
-  const sidebarRef = useRef<HTMLElement>(null);
-  const sidebarToggle = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    try {
-      setFull(localStorage.getItem("lunar-view") === "full");
-      setSidebarOpen(false);
-      setNewsOpen(localStorage.getItem("lunar-news") === "open");
-    } catch { /* Storage is optional. */ }
-  }, []);
-  const closeSidebar = () => {
-    setSidebarOpen(false);
-    try { localStorage.setItem("lunar-sidebar", "closed"); } catch {}
-    sidebarToggle.current?.focus();
-  };
-  useEffect(() => {
-    if (!sidebarOpen) return;
-    const sidebar = sidebarRef.current;
-    sidebar?.querySelector<HTMLButtonElement>("button")?.focus();
-    const handle = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.preventDefault(); closeSidebar(); }
-      if (event.key !== "Tab") return;
-      const nodes = sidebar?.querySelectorAll<HTMLElement>('button, a[href]');
-      if (!nodes?.length) return;
-      const first = nodes[0], last = nodes[nodes.length - 1];
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    document.addEventListener("keydown", handle);
-    return () => document.removeEventListener("keydown", handle);
-  }, [sidebarOpen]);
   const [sites, setSites] = useState<Site[]>([]);
   const [selected, setSelected] = useState<Site>({
     name: "Shackleton vicinity",
@@ -570,6 +537,7 @@ export default function Page() {
   }, []);
   useEffect(() => {
     generation.current++;
+    setResearchResult(null);
     setAnalysis(pendingExample.current);
     pendingExample.current = null;
     setComparison(null);
@@ -719,125 +687,17 @@ export default function Page() {
       ? "Terrain-screened geometry"
       : "Reference-sphere geometry";
   return (
-    <div className={`app-shell ${full ? "full-view" : "simple-view"} ${sidebarOpen ? "sidebar-open" : "sidebar-closed"}`}>
-      {sidebarOpen && <button className="sidebar-scrim" aria-label="Dismiss navigation overlay" tabIndex={-1} onClick={closeSidebar} />}
-      <aside className="sidebar" id="workspace-navigation" aria-label="Workspace navigation" ref={sidebarRef} hidden={!sidebarOpen}>
-        <button className="button subtle close-sidebar" onClick={closeSidebar}>Close sidebar ×</button>
-        <a className="brand" href="/" aria-label="Lunar Navigator home">
-          <div className="brand-mark">
-            <Moon size={22} />
-          </div>
-          <div>
-            LUNAR<span>NAVIGATOR</span>
-          </div>
-        </a>
-        <div className="workspace-options">          <div className="view-switch" role="group" aria-label="Detail view">
-            {[false, true].map(value => <button key={String(value)} aria-pressed={full === value} onClick={() => {
-              setFull(value); try { localStorage.setItem("lunar-view", value ? "full" : "simple"); } catch {}
-            }}>{value ? "Full" : "Simple"}</button>)}
-          </div>
-          <button className="button subtle" aria-expanded={newsOpen} aria-controls="news-panel" onClick={() => {
-            setNewsOpen(!newsOpen); try { localStorage.setItem("lunar-news", !newsOpen ? "open" : "closed"); } catch {}
-          }}>{newsOpen ? "Hide news" : "Show news"}</button>
-</div>
-        <div className="side-label">MISSION WORKSPACE</div>
-        <nav>
-          {views.map((label, i) => {
-            const Icon = icons[i];
-            return (
-              <button
-                aria-label={label}
-                className={view === i ? "active" : ""}
-                onClick={() => { setView(i); setTopSection(i === 3 ? "alternative" : "search"); closeSidebar(); window.scrollTo({top:0}); }}
-                key={label}
-              >
-                <Icon size={18} />
-                <span>{label}</span>
-                {view === i && <ChevronRight size={14} />}
-              </button>
-            );
-          })}
-        </nav>
-        <div className="side-bottom">
-          <div className="mission-badge">
-            <span className="live-dot" /> NASA SPACE APPS <b>2026</b>
-          </div>
-          <p>
-            Explore possibilities.
-            <br />
-            Understand the constraints.
-          </p>
-          <a
-            href="https://naif.jpl.nasa.gov/naif/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <CircleHelp size={15} /> Science & data reference{" "}
-            <ExternalLink size={12} />
-          </a>
-          <div className="version">
-            EXPLORATORY TOOL <span>v1.0</span>
-          </div>
-        </div>
-      </aside>
+    <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} style={{"--ui-scale":preferences.scale} as CSSProperties}>
+      <div className="stars" aria-hidden="true"/><Navigation view={view} onNavigate={setView} health={health} preferences={preferences} onPreferences={updatePreferences}/>
       <div className="main-shell">
-        <header className="topbar">
-          <a className="header-brand" href="/" aria-label="Lunar Navigator home"><Moon/><span>LUNAR</span></a>
-          <nav className="glass-navigation" aria-label="Main navigation">
-            <button aria-current={view===0&&topSection!=="result"?"page":undefined} onClick={()=>goTo("search")}>Search</button>
-            <button aria-current={view===0&&topSection==="result"?"page":undefined} onClick={()=>goTo("result")}>Result</button>
-            <button aria-current={view===3?"page":undefined} onClick={()=>goTo("alternative")}>Alternative</button>
-            <button aria-haspopup="dialog" onClick={()=>aboutDialog.current?.showModal()}>About Us</button>
-          </nav>
-          <div className="header-tools">
-            <span title={health} aria-label={health} className={`connection-indicator ${health==="SPICE online"?"live-dot":"offline-dot"}`}/>
-            <button ref={sidebarToggle} className="button subtle" aria-label={sidebarOpen?"Close workspace menu":"Open workspace menu"} aria-expanded={sidebarOpen} aria-controls="workspace-navigation" onClick={()=>setSidebarOpen(!sidebarOpen)}><Menu size={21}/></button>
-          </div>
-        </header>
-        <div className={`workspace-with-news ${newsOpen ? "" : "news-closed"}`}>
-          <main id="lunar-search">
-            {view===0 ? <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration">
-              <div className="hero-copy"><div className="eyebrow">A NEW PERSPECTIVE ON THE MOON</div><h1>Find your place&nbsp;on<br/>the Moon.</h1><p>Explore lunar landing possibilities. Enter a time and coordinates to assess sunlight, communication and the terrain between.</p><span className="hero-mantra">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"})}>Explore a landing site <ArrowRight size={17}/></button></div>
-              <CinematicHero/>
-            </section> : <div className="page-heading">
-              <div>
-                <div className="eyebrow">
-                  LUNAR SOUTH POLE / MISSION PLANNING
-                </div>
-                <h1>
-                  {
-                    [
-                      "Find your next horizon.",
-                      "See beyond the horizon.",
-                      "Read the lunar landscape.",
-                      "Compare the possibilities.",
-                      "Explore the missions before us.",
-                      "Explore the Moon and its celestial neighbours.",
-                    ][view]
-                  }
-                </h1>
-                <p>
-                  {
-                    [
-                      "Explore landing locations. Understand sunlight, communication, and the terrain between.",
-                      "Follow the Sun and Earth across the local sky, one moment at a time.",
-                      "Inspect elevation, slope, and obstructions from a verified lunar DEM.",
-                      "Weigh operational trade-offs across the same mission window.",
-                      "Search historical lunar missions and replay their documented stages in 3D.",
-                      "Explore NASA Sun–Earth–Moon positions, reference models and your computed local sky.",
-                    ][view]
-                  }
-                </p>
-              </div>
-              <button
-                className="button subtle report-button"
-                onClick={() => setView(4)}
-              >
-                <FileText size={16} /> Lunar mission archive <ArrowRight size={15} />
-              </button>
-            </div>}
-            {view===0&&<SearchConsole selected={selected} onSelect={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={setResearchPriority} busy={researchBusy} onEvaluate={()=>{void researchActions.current?.evaluate();goTo("result");}}/>}
-            <div hidden={view === 4 || (view === 5 && observatoryMode === "system")}>
+        <div className="workspace-with-news"><main id="main-content">
+          {view!==7&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{views[view]||["","","","","","","","","Result","About Us","Settings"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div></div></>}
+          {view===7&&<section className="search-layout revised-search" aria-label="Search for a lunar landing site">
+            <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration"><div className="hero-copy"><span className="eyebrow">A NEW PERSPECTIVE ON THE MOON</span><h1>Find your place<br/>on the <em>Moon.</em></h1><p>Every mission starts with a possibility. Explore lunar locations through real sunlight, communication and terrain data.</p><div className="hero-hairline"/><span className="hero-footnote">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}>Explore a landing site <ArrowRight size={17}/></button></div><CinematicHero animate={preferences.animate}/></section>
+            <LandingSearch selected={selected} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{void researchActions.current?.evaluate();setView(8);}} onMap={()=>setView(0)}/><NewsSidebar/>
+          </section>}
+          {view===8&&<ResearchOverview result={researchResult} onNavigate={setView} busy={researchBusy}/>}
+          <div hidden={![0,1,2,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>
               <p>Choose a site and dates, calculate how often the Sun and Earth are both visible, then compare alternatives. These exploratory results do not establish landing safety.</p>
@@ -875,7 +735,7 @@ export default function Page() {
                 {notice}
               </div>
             )}
-            <div className="mission-controls" hidden={view===0}>
+            <div className="mission-controls" hidden={view===8}>
               <div className="mission-control-title">
                 <SlidersHorizontal size={16} />
                 <span>Mission window</span>
@@ -1700,8 +1560,11 @@ export default function Page() {
                 {observatoryMode === "surface" && !analysis && <div className="panel">{empty}</div>}
               </>
             )}
-            <div hidden={view!==0&&view!==3}><LandingResearch actionRef={researchActions} priority={researchPriority} onBusyChange={setResearchBusy} mission={mission()} sites={sites} onSelect={site => { setSelected(site); goTo("search"); }} /></div>
+            <div hidden={![0,3,8].includes(view)}><LandingResearch onResultChange={setResearchResult} actionRef={researchActions} priority={researchPriority} onBusyChange={setResearchBusy} mission={mission()} sites={sites} onSelect={site => { setSelected(site); setView(7); }} /></div>
             <div hidden={view !== 5 || observatoryMode !== "system"}>{astronomyVisited && <AstronomySimulation active={view === 5 && observatoryMode === "system"} />}</div>
+            {view===3&&comparison&&<AlternativeCards comparison={comparison} onInspect={r=>{setSelected({name:r.mission.name,latitude:r.mission.latitude,longitude:r.mission.longitude});setView(0);}}/>}
+            {view===9&&<section className="about-grid"><article className="about-intro glass"><span className="eyebrow">EXPLORATION, INFORMED BY EVIDENCE</span><h2>A place to ask<br/>better questions.</h2><p>LUNAR is a NASA Space Apps 2026 research demonstrator for investigating lunar landing locations, mission windows and backup possibilities.</p><p>The cinematic spacecraft is an illustration. Its motion and scales are artistic. The observatory retrieves actual Sun–Earth–Moon vectors separately.</p><button className="button primary" onClick={()=>setView(7)}>Start exploring <ArrowRight size={15}/></button></article><article className="about-method glass"><h3>Real data. Transparent limits.</h3><p>NASA Horizons and the existing SPICE workflow provide astronomical geometry. Regional LOLA, LROC and historical Diviner products support available terrain and temperature evidence. Missing factors remain unavailable.</p><h3>A score is not a promise.</h3><p>The five-factor NASA research score and reference-sphere visibility comparison are distinct models. Neither establishes landing safety, a fuel-feasible diversion or a probability of success.</p><h3>Terrain and spacecraft evidence</h3><p>The regional 20 m DEM screens finite horizons. The 5 m footprint product has limited coverage. Apollo LM uncertainty and backup searches retain their published limitations.</p><div className="reference-links"><a href="https://github.com/xiangen-coder/nasa/blob/public-preview/docs/WIDE_TERRAIN.md" target="_blank" rel="noreferrer">Terrain methods & coverage</a><a href="https://ssd-api.jpl.nasa.gov/doc/horizons.html" target="_blank" rel="noreferrer">JPL Horizons</a></div><button className="text-button" onClick={()=>setView(8)}>Review assessment & provenance <ArrowRight size={14}/></button></article></section>}
+            {view===10&&<section className="preferences-page glass"><span className="eyebrow">YOUR EXPERIENCE</span><h2>Settings.</h2><PreferencesControls value={preferences} onChange={updatePreferences}/><button className="button subtle" onClick={()=>setView(7)}>Back to Search <ArrowRight size={14}/></button></section>}
             <footer className="footer">
               <span>
                 <Moon size={13} /> LUNAR LANDING SITE NAVIGATOR <span> / </span>{" "}
@@ -1712,17 +1575,7 @@ export default function Page() {
               </span>
             </footer>
           </main>
-          <dialog className="method-dialog" ref={aboutDialog} aria-labelledby="about-title" onClick={e=>{if(e.target===e.currentTarget)aboutDialog.current?.close();}}>
-            <button className="button subtle dialog-close" autoFocus onClick={()=>aboutDialog.current?.close()} aria-label="Close about">Close ×</button>
-            <div className="eyebrow">ABOUT THE PROJECT</div><h2 id="about-title">A new perspective.<br/>Grounded in evidence.</h2>
-            <p>Lunar Navigator is a NASA Space Apps 2026 research demonstrator for exploring lunar landing locations, mission windows and backup possibilities.</p>
-            <h3>Real data, transparent limits</h3><p>NASA/JPL ephemerides power the celestial geometry. NASA LOLA elevation, LROC imagery and historical Diviner temperature products support the available regional measurements. Missing evidence stays unavailable. A research score is not a probability of landing success.</p>
-            <h3>Your complete workspace</h3><p>The menu provides the map explorer, local horizon, terrain analysis, site comparison, historical mission archive and interactive Sun–Earth–Moon observatory.</p>
-            <p>The opening spacecraft scene is an original visual illustration with a generic vehicle, reused Earth surface model and decorative trails. Camera motion, body positions and relative scales are artistic; they are not a flight path, telemetry or ephemeris simulation. Actual Sun–Earth–Moon positions remain in the observatory.</p>
-            <p><a href="https://svs.gsfc.nasa.gov/4720/" target="_blank" rel="noreferrer">NASA Moon imagery</a> · <a href="https://ssd-api.jpl.nasa.gov/doc/horizons.html" target="_blank" rel="noreferrer">JPL Horizons</a> · <a href="https://github.com/xiangen-coder/nasa/blob/public-preview/docs/WIDE_TERRAIN.md" target="_blank" rel="noreferrer">Terrain methods & coverage</a></p>
-          </dialog>
-          <button className="news-float" aria-label={newsOpen?"Hide lunar dispatch":"Show lunar dispatch"} aria-controls="news-panel" aria-expanded={newsOpen} onClick={()=>{setNewsOpen(!newsOpen);try{localStorage.setItem("lunar-news",!newsOpen?"open":"closed");}catch{}}}><Newspaper size={21}/></button>
-          <div id="news-panel" hidden={!newsOpen}><NewsSidebar /></div>
+
         </div>
       </div>
     </div>

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "./canva-theme.css";
+import "./canva.css";
 import "./cinematic-hero.css";
+import "./integration-latest.css";
 export const metadata: Metadata = {
   title: "Lunar Landing Site Navigator",
   description:

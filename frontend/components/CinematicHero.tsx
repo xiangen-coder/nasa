@@ -1,23 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play } from "lucide-react";
+import { Pause, Play, RotateCcw } from "lucide-react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 /** Art-directed concept scene. No ephemerides, mission vectors or scoring data. */
-export default function CinematicHero() {
+export default function CinematicHero({animate=true}:{animate?:boolean}) {
   const host = useRef<HTMLDivElement>(null);
   const controller = useRef<{ pause: (value: boolean) => void } | null>(null);
   const [paused, setPaused] = useState(true);
   const [ready, setReady] = useState(false);
+  const [sceneVersion,setSceneVersion] = useState(0);
+  const [sceneStatus,setSceneStatus] = useState<"loading"|"ready"|"lost"|"unavailable">("loading");
+  const pauseIntent = useRef<boolean|null>(null);
 
   useEffect(() => {
     const element = host.current;
     if (!element) return;
+    setReady(false); setSceneStatus("loading");
     let renderer: THREE.WebGLRenderer;
     try { renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "low-power" }); }
-    catch { return; }
+    catch { setSceneStatus("unavailable"); return; }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -28,8 +32,8 @@ export default function CinematicHero() {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(42, 1, .1, 100);
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let disposed = false, userPaused = media.matches, inView = true;
-    let frame = 0, previous = 0, elapsed = 0;
+    let disposed = false, userPaused = pauseIntent.current ?? (media.matches || !animate), inView = true, graphicsAvailable = true;
+    let frame = 0, previous = 0, elapsed = 0, segmentStart = 0;
     const textures = new Set<THREE.Texture>();
     const disposeObject = (root: THREE.Object3D) => {
       const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
@@ -159,25 +163,28 @@ export default function CinematicHero() {
     }
     let portrait = false;
     function render() {
-      if (disposed) return;
+      if (disposed || !graphicsAvailable) return;
       const drift = Math.sin(elapsed * .14);
-      craft.position.set(portrait ? 1.1 : 2.3, portrait ? -.9 : -.3, 1);
-      craft.rotation.set(.23 + Math.sin(elapsed * .09) * .035, -.42 + drift * .1, -.27 + Math.sin(elapsed * .11) * .025);
-      earth.rotation.y = 1.6 + elapsed * .006;
-      camera.position.set(drift * .13, .18 + Math.cos(elapsed * .1) * .07, portrait ? 12.4 : 8.7 + Math.cos(elapsed * .12) * .18);
-      camera.lookAt(portrait ? .25 : 0, 0, 0); renderer.render(scene, camera);
+      craft.position.set((portrait ? 1.1 : 2.3) + Math.sin(elapsed*.23)*.45, (portrait ? -.9 : -.3) + Math.sin(elapsed*.17)*.16, 1+Math.sin(elapsed*.2)*.2);
+      craft.rotation.set(.23 + Math.sin(elapsed*.22)*.08, -.42 + Math.sin(elapsed*.25)*.45, -.27 + Math.sin(elapsed*.19)*.08);
+      earth.rotation.y = 1.6 + elapsed*.025;
+      camera.position.set(drift*.25,.18+Math.cos(elapsed*.14)*.13,portrait?12.4:8.7+Math.cos(elapsed*.16)*.28);
+      camera.lookAt(portrait?.25:0,0,0);
+      try {renderer.render(scene,camera); element!.dataset.motionSeconds=elapsed.toFixed(2);}
+      catch {graphicsAvailable=false;userPaused=true;stop();setReady(false);setSceneStatus("unavailable");setPaused(true);}
     }
-    function stop() { cancelAnimationFrame(frame); frame = 0; previous = 0; }
+    function stop() { cancelAnimationFrame(frame); frame = 0; previous = 0; segmentStart = 0; }
     function tick(now: number) {
       frame = 0;
-      if (disposed || userPaused || !inView || document.hidden) return;
+      if (disposed || !graphicsAvailable || userPaused || !inView || document.hidden) return;
+      if (!segmentStart) segmentStart=now-elapsed*1000;
       if (!previous || now - previous >= 1000 / 30) {
-        if (previous) elapsed += Math.min((now - previous) / 1000, .08);
+        elapsed=(now-segmentStart)/1000;
         previous = now; render();
       }
       frame = requestAnimationFrame(tick);
     }
-    function schedule() { stop(); if (!disposed && !userPaused && inView && !document.hidden) frame = requestAnimationFrame(tick); }
+    function schedule() { stop(); if (!disposed && graphicsAvailable && !userPaused && inView && !document.hidden) frame = requestAnimationFrame(tick); }
     controller.current = { pause(value) { userPaused = value; schedule(); render(); } };
     const resize = () => {
       const { width, height } = element.getBoundingClientRect(); if (!width || !height) return;
@@ -186,26 +193,30 @@ export default function CinematicHero() {
     const resizeObserver = new ResizeObserver(resize); resizeObserver.observe(element);
     const intersection = new IntersectionObserver(entries => { inView = entries[0].isIntersecting; schedule(); }, { threshold: 0 }); intersection.observe(element);
     const visibility = () => schedule(); document.addEventListener("visibilitychange", visibility);
-    const preference = () => { if (media.matches) setPaused(true); }; media.addEventListener("change", preference);
-    const contextLost = (event: Event) => { event.preventDefault(); userPaused = true; stop(); setReady(false); setPaused(true); };
+    const preference = () => { if (media.matches) {pauseIntent.current=true;setPaused(true);} }; media.addEventListener("change", preference);
+    const contextLost = (event: Event) => { event.preventDefault(); graphicsAvailable=false; userPaused = true; stop(); setReady(false); setSceneStatus("lost"); setPaused(true); };
     renderer.domElement.addEventListener("webglcontextlost", contextLost);
-    resize(); render(); setReady(true); setPaused(media.matches); schedule();
+    const contextRestored=()=>{if(!disposed)setSceneVersion(v=>v+1);};
+    renderer.domElement.addEventListener("webglcontextrestored",contextRestored);
+    resize(); render(); if(graphicsAvailable){setReady(true);setSceneStatus("ready");} setPaused(userPaused); schedule();
     return () => {
       disposed = true; stop(); controller.current = null;
       resizeObserver.disconnect(); intersection.disconnect(); document.removeEventListener("visibilitychange", visibility); media.removeEventListener("change", preference);
       renderer.domElement.removeEventListener("webglcontextlost", contextLost);
+      renderer.domElement.removeEventListener("webglcontextrestored",contextRestored);
       disposeObject(scene); textures.forEach(t => t.dispose()); renderer.dispose(); renderer.domElement.remove();
     };
-  }, []);
+  }, [sceneVersion]);
 
+  useEffect(()=>{pauseIntent.current=!animate||matchMedia("(prefers-reduced-motion: reduce)").matches;setPaused(pauseIntent.current);},[animate]);
   useEffect(() => { controller.current?.pause(paused); }, [paused]);
   return <>
-    <div className="cinematic-visual" role="img" aria-label="Illustration of a generic solar-powered spacecraft passing Earth, with an atmospheric glow and decorative trails. Not a mission simulation." data-motion={paused ? "paused" : "playing"}>
+    <div className="cinematic-visual" role="img" aria-label="Illustration of a generic solar-powered spacecraft passing Earth, with an atmospheric glow and decorative trails. Not a mission simulation." data-motion={!ready ? "static" : paused ? "paused" : "playing"}>
       <div className="cinematic-poster" aria-hidden="true" />
       <div className="cinematic-canvas" ref={host} style={{ opacity: ready ? 1 : 0 }}/>
       <div className="cinematic-shade" aria-hidden="true" />
     </div>
-    <div className="cinematic-caption"><span>SPACECRAFT CONCEPT</span><span>Illustration only · not a mission simulation</span></div>
-    {ready&&<button className="cinematic-pause" aria-label={paused ? "Play illustrative animation" : "Pause illustrative animation"} onClick={()=>setPaused(!paused)}>{paused?<Play size={18}/>:<Pause size={18}/>}</button>}
+    <div className="cinematic-caption"><span>SPACECRAFT CONCEPT</span><span>Illustration only · not a mission simulation</span><span role="status">{sceneStatus==="loading"?"Preparing animation…":sceneStatus==="lost"?"Graphics interrupted — retry the illustration":sceneStatus==="unavailable"?"Static illustration — 3D graphics unavailable":paused?"Motion paused · press Play to animate":"Motion playing"}</span></div>
+    <div className="cinematic-controls">{ready&&<button className="cinematic-pause" aria-label={paused?"Play illustrative animation":"Pause illustrative animation"} onClick={()=>{pauseIntent.current=!paused;setPaused(!paused);}}>{paused?<Play size={18}/>:<Pause size={18}/>}</button>}<button className="cinematic-pause" aria-label="Restart illustrative animation" title="Restart illustration" disabled={sceneStatus==="loading"} onClick={()=>{pauseIntent.current=false;setPaused(false);setSceneVersion(v=>v+1);}}><RotateCcw size={18}/></button></div>
   </>;
 }
