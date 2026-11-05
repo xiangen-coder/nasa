@@ -295,14 +295,21 @@ export default function LandingResearch({
     setError("");
     setFailures({});
     setCandidates(unique);
-    setResults([]);
-    setDetailKey(null);
+    // Expanding alternatives keeps the selected assessment from this unchanged request.
+    // Mission/limit changes already invalidate results in the request-key effect above.
+    const retained = compare
+      ? results.filter((r) => locationKey(r.mission) === locationKey(mission))
+      : [];
+    setResults(retained);
+    setDetailKey(retained.length ? locationKey(mission) : null);
     setDetail(0);
     setSample(0);
     setImagery(null);
-    const collected: Research[] = [];
+    const collected: Research[] = [...retained];
     try {
       for (const [i, s] of unique.entries()) {
+        if (collected.some((r) => locationKey(r.mission) === locationKey(s)))
+          continue;
         setProgress(
           `Evaluating ${s.name} (${i + 1}/${unique.length}). Cached NASA observations and local raster windows; no large downloads.`,
         );

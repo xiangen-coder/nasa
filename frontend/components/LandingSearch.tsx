@@ -53,13 +53,19 @@ export default function LandingSearch({
   }, []);
   return (
     <form
-      id="landing-search-form" className="landing-search glass"
+      id="landing-search-form"
+      className="landing-search glass"
       aria-label="Lunar landing search"
       onSubmit={(e) => {
         e.preventDefault();
-        const a=Date.parse(`${start}T${startTime}:00Z`), b=Date.parse(`${end}T${endTime}:00Z`);
-        if(!Number.isFinite(a)||!Number.isFinite(b)||b<=a){setError("End date and time must be later than the start.");return;}
-        setError("");onSubmit();
+        const a = Date.parse(`${start}T${startTime}:00Z`),
+          b = Date.parse(`${end}T${endTime}:00Z`);
+        if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) {
+          setError("End date and time must be later than the start.");
+          return;
+        }
+        setError("");
+        onSubmit();
       }}
     >
       <fieldset
@@ -118,7 +124,9 @@ export default function LandingSearch({
               value={priority}
               onChange={(e) => onPriority(e.target.value)}
             >
-              <option value="T">Terrain safety</option><option value="S">Sunlight availability</option><option value="C">Earth communication</option>
+              <option value="T">Terrain safety</option>
+              <option value="S">Sunlight availability</option>
+              <option value="C">Earth communication</option>
             </select>
           </label>
         </div>
@@ -192,7 +200,7 @@ export default function LandingSearch({
               </>
             ) : (
               <>
-                Assess this site <ArrowUpRight size={19} />
+                Go <ArrowUpRight size={19} />
               </>
             )}
           </button>
@@ -201,7 +209,8 @@ export default function LandingSearch({
           <p>
             Planetocentric latitude · east-positive longitude · 1901–2052
             <br />
-            Focus highlights a factor. Five-factor scoring weights remain fixed; missing terrain stays unavailable.
+            Focus highlights a factor. Five-factor scoring weights remain fixed;
+            missing terrain stays unavailable.
           </p>
           <details className="search-advanced">
             <summary>
@@ -242,7 +251,12 @@ export default function LandingSearch({
             </div>
           </details>
         </div>
-      </fieldset>{error&&<p className="error" role="alert">{error}</p>}
+      </fieldset>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
     </form>
   );
 }

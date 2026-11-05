@@ -9,26 +9,22 @@ const score = (r: Research | undefined, k: string) =>
     : `${r.factors[k].score!.toFixed(1)}${k === "S" || k === "C" ? "%" : " / 100"}`;
 export default function PreliminaryComparison({
   mission,
-  sites,
   state,
   onCompare,
+  onEvaluate,
   onInspect,
   onSearch,
   onCancel,
 }: {
   mission: Mission;
-  sites: Site[];
   state: ResearchComparison | null;
   onCompare: () => void;
+  onEvaluate: () => void;
   onInspect: (r: Research) => void;
   onSearch: () => void;
   onCancel: () => void;
 }) {
-  const planned = state?.candidates.length
-    ? state.candidates
-    : [mission, ...sites]
-        .filter((s, i, a) => a.findIndex((p) => key(p) === key(s)) === i)
-        .slice(0, 3);
+  const planned = state?.candidates.length ? state.candidates : [mission];
   const selected = state?.results.find((r) => key(r.mission) === key(mission));
   return (
     <section
@@ -39,8 +35,9 @@ export default function PreliminaryComparison({
         <div>
           <span className="eyebrow">PRELIMINARY ASSESSMENT</span>
           <p>
-            Compare your selected location with up to two saved or reference
-            points, using the same mission window and research limits.
+            Start with your selected location. Choose More Alternatives to
+            reveal up to two comparison points for the same mission window and
+            research limits.
           </p>
           <small>
             {mission.start.replace("T", " ")} → {mission.end.replace("T", " ")}{" "}
@@ -51,13 +48,11 @@ export default function PreliminaryComparison({
           <button className="button subtle" onClick={onSearch}>
             Back to Search
           </button>
-          <button
-            className="button primary"
-            disabled={state?.busy}
-            onClick={onCompare}
-          >
-            {state?.busy ? "Comparing…" : "Compare these points"}
-          </button>
+          {!selected && !state?.busy && (
+            <button className="button primary" onClick={onEvaluate}>
+              Evaluate selected site
+            </button>
+          )}
           {state?.busy && (
             <button className="button subtle" onClick={onCancel}>
               Stop comparison
@@ -138,15 +133,6 @@ export default function PreliminaryComparison({
                   )}
                 </div>
                 <div>
-                  <dt>TERRAIN SAFETY</dt>
-                  <dd>
-                    {score(r, "T")}
-                    {r?.terrain.slope_p95_deg != null
-                      ? ` · ${r.terrain.slope_p95_deg.toFixed(1)}° p95 slope`
-                      : ""}
-                  </dd>
-                </div>
-                <div>
                   <dt>SUNLIGHT AVAILABILITY</dt>
                   <dd>{score(r, "S")}</dd>
                 </div>
@@ -155,12 +141,6 @@ export default function PreliminaryComparison({
                   <dd>
                     {score(r, "C")}{" "}
                     {r?.factors.C.score != null ? "geometric visibility" : ""}
-                  </dd>
-                </div>
-                <div>
-                  <dt>TEMPERATURE / ICE POTENTIAL</dt>
-                  <dd>
-                    {score(r, "H")} / {score(r, "I")}
                   </dd>
                 </div>
                 <div>
@@ -173,9 +153,37 @@ export default function PreliminaryComparison({
                           ? r.constraints_failed.join(" ")
                           : "Landing safety is not established.")}
                   </dd>
-                  {r && <dd>{r.warnings.slice(0, 2).join(" ")}</dd>}
                 </div>
               </dl>
+              <details className="pre-extra">
+                <summary>Terrain, temperature & ice details</summary>
+                <dl>
+                  <div>
+                    <dt>TERRAIN SAFETY</dt>
+                    <dd>
+                      {score(r, "T")}
+                      {r?.terrain.slope_p95_deg != null
+                        ? ` · ${r.terrain.slope_p95_deg.toFixed(1)}° p95 slope`
+                        : ""}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>TEMPERATURE / ICE POTENTIAL</dt>
+                    <dd>
+                      {score(r, "H")} / {score(r, "I")}
+                    </dd>
+                  </div>
+                  {r && (
+                    <div>
+                      <dt>DATA WARNINGS</dt>
+                      <dd>
+                        {r.warnings.join(" ") ||
+                          "Review full sources and limitations in More Info."}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </details>
               {!isSelected && r && selected && (
                 <p className="pre-comparison-note">
                   {r.constraints_failed.length
@@ -193,11 +201,20 @@ export default function PreliminaryComparison({
                   disabled={!r}
                   onClick={() => r && onInspect(r)}
                 >
-                  More info <ArrowUpRight size={13} />
+                  More Info <ArrowUpRight size={13} />
                 </button>
                 <button className="button subtle" onClick={onSearch}>
                   Back to Search
                 </button>
+                {isSelected && (
+                  <button
+                    className="button subtle"
+                    disabled={!r || state?.busy}
+                    onClick={onCompare}
+                  >
+                    More Alternatives
+                  </button>
+                )}
               </div>
             </article>
           );
