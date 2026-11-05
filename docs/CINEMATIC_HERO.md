@@ -1,0 +1,11 @@
+# Illustrative cinematic hero
+
+The opening Moon is replaced by an original Three.js spacecraft/Earth concept scene inspired by the presentation style at https://www.intuitivemachines.com/ and the supplied screenshot. No Intuitive Machines video, source code, spacecraft model, logos or branding are bundled. The linked reverse-skill repository was inspected and found to be a security-analysis router, not a visual-effects library; no security toolchain was installed or run.
+
+CinematicHero.tsx creates a generic spacecraft, instanced solar cells, foil surface, antenna/dish, decorative trails and stars. These are art-directed and not vehicle specifications, ephemerides, predicted orbits, communications analysis or real telemetry. The visible caption and About description explicitly distinguish the illustration from the actual scientific observatory. No astronomical backend, research weight, scoring rule or terrain dataset changed.
+
+The original user-supplied Earth GLB remains unchanged. earth-lite.glb retains the source geometry, transforms, normals and UVs; only the embedded images are downsampled and JPEG compressed. The 382,892-byte asset replaces a 12,916,400-byte download in the hero. Source/output SHA-256 and image dimensions are recorded in illustration/earth-lite-source.json. The standalone observatory continues using its own existing model. The concept sphere, camera drift, body orientation and all relative distances are illustrative.
+
+Animation is capped at 30 frames/s and device pixel ratio 1.5. Pause cancels scheduled animation; elapsed time is frozen rather than advancing while paused. IntersectionObserver and document visibility stop work offscreen and in background tabs. Reduced-motion preference starts the scene paused and changes to that preference pause it; the user may explicitly choose Play. Geometry, materials, textures, listeners and observers are disposed on unmount. A static original SVG poster is available before rendering or if WebGL is unavailable/lost. No new runtime dependency was introduced.
+
+The hero CTA scrolls to the existing search form. Search, Result, Alternative, the workspace tools, NASA requests and all date/coordinate controls remain in the same application. The pause control is placed clear of the existing floating news control on desktop and mobile.

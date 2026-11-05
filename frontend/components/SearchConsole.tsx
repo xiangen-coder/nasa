@@ -17,7 +17,7 @@ type Props = {
 
 export default function SearchConsole(p: Props) {
   const [error, setError] = useState("");
-  return <form className="search-console" aria-label="Search for a lunar landing site" onSubmit={event => {
+  return <form id="landing-search-form" className="search-console" aria-label="Search for a lunar landing site" onSubmit={event => {
     event.preventDefault();
     const start = Date.parse(`${p.start}T${p.startTime}:00Z`);
     const end = Date.parse(`${p.end}T${p.endTime}:00Z`);

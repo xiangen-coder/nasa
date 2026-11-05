@@ -5,7 +5,7 @@ import { CalculationDetails, Uncertainty } from "../components/ResultExplanation
 import NewsSidebar from "../components/NewsSidebar";
 import LandingResearch from "../components/LandingResearch";
 import SearchConsole, { type ResearchPriority } from "../components/SearchConsole";
-const HeroMoon = dynamic(() => import("../components/HeroMoon"), { ssr: false });
+const CinematicHero = dynamic(() => import("../components/CinematicHero"), { ssr: false });
 const AstronomySimulation = dynamic(() => import("../components/AstronomySimulation"), { ssr: false, loading: () => <div className="panel empty">Loading astronomical simulation…</div> });
 const CelestialViewer = dynamic(() => import("../components/CelestialViewer"), {
   ssr: false,
@@ -796,9 +796,9 @@ export default function Page() {
         </header>
         <div className={`workspace-with-news ${newsOpen ? "" : "news-closed"}`}>
           <main id="lunar-search">
-            {view===0 ? <section className="lunar-hero" aria-label="Lunar exploration">
-              <div className="hero-copy"><div className="eyebrow">A NEW PERSPECTIVE ON THE MOON</div><h1>Find your place on<br/>the Moon.</h1><p>Explore lunar landing possibilities. Enter a time and coordinates to assess sunlight, communication and the terrain between.</p><span className="hero-mantra">EXPLORE · ASSESS · DISCOVER</span></div>
-              <HeroMoon/>
+            {view===0 ? <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration">
+              <div className="hero-copy"><div className="eyebrow">A NEW PERSPECTIVE ON THE MOON</div><h1>Find your place&nbsp;on<br/>the Moon.</h1><p>Explore lunar landing possibilities. Enter a time and coordinates to assess sunlight, communication and the terrain between.</p><span className="hero-mantra">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"})}>Explore a landing site <ArrowRight size={17}/></button></div>
+              <CinematicHero/>
             </section> : <div className="page-heading">
               <div>
                 <div className="eyebrow">
@@ -1718,7 +1718,7 @@ export default function Page() {
             <p>Lunar Navigator is a NASA Space Apps 2026 research demonstrator for exploring lunar landing locations, mission windows and backup possibilities.</p>
             <h3>Real data, transparent limits</h3><p>NASA/JPL ephemerides power the celestial geometry. NASA LOLA elevation, LROC imagery and historical Diviner temperature products support the available regional measurements. Missing evidence stays unavailable. A research score is not a probability of landing success.</p>
             <h3>Your complete workspace</h3><p>The menu provides the map explorer, local horizon, terrain analysis, site comparison, historical mission archive and interactive Sun–Earth–Moon observatory.</p>
-            <p>The opening Moon is an illustrative surface model using NASA SVS / LRO / Ernie Wright imagery. It does not show the predicted lunar orientation.</p>
+            <p>The opening spacecraft scene is an original visual illustration with a generic vehicle, reused Earth surface model and decorative trails. Camera motion, body positions and relative scales are artistic; they are not a flight path, telemetry or ephemeris simulation. Actual Sun–Earth–Moon positions remain in the observatory.</p>
             <p><a href="https://svs.gsfc.nasa.gov/4720/" target="_blank" rel="noreferrer">NASA Moon imagery</a> · <a href="https://ssd-api.jpl.nasa.gov/doc/horizons.html" target="_blank" rel="noreferrer">JPL Horizons</a> · <a href="https://github.com/xiangen-coder/nasa/blob/public-preview/docs/WIDE_TERRAIN.md" target="_blank" rel="noreferrer">Terrain methods & coverage</a></p>
           </dialog>
           <button className="news-float" aria-label={newsOpen?"Hide lunar dispatch":"Show lunar dispatch"} aria-controls="news-panel" aria-expanded={newsOpen} onClick={()=>{setNewsOpen(!newsOpen);try{localStorage.setItem("lunar-news",!newsOpen?"open":"closed");}catch{}}}><Newspaper size={21}/></button>

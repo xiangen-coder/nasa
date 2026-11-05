@@ -1,0 +1,31 @@
+{
+  "source": "Existing user-supplied frontend/public/models/earth.glb",
+  "source_sha256": "05a5aea99db8ab472487a06debc3b5d0b2cae7636a1a6b9ecfa40b7d1722ba23",
+  "output_sha256": "71301de2a42347b85ad79ddacc7683c41943355493ec09a463291b2bfb794f65",
+  "output_bytes": 382892,
+  "processing": "Existing geometry, normals, transforms and UVs preserved verbatim. Only embedded images resized and JPEG-compressed for a decorative hero; original model unchanged. Not an ephemeris or elevation product.",
+  "images": [
+    {
+      "name": "earth_norm.jpg",
+      "original_size": [
+        4096,
+        3072
+      ],
+      "hero_size": [
+        1024,
+        768
+      ]
+    },
+    {
+      "name": "earth_diff.jpg",
+      "original_size": [
+        4096,
+        3072
+      ],
+      "hero_size": [
+        2048,
+        1536
+      ]
+    }
+  ]
+}
