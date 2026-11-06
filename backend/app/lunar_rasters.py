@@ -106,6 +106,35 @@ def local_terrain(location,radius_m=100):
     except (OSError,ValueError,KeyError,rasterio.errors.RasterioError) as exc:
         return {'available':False,'reason':str(exc),'grid':[]}
 
+def _sample_horizon_pixels(dataset, xs, ys):
+    """Read each raster block touched by the selected site's rays only once."""
+    if not np.isfinite(xs).all() or not np.isfinite(ys).all():
+        raise ValueError('Invalid horizon ray coordinates.')
+    rows, columns = map(np.asarray, rasterio.transform.rowcol(dataset.transform, xs, ys))
+    if (rows.min() < 0 or rows.max() >= dataset.height or
+            columns.min() < 0 or columns.max() >= dataset.width):
+        raise ValueError('DEM does not cover all 20 km horizon rays.')
+
+    block_height, block_width = dataset.block_shapes[0]
+    blocks_per_row = (dataset.width + block_width - 1) // block_width
+    block_ids = (rows // block_height) * blocks_per_row + columns // block_width
+    order = np.argsort(block_ids)
+    boundaries = np.flatnonzero(np.diff(block_ids[order])) + 1
+    values = np.empty(rows.size, dtype=dataset.dtypes[0])
+    for indices in np.split(order, boundaries):
+        block_row, block_column = divmod(int(block_ids[indices[0]]), blocks_per_row)
+        row = block_row * block_height
+        column = block_column * block_width
+        window = Window(column, row, min(block_width, dataset.width - column),
+                        min(block_height, dataset.height - row))
+        block = dataset.read(1, window=window, masked=True)
+        samples = block[rows[indices] - row, columns[indices] - column]
+        if np.ma.getmaskarray(samples).any() or not np.isfinite(samples).all():
+            raise ValueError('DEM does not cover all 20 km horizon rays.')
+        values[indices] = samples
+    return values
+
+
 def horizon(location,height):
     """Finite 20 km terrain screening; missing rays never imply a flat horizon."""
     try:
@@ -121,9 +150,8 @@ def horizon(location,height):
             xs,ys=transform.transform(lon,lat)
             if np.min(xs)<ds.bounds.left or np.max(xs)>=ds.bounds.right or np.min(ys)<=ds.bounds.bottom or np.max(ys)>ds.bounds.top:
                 raise ValueError('DEM does not cover every horizon ray to 20 km; reference geometry remains provisional.')
-            vals=np.ma.array([v[0] for v in ds.sample(zip(xs,ys),masked=True)])
-            if np.ma.getmaskarray(vals).any() or not np.isfinite(vals).all(): raise ValueError('DEM does not cover all 20 km horizon rays.')
-            heights=np.asarray(vals).reshape(az.shape)*ds.scales[0]+ds.offsets[0]
+            vals = _sample_horizon_pixels(ds, xs, ys)
+            heights=vals.reshape(az.shape)*ds.scales[0]+ds.offsets[0]
             angle=dist/RADIUS
             angles=np.degrees(np.arctan2((RADIUS+heights)*np.cos(angle)-(RADIUS+height),(RADIUS+heights)*np.sin(angle)))
             return {'available':True,'profile':[{'azimuth':int(a),'elevation':float(e)} for a,e in zip(azimuths,angles.max(axis=1))],
