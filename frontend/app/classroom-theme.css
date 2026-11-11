@@ -35,6 +35,36 @@
   color: var(--classroom-muted);
 }
 
+[data-classroom-theme] .workspace-breadcrumb button {
+  color: var(--classroom-accent);
+}
+
+[data-classroom-theme] .mission-lab .button.subtle,
+[data-classroom-theme] .mission-lab .text-button {
+  background: #fff;
+  color: #145b63;
+  border-color: var(--classroom-border);
+  box-shadow: none;
+}
+
+[data-classroom-theme] .mission-lab .button.primary,
+[data-classroom-theme] .mission-lab .button[aria-pressed="true"] {
+  background: var(--classroom-accent);
+  border-color: var(--classroom-accent);
+  color: #fff;
+  box-shadow: none;
+}
+
+[data-classroom-theme] .mission-lab .button.subtle:hover,
+[data-classroom-theme] .mission-lab .text-button:hover {
+  background: #e3f1ee;
+}
+
+[data-classroom-theme] .mission-lab .button.primary:hover {
+  background: #10555c;
+  color: #fff;
+}
+
 .lunar-app[data-classroom-theme] .nav-pill,
 [data-classroom-theme] .header-mode-switch,
 [data-classroom-theme] .settings-trigger,
