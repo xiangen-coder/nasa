@@ -107,7 +107,7 @@ export type ResearchComparison = {
 };
 export type ResearchActions = {
   evaluate: () => Promise<void>;
-  compare: () => Promise<void>;
+  compare: (chosen?: Site[]) => Promise<void>;
   inspect: (result: Research) => void;
   cancel: () => void;
 };
@@ -279,12 +279,12 @@ export default function LandingResearch({
       );
     }
   };
-  const run = async (compare: boolean) => {
+  const run = async (compare: boolean, chosen?: Site[]) => {
     abort.current?.abort();
     const controller = new AbortController();
     abort.current = controller;
     const gen = ++generation.current;
-    const candidates = compare ? [mission, ...saved, ...sites] : [mission];
+    const candidates = compare ? [mission, ...(chosen ?? [...saved, ...sites])] : [mission];
     const unique = candidates
       .filter(
         (s, i, a) =>
@@ -362,7 +362,7 @@ export default function LandingResearch({
   }, [result, onResultChange]);
   useImperativeHandle(actionRef, () => ({
     evaluate: () => run(false),
-    compare: () => run(true),
+    compare: (chosen) => run(true, chosen),
     inspect: (r: Research) => {
       setDetailKey(locationKey(r.mission));
       setSample(0);

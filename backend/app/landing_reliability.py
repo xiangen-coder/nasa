@@ -142,6 +142,13 @@ def alternatives(request,baseline):
 
 
 
+@router.post('/alternatives')
+def shortlist(request:ReliabilityRequest):
+    """Find local terrain candidates without calculating ephemerides."""
+    request=request.model_copy(update={'limits':request.limits.model_copy(update={'max_slope_deg':min(request.limits.max_slope_deg,12),'good_slope_deg':min(request.limits.good_slope_deg,5.999)})})
+    return alternatives(request,screened(request.mission,request.limits,request.vehicle))
+
+
 @router.post('/assess')
 
 def assess(request:ReliabilityRequest):

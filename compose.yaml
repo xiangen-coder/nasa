@@ -17,6 +17,10 @@ services:
         BACKEND_URL: http://backend:8000
     ports:
       - "3000:3000"
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+      SITE_URL: ${SITE_URL:-http://localhost:3000}
     depends_on:
       backend:
         condition: service_healthy

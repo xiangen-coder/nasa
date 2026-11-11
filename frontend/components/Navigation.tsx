@@ -13,6 +13,8 @@ import {
   Settings,
   SlidersHorizontal,
   X,
+  UserRound,
+  FlaskConical,
 } from "lucide-react";
 import PreferencesControls, { type Preferences } from "./Preferences";
 
@@ -29,13 +31,17 @@ export const viewPaths = [
   "about",
   "settings",
   "pre-results",
+  "mission-lab",
+  "account",
 ];
 export const toolItems = [
+  { view: 12, label: "Mission lab", icon: FlaskConical, detail: "Scenarios, equipment & classroom activities" },
+  { view: 13, label: "Account & saved searches", icon: UserRound, detail: "Sign in to save and reopen your searches" },
   {
     view: 11,
     label: "Pre-result comparison",
     icon: Layers,
-    detail: "Selected point & two research alternatives",
+    detail: "Choose up to two alternatives",
   },
   {
     view: 0,

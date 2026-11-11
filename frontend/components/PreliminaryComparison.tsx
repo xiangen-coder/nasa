@@ -35,9 +35,7 @@ export default function PreliminaryComparison({
         <div>
           <span className="eyebrow">PRELIMINARY ASSESSMENT</span>
           <p>
-            Start with your selected location. Choose More Alternatives to
-            reveal up to two comparison points for the same mission window and
-            research limits.
+            Start with your selected location. Choose up to two alternatives below to compare under the same mission window and research limits.
           </p>
           <small>
             {mission.start.replace("T", " ")} → {mission.end.replace("T", " ")}{" "}
@@ -212,7 +210,7 @@ export default function PreliminaryComparison({
                     disabled={!r || state?.busy}
                     onClick={onCompare}
                   >
-                    More Alternatives
+                    Choose alternatives
                   </button>
                 )}
               </div>
@@ -222,10 +220,9 @@ export default function PreliminaryComparison({
       </div>
       <p className="preliminary-disclosure">
         Scores are research screening results, not landing-success
-        probabilities. Comparison points are selected from saved points and
-        geographic references; they are not verified safe, reachable or
-        optimized landing alternatives. Use More info for source data, Apollo LM
-        assumptions and backup terrain screening.
+        probabilities. Terrain suggestions screen nearby footprints. Each chosen
+        candidate still needs its own sunlight, communications and thermal
+        evaluation. Use More Info for source data and Apollo LM assumptions.
       </p>
     </section>
   );
