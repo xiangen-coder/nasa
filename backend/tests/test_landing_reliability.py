@@ -31,6 +31,24 @@ def test_missing_uncertainty_prevents_candidate(raster,monkeypatch):
  q=r.ReliabilityRequest(mission=mission());a=r.screened(q.mission,q.limits,q.vehicle)
  assert a['margin_terrain_score'] is None;assert not r.alternatives(q,a)['candidates']
 
+def test_regional_terrain_can_be_compared_without_passing_apollo(raster,monkeypatch):
+ def local(*args,allow_regional=False):
+  return {**terrain(),'resolution_m':20,'coverage_type':'regional'} if allow_regional else {'available':False}
+ monkeypatch.setattr(r.rasters,'local_terrain',local)
+ monkeypatch.setattr(r,'uncertainty',lambda *a:{'available':False,'layers':{}})
+ report=r.shortlist(r.ReliabilityRequest(mission=mission(),vehicle=r.Vehicle(search_radius_m=1000)))
+ assert not report['candidates'] and report['passing_terrain_candidates']==0
+ assert report['outside_or_missing']==24 and report['search_radius_m']==1000
+ assert report['exploration_candidates']
+ assert all(c['resolution_m']==20 and 'margin_terrain_score' not in c for c in report['exploration_candidates'])
+
+def test_regional_comparison_rejects_nominal_slope_over_apollo_cap(raster,monkeypatch):
+ monkeypatch.setattr(r.rasters,'local_terrain',lambda *a,allow_regional=False:
+     {**terrain(),'slope_max_deg':13,'resolution_m':20} if allow_regional else {'available':False})
+ monkeypatch.setattr(r,'uncertainty',lambda *a:{'available':False,'layers':{}})
+ report=r.shortlist(r.ReliabilityRequest(mission=mission(),limits=Limits(max_slope_deg=30)))
+ assert not report['exploration_candidates']
+
 def test_diversion_and_spatial_separation(raster):
  q=r.ReliabilityRequest(mission=mission(),vehicle=r.Vehicle(diversion_range_m=450))
  a=r.screened(q.mission,q.limits,q.vehicle);b=r.alternatives(q,a)

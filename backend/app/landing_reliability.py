@@ -93,7 +93,7 @@ def alternatives(request,baseline):
 
     v=request.vehicle;maximum=min(v.search_radius_m,v.diversion_range_m) if v.diversion_range_m is not None else v.search_radius_m
 
-    rows=[];inspection=[];rejected=0;outside=0;overlap=0
+    rows=[];inspection=[];unverified=[];rejected=0;outside=0;overlap=0
 
     # 24 deterministic geodesic candidates; never fabricate an elevation or reuse source-site lighting.
 
@@ -108,7 +108,10 @@ def alternatives(request,baseline):
 
             a=screened(m,request.limits,v)
 
-            if a['status']=='insufficient_evidence':outside+=1;continue
+            if a['status']=='insufficient_evidence':
+                outside+=1
+                unverified.append((m,radius,a))
+                continue
 
             if a['status']!='passes_available_terrain_checks':
 
@@ -128,18 +131,49 @@ def alternatives(request,baseline):
 
     # Spatial separation avoids presenting almost identical footprints as independent backups.
 
-    selected=[]
-
-    for row in rows:
-
-        if all(rasters.GEOD.inv(row['location']['longitude'],row['location']['latitude'],p['location']['longitude'],p['location']['latitude'])[2]>=2*baseline['screening_radius_m'] for p in selected):selected.append(row)
-
-        if len(selected)==3:break
-
+    selected=distinct_candidates(rows,baseline['screening_radius_m'])
+    exploration=[] if selected else exploration_candidates(unverified,baseline['screening_radius_m'],request.limits)
     return {'searched':24,'overlap_excluded':overlap,'outside_or_missing':outside,'failed_limits':rejected,'passing_terrain_candidates':len(rows),'candidates':selected,'inspection_candidates':inspection[:3] if not selected else [],
+      'exploration_candidates':exploration,'search_radius_m':maximum,
 
       'scope':'Local terrain shortlist only. Candidate lighting, thermal suitability, boulders, fuel, navigation and flight reachability must be checked independently. No candidate is a certified landing site.'}
 
+
+
+def distinct_candidates(rows, screening_radius):
+    selected = []
+    for row in rows:
+        point = row['location']
+        if all(rasters.GEOD.inv(point['longitude'], point['latitude'], p['location']['longitude'],
+                               p['location']['latitude'])[2] >= 2 * screening_radius for p in selected):
+            selected.append(row)
+        if len(selected) == 3:
+            break
+    return selected
+
+
+def exploration_candidates(unverified, screening_radius, limits):
+    """Nominal terrain comparisons for sites without enough Apollo evidence."""
+    limits = limits.model_copy(update={'max_slope_deg': min(limits.max_slope_deg, 12),
+                                       'good_slope_deg': min(limits.good_slope_deg, 5.999)})
+    rows = []
+    for mission, distance, assessment in unverified:
+        terrain = assessment['terrain']
+        if not terrain.get('available'):
+            terrain = rasters.local_terrain(mission, screening_radius, allow_regional=True)
+        if not terrain.get('available') or terrain['slope_mean_deg'] > 6:
+            continue
+        hazards = rasters.measurement('hazards', mission)
+        nominal = score_factors(terrain, {}, {}, hazards, {}, limits)
+        score = nominal['factors']['T']['score']
+        if score is None or nominal['constraints_failed']:
+            continue
+        rows.append({'location': {**mission.model_dump(mode='json'),
+                                  'name': mission.name.replace('Backup terrain candidate', 'Terrain comparison point')},
+                     'distance_m': distance, 'resolution_m': terrain['resolution_m'],
+                     'slope_p95_deg': terrain['slope_p95_deg'], 'nominal_terrain_score': score})
+    rows.sort(key=lambda row: (row['resolution_m'], -row['nominal_terrain_score'], row['distance_m']))
+    return distinct_candidates(rows, screening_radius)
 
 
 @router.post('/alternatives')

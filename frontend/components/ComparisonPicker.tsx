@@ -16,6 +16,24 @@ type Candidate = {
   distance_m: number;
   terrain_score_change: number | null;
 };
+export type TerrainComparisonPoint = Pick<Candidate, "location" | "distance_m"> & {
+  resolution_m: number;
+  slope_p95_deg: number;
+};
+type Rejected = Pick<Candidate, "location" | "distance_m"> & {
+  assessment: { constraints_failed: string[] };
+};
+type Shortlist = {
+  candidates: Candidate[];
+  exploration_candidates?: TerrainComparisonPoint[];
+  inspection_candidates?: Rejected[];
+  searched: number;
+  overlap_excluded: number;
+  outside_or_missing: number;
+  failed_limits: number;
+  passing_terrain_candidates: number;
+  scope: string;
+};
 
 export default function ComparisonPicker({
   mission,
@@ -34,9 +52,9 @@ export default function ComparisonPicker({
 }) {
   const [suggestions, setSuggestions] = useState<{
     key: string;
-    candidates: Candidate[];
-    note: string;
+    data: Shortlist;
   }>();
+  const [radius, setRadius] = useState(500);
   const [loading, setLoading] = useState(false);
   const [entry, setEntry] = useState("");
   const [name, setName] = useState("");
@@ -50,7 +68,10 @@ export default function ComparisonPicker({
       all.findIndex((p) => siteKey(p) === siteKey(s)) === i,
   );
   const selected = chosen.filter((s) => siteKey(s) !== key);
-  const screened = suggestions?.key === key ? suggestions : undefined;
+  const searchKey = `${key}:${radius}`;
+  const screened = suggestions?.key === searchKey ? suggestions.data : undefined;
+  const canAdd = (site: Site) =>
+    !busy && selected.length < 2 && !selected.some((s) => siteKey(s) === siteKey(site));
   function add(site: Site) {
     if (selected.length >= 2)
       return setError("Choose at most two alternatives.");
@@ -74,18 +95,12 @@ export default function ComparisonPicker({
       const r = await fetch("/api/reliability/alternatives", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mission }),
+        body: JSON.stringify({ mission, vehicle: { search_radius_m: radius } }),
       });
       if (!r.ok)
         throw new Error("Terrain suggestions are unavailable for this search.");
-      const data = await r.json();
-      setSuggestions({
-        key,
-        candidates: data.candidates,
-        note: data.candidates.length
-          ? data.scope
-          : "No nearby points passed the available terrain checks. Terrain coverage and the Apollo LM screening assumptions limit this shortlist.",
-      });
+      const data: Shortlist = await r.json();
+      setSuggestions({ key: searchKey, data });
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Could not load terrain suggestions.",
@@ -131,6 +146,14 @@ export default function ComparisonPicker({
         >
           Add reference
         </button>
+        <label>
+          Nearby search radius
+          <select value={radius} onChange={(event) => setRadius(Number(event.target.value))}>
+            <option value={500}>500 m</option>
+            <option value={1000}>1 km</option>
+            <option value={2000}>2 km</option>
+          </select>
+        </label>
         <button
           className="button subtle"
           disabled={busy || loading}
@@ -147,8 +170,10 @@ export default function ComparisonPicker({
       {screened && (
         <div>
           <p className="info" role="status">
-            {screened.note}
+            {screened.candidates.length ? "Nearby points passed the available Apollo terrain checks." : "No nearby point passed the available Apollo terrain checks."}
+            {" "}{screened.searched} grid points · {screened.overlap_excluded} excluded for overlap · {screened.outside_or_missing} lack sufficient evidence · {screened.failed_limits} exceeded limits · {screened.passing_terrain_candidates} passed.
           </p>
+          <p className="muted">{screened.scope}</p>
           {screened.candidates.map((c) => (
             <div key={siteKey(c.location)} className="saved-search">
               <span>
@@ -159,17 +184,40 @@ export default function ComparisonPicker({
               </span>
               <button
                 className="button subtle"
-                disabled={
-                  busy ||
-                  selected.length >= 2 ||
-                  selected.some((s) => siteKey(s) === siteKey(c.location))
-                }
+                disabled={!canAdd(c.location)}
                 onClick={() => add(c.location)}
               >
                 Add to comparison
               </button>
             </div>
           ))}
+          {!!screened.exploration_candidates?.length && (
+            <section aria-label="Terrain comparison points">
+              <h3>Terrain comparison points</h3>
+              <p>Nominal terrain checks passed. Apollo footprint and uncertainty evidence is incomplete.</p>
+              {screened.exploration_candidates.map((c) => (
+                <div key={siteKey(c.location)} className="saved-search">
+                  <span>{c.location.name} · {c.resolution_m} m DEM · {c.slope_p95_deg.toFixed(1)}° p95 slope</span>
+                  <button className="button subtle" disabled={!canAdd(c.location)} onClick={() => add(c.location)}>
+                    Add for comparison
+                  </button>
+                </div>
+              ))}
+            </section>
+          )}
+          {!!screened.inspection_candidates?.length && (
+            <details>
+              <summary>Points that exceeded terrain limits</summary>
+              {screened.inspection_candidates.map((c) => (
+                <div key={siteKey(c.location)} className="saved-search">
+                  <span>{c.location.name} · {c.assessment.constraints_failed.join(" ")}</span>
+                  <button className="button subtle" disabled={!canAdd(c.location)} onClick={() => add({ ...c.location, name: c.location.name.replace("Backup terrain candidate", "Rejected terrain point") })}>
+                    Compare rejected point
+                  </button>
+                </div>
+              ))}
+            </details>
+          )}
         </div>
       )}
       <form className="account-actions" onSubmit={custom}>
