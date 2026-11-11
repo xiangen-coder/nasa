@@ -14,6 +14,149 @@
 .lunar-app .nav-pill {
   background: rgba(20, 26, 40, 0.65);
 }
+.lunar-app .topbar-actions {
+  gap: 10px;
+}
+.header-mode-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid #b5c8e333;
+  border-radius: 999px;
+  background: #101a2c;
+}
+.header-mode-switch button {
+  min-height: 34px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  color: #c3d1e5;
+  font-size: 12px;
+}
+.header-mode-switch button[aria-pressed="true"] {
+  background: #465675;
+  color: #fff;
+}
+.header-mode-switch button:hover,
+.home-mode-cards button:hover {
+  box-shadow: inset 0 0 0 1px #c6daf585;
+}
+.home-mode-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 1204px;
+  margin: 0 auto 26px;
+}
+.home-mode-cards button {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 101px;
+  padding: 18px 21px;
+  border: 1px solid #b8cbea33;
+  border-radius: 18px;
+  background: #1c273ce8;
+  color: #dbe6f5;
+  text-align: left;
+}
+.home-mode-cards button[aria-pressed="true"] {
+  border-color: #c8dcff9c;
+  background: #303e57;
+}
+.home-mode-cards strong {
+  font-size: clamp(17px, 2vw, 22px);
+}
+.home-mode-cards span {
+  font-size: clamp(12px, 1.4vw, 16px);
+}
+.lunar-app .more-menu {
+  max-height: min(322px, calc(100dvh - 155px));
+  scrollbar-width: thin;
+  scrollbar-color: #52647c transparent;
+}
+.lunar-app .more-menu button {
+  gap: 9px;
+  padding: 8px 10px;
+  text-align: left;
+}
+.revised-search .cinematic-cta {
+  min-height: 38px;
+  padding: 8px 16px;
+  border-color: #b5c8e344;
+  background: #192439;
+  color: #eaf0fa;
+  font-size: 12px;
+  box-shadow: none;
+}
+.revised-search .cinematic-cta:hover {
+  background: #303e57;
+}
+@media (min-width: 851px) {
+  .lunar-app .lunar-topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 18px;
+  }
+  .lunar-app .nav-pill {
+    justify-self: center;
+  }
+  .lunar-app .nav-pill > a,
+  .lunar-app .nav-pill > .more-menu-wrap > button {
+    padding-inline: 17px;
+  }
+  .lunar-app .more-menu {
+    left: -85px;
+    width: 285px;
+  }
+  .revised-search > .cinematic-hero {
+    min-height: clamp(565px, calc(100svh - 220px), 755px);
+    align-items: flex-start;
+    padding-top: 28px;
+    padding-inline: max(4.5vw, calc((min(100vw, 1600px) - 1204px) / 2));
+    background: transparent;
+  }
+  .revised-search .cinematic-visual {
+    mask-image: linear-gradient(transparent, #000 45px);
+  }
+  .revised-search .cinematic-hero .hero-copy {
+    align-self: flex-start;
+  }
+}
+@media (min-width: 851px) and (max-width: 1050px) {
+  .lunar-app .nav-pill > a,
+  .lunar-app .nav-pill > .more-menu-wrap > button {
+    padding-inline: 13px;
+  }
+}
+@media (max-width: 500px) {
+  .home-mode-cards {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .home-mode-cards button {
+    min-height: 104px;
+    padding: 12px;
+  }
+  .header-mode-switch button {
+    min-height: 32px;
+    padding-inline: 7px;
+    font-size: 11px;
+  }
+}
+@media (max-width: 380px) {
+  .lunar-app .topbar-actions,
+  .lunar-app .lunar-brand {
+    gap: 6px;
+  }
+  .lunar-app .lunar-brand {
+    font-size: 15px;
+  }
+  .lunar-app .lunar-brand > svg {
+    width: 19px;
+  }
+  .header-mode-switch button {
+    padding-inline: 5px;
+  }
+}
 .revised-search {
   grid-template-columns: minmax(0, 1fr);
   gap: 24px;

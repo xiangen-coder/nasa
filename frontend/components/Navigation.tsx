@@ -7,9 +7,11 @@ import {
   ArrowUpRight,
   ChevronDown,
   Compass,
+  FileText,
   Layers,
   Moon,
   Orbit,
+  Rocket,
   Settings,
   SlidersHorizontal,
   X,
@@ -34,8 +36,15 @@ export const viewPaths = [
   "mission-lab",
   "account",
   "education",
+  "mission-report",
+  "mission-planner",
 ];
 export const toolItems = [
+  { view: 0, label: "Map explorer", icon: Compass, detail: "Coordinates & geographic references" },
+  { view: 15, label: "Mission report", icon: FileText, detail: "Scenario evidence & exports" },
+  { view: 5, label: "3D observatory", icon: Orbit, detail: "NASA positions & computed local sky" },
+  { view: 16, label: "Mission planner", icon: Rocket, detail: "Vehicle worksheet & launch weather" },
+  { view: 4, label: "Lunar mission archive", icon: Archive, detail: "Historical missions & documented 3D paths" },
   { view: 12, label: "Mission lab", icon: FlaskConical, detail: "Scenarios, equipment & classroom activities" },
   { view: 13, label: "Account & saved searches", icon: UserRound, detail: "Sign in to save and reopen your searches" },
   {
@@ -43,12 +52,6 @@ export const toolItems = [
     label: "Pre-result comparison",
     icon: Layers,
     detail: "Choose up to two alternatives",
-  },
-  {
-    view: 0,
-    label: "Map explorer",
-    icon: Compass,
-    detail: "Coordinates & geographic references",
   },
   {
     view: 1,
@@ -68,28 +71,18 @@ export const toolItems = [
     icon: SlidersHorizontal,
     detail: "Alternatives & weighted ranking",
   },
-  {
-    view: 4,
-    label: "Lunar mission archive",
-    icon: Archive,
-    detail: "Historical missions & documented 3D paths",
-  },
-  {
-    view: 5,
-    label: "3D observatory",
-    icon: Orbit,
-    detail: "NASA positions & computed local sky",
-  },
 ];
 
 export default function Navigation({
   view,
+  education,
   onNavigate,
   health,
   preferences,
   onPreferences,
 }: {
   view: number;
+  education: boolean;
   onNavigate: (view: number) => void;
   health: string;
   preferences: Preferences;
@@ -129,15 +122,15 @@ export default function Navigation({
       </a>
       <nav className="nav-pill glass" aria-label="Main navigation">
         {[
-          { label: "Search", view: 7 },
+          { label: "Configure", view: education ? 14 : 7 },
+          { label: "Compare", view: 11 },
           { label: "Result", view: 8 },
-          { label: "Education", view: 14 },
         ].map((item) => (
           <a
             key={item.view}
             href={`#${viewPaths[item.view]}`}
             aria-current={
-              view === item.view || (item.view === 7 && view === 11)
+              view === item.view
                 ? "page"
                 : undefined
             }
@@ -183,7 +176,7 @@ export default function Navigation({
         >
           <button
             ref={moreButton}
-            className={view < 7 ? "active" : ""}
+            className={toolItems.some((item) => item.view === view) && view !== 11 ? "active" : ""}
             aria-haspopup="menu"
             aria-expanded={more}
             aria-controls="more-tools"
@@ -228,6 +221,14 @@ export default function Navigation({
         </a>
       </nav>
       <div className="topbar-actions">
+        <div className="header-mode-switch" role="group" aria-label="Experience mode">
+          <button type="button" aria-pressed={!education} onClick={() => navigate(7)}>
+            Professional
+          </button>
+          <button type="button" aria-pressed={education} onClick={() => navigate(14)}>
+            Education
+          </button>
+        </div>
         <div className="system-state">
           <span
             className={health === "SPICE online" ? "live-dot" : "offline-dot"}

@@ -37,6 +37,7 @@ type Props = Pick<
 > & {
   mission: Mission;
   mode: ExperienceMode;
+  linkedTool?: 8 | 14;
   onModeChange: (mode: ExperienceMode) => void;
   onRestore: (m: Mission) => void;
 };
@@ -44,17 +45,16 @@ type Props = Pick<
 export default function MissionLab({
   mission,
   mode,
+  linkedTool,
   onModeChange,
   onRestore,
   ...inputs
 }: Props) {
   const [tabs, setTabs] = useState({ professional: 7, education: 7 });
-  const tab = tabs[mode];
-  const nextMode = mode === "education" ? "professional" : "education";
-  const modeLabel = mode === "education" ? "Education" : "Professional";
-  const nextModeLabel = nextMode === "education" ? "Education" : "Professional";
+  const tab = linkedTool ?? tabs[mode];
   const setTab = (next: number, targetMode = mode) => {
     setTabs((previous) => ({ ...previous, [targetMode]: next }));
+    if (linkedTool !== undefined) onModeChange(targetMode);
   };
   const [weights, setWeights] = useState<Weights>({
     sunlight: 1,
@@ -100,15 +100,6 @@ export default function MissionLab({
       aria-label="Mission lab"
     >
       <div className="panel mission-lab-intro">
-        <div className="experience-switch">
-          <button
-            type="button"
-            aria-label={`${modeLabel} mode. Switch to ${nextModeLabel}.`}
-            onClick={() => onModeChange(nextMode)}
-          >
-            {modeLabel} <span aria-hidden="true">→</span> {nextModeLabel}
-          </button>
-        </div>
         <p>
           Explore how location, dates and equipment change visibility and power.
           The lab uses the SPICE visibility model. The main Result view uses the
