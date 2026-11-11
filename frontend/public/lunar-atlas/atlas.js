@@ -4,6 +4,7 @@ import {DEG, MOON_RADIUS, clamp, wrap, dot, vector, coordinates, cameraBasis} fr
 const $=id=>document.getElementById(id);
 const canvas=$('overlay'), surface=$('surface'), ctx=canvas.getContext('2d');
 const state = { lat: -5.831, lon: 8.151, zoom: 1, flat: false, relief: 3, selected: null };
+let landingPoint = null;
 let renderer, fallbackImage, elevation, features = [], missions = [], marks = [], frame = 0, noticeTimer, view;
 const majorNames=new Set(['Tycho','Copernicus','Plato','Clavius','Aristarchus','Kepler','Grimaldi','Theophilus','Ptolemaeus','Orientale','Tsiolkovskiy','Montes Apenninus','Rupes Recta','Vallis Alpes','Bailly','Langrenus','Gassendi','Posidonius','Humboldt','Petavius','Schickard','Schiller','Archimedes','Eratosthenes','Atlas','Hercules','Endymion','Wargentin','Pico','Mons Piton','Reiner Gamma','Hyginus','Triesnecker','Linné','Mare Moscoviense']);
 const isSea=feature=>/^(Mare|Oceanus|Sinus|Lacus|Palus)\b/.test(feature.name);
@@ -26,7 +27,7 @@ function layout() {
     const w=Math.round(width*dpr),h=Math.round(height*dpr);
     if(layer.width!==w || layer.height!==h){layer.width=w;layer.height=h;}
   }
-  const radius=(state.flat?Math.min(width/(2*Math.PI),height/Math.PI)*.98:Math.min(width,height)*.405)*state.zoom;
+  const radius=(state.flat?Math.min(width/(2*Math.PI),height/Math.PI)*.93:Math.min(width,height)*.405)*state.zoom;
   return {width,height,dpr,radius,basis:cameraBasis(state.lat,state.lon)};
 }
 function project(lat,lon) {
@@ -114,6 +115,23 @@ function drawLabels() {
     ctx.fillText(feature.name,x+7,y);
   }
 }
+function drawLandingPoint() {
+  if (!landingPoint) return;
+  const position = project(landingPoint.latitude, landingPoint.longitude);
+  if (!position) return;
+  const [x, y] = position;
+  ctx.beginPath();
+  ctx.arc(x, y, 8, 0, Math.PI * 2);
+  ctx.fillStyle = '#132539';
+  ctx.fill();
+  ctx.strokeStyle = '#9ce9ff';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(x, y, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#9ce9ff';
+  ctx.fill();
+}
 function draw() {
   frame=0;
   view=layout();
@@ -131,12 +149,55 @@ function draw() {
   }
   if(state.flat) drawGrid();
   drawLabels();
+  drawLandingPoint();
   $('scale').textContent=`≈ ${Math.round(50*MOON_RADIUS/radius).toLocaleString()} km / 50 px at center`;
 }
 function coordText(lat,lon) {
   const coordinate=(value,positive,negative)=>`${Math.abs(value).toFixed(3)}° ${value>=0?positive:negative}`;
   return `${coordinate(lat,'N','S')} · ${coordinate(lon,'E','W')}`;
 }
+function centerLanding() {
+  state.lat = state.flat ? 0 : landingPoint?.latitude ?? -5.831;
+  state.lon = landingPoint?.longitude ?? 8.151;
+  state.zoom = 1;
+  redraw();
+}
+function setLandingPoint(point, recenter = false) {
+  const coordinatesChanged = point?.latitude !== landingPoint?.latitude ||
+    point?.longitude !== landingPoint?.longitude;
+  landingPoint = point;
+  $('landing-point').textContent = point
+    ? `Selected: ${point.name || 'Landing point'} · ${coordText(point.latitude, point.longitude)}`
+    : '';
+  if (point && coordinatesChanged && recenter) {
+    $('dismiss').click();
+    centerLanding();
+  } else {
+    redraw();
+  }
+}
+function pickLandingPoint(latitude, longitude, name = 'Custom location') {
+  const point = {
+    name: name.slice(0, 100),
+    latitude: Number(latitude.toFixed(6)),
+    longitude: Number(wrap(longitude).toFixed(6)),
+  };
+  setLandingPoint(point);
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: 'lunar-atlas:pick', point }, location.origin);
+  }
+}
+window.addEventListener('message', (event) => {
+  if (event.origin !== location.origin || event.source !== window.parent ||
+      event.data?.type !== 'lunar-atlas:set-selection') return;
+  const point = event.data.point;
+  if (point === null) setLandingPoint(null);
+  else if (typeof point?.name === 'string' && point.name.length <= 100 &&
+      typeof point.latitude === 'number' && Math.abs(point.latitude) <= 90 &&
+      typeof point.longitude === 'number' && Math.abs(point.longitude) <= 180) {
+    setLandingPoint(point, true);
+  }
+});
 function readout(point) {
   if(!point){
     $('coords').textContent='Move over the surface for coordinates';
@@ -160,11 +221,14 @@ $('dismiss').onclick=()=>{
 };
 
 function setProjection(flat) {
-  state.flat=flat||!renderer;
+  const next = flat || !renderer;
+  const changed = state.flat !== next;
+  state.flat = next;
   $('globe').setAttribute('aria-pressed',String(!state.flat));
   $('flat').setAttribute('aria-pressed',String(state.flat));
   $('globe').disabled=!renderer;
-  redraw();
+  if (changed && landingPoint) centerLanding();
+  else redraw();
 }
 $('globe').onclick=()=>setProjection(false);
 $('flat').onclick=()=>setProjection(true);
@@ -177,18 +241,21 @@ function setZoom(value) {
 $('closer').onclick=()=>setZoom(state.zoom*1.3);
 $('farther').onclick=()=>setZoom(state.zoom/1.3);
 $('reset').onclick=()=>{
-  Object.assign(state,{lat:-5.831,lon:8.151,zoom:1});
+  centerLanding();
   $('dismiss').click();
 };
 const pointers=new Map();
-let moved=false;
+let moved=false, pointerOrigin;
 const position=event=>{
   const rect=canvas.getBoundingClientRect();
   return [event.clientX-rect.left,event.clientY-rect.top];
 };
 canvas.addEventListener('pointerdown',event=>{
   if(event.button!==0) return;
-  if(pointers.size===0) moved=false;
+  if(pointers.size===0) {
+    moved=false;
+    pointerOrigin=position(event);
+  }
   else moved=true;
   pointers.set(event.pointerId,position(event));
   canvas.setPointerCapture(event.pointerId);
@@ -203,10 +270,12 @@ canvas.addEventListener('pointermove',event=>{
       if(oldDistance>0) setZoom(state.zoom*Math.hypot(next[0]-other[0],next[1]-other[1])/oldDistance);
     }else{
       const dx=next[0]-previous[0],dy=next[1]-previous[1];
-      moved ||= Math.abs(dx)+Math.abs(dy)>2;
-      state.lon=wrap(state.lon-dx/view.radius/DEG);
-      state.lat=clamp(state.lat+dy/view.radius/DEG,-89.8,89.8);
-      redraw();
+      moved ||= Math.hypot(next[0]-pointerOrigin[0],next[1]-pointerOrigin[1])>4;
+      if(moved){
+        state.lon=wrap(state.lon-dx/view.radius/DEG);
+        state.lat=clamp(state.lat+dy/view.radius/DEG,-89.8,89.8);
+        redraw();
+      }
     }
     pointers.set(event.pointerId,next);
   }
@@ -216,7 +285,16 @@ canvas.addEventListener('pointerup',event=>{
   if(!pointers.delete(event.pointerId) || moved || pointers.size || !view) return;
   const [x,y]=position(event);
   const hit=marks.find(mark=>Math.abs(y-mark.y)<9 && x>=mark.x-7 && x<=mark.x+mark.width);
-  if(hit) select(hit.feature);
+  if(hit) {
+    select(hit.feature);
+    pickLandingPoint(hit.feature.lat, hit.feature.lon, hit.feature.name);
+  } else {
+    const point=unproject(x,y);
+    if(point) {
+      $('dismiss').click();
+      pickLandingPoint(...point);
+    }
+  }
 });
 canvas.addEventListener('pointercancel',event=>pointers.delete(event.pointerId));
 canvas.addEventListener('pointerleave',()=>readout(null));
@@ -226,6 +304,12 @@ canvas.addEventListener('wheel',event=>{
   setZoom(state.zoom*Math.exp(-clamp(event.deltaY,-300,300)*.0018));
 },{passive:false});
 canvas.addEventListener('keydown',event=>{
+  if(event.key==='Enter') {
+    event.preventDefault();
+    $('dismiss').click();
+    pickLandingPoint(state.lat, state.lon);
+    return;
+  }
   const keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','=','-'];
   if(!keys.includes(event.key)) return;
   event.preventDefault();
@@ -239,6 +323,9 @@ canvas.addEventListener('keydown',event=>{
   redraw();
 });
 new ResizeObserver(redraw).observe(canvas);
+if (window.parent !== window) {
+  window.parent.postMessage({ type: 'lunar-atlas:ready' }, location.origin);
+}
 
 async function load(path,method='json') {
   const response=await fetch(path);

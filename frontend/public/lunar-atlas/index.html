@@ -13,10 +13,10 @@
   </div>
   <main class="viewport" aria-label="Interactive lunar surface">
     <canvas id="surface" aria-hidden="true"></canvas>
-    <canvas id="overlay" tabindex="0" aria-label="Lunar surface. Use arrow keys to pan and plus or minus to zoom."></canvas>
+    <canvas id="overlay" tabindex="0" aria-label="Lunar surface. Click or tap a point to select it. Use arrow keys to pan, plus or minus to zoom, and Enter to select the center."></canvas>
     <div class="intro">
       <h1>Explore the lunar surface.</h1>
-      <p>Drag to explore · Pinch or use + and − to zoom</p>
+      <p>Click or tap to select · Drag to explore</p>
     </div>
     <div class="controls" role="group" aria-label="Camera controls">
       <button id="closer" aria-label="Zoom in">+</button>
@@ -31,6 +31,7 @@
     </div>
     <p id="notice" role="status"></p>
     <footer>
+      <span id="landing-point" role="status"></span>
       <span id="coords">Move over the surface for coordinates</span>
       <span id="scale"></span>
       <span><a href="https://svs.gsfc.nasa.gov/4720/" target="_blank" rel="noreferrer">NASA LRO</a> · <a href="https://planetarynames.wr.usgs.gov/GIS_Downloads" target="_blank" rel="noreferrer">IAU/USGS</a> · <a href="https://azmth.space/moon/data" target="_blank" rel="noreferrer">Landing data</a> (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>)</span>

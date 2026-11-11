@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ArrowUpRight, MapPin, SlidersHorizontal } from "lucide-react";
 import type { MissionCatalogEntry, Site } from "../app/types";
 import { referenceSites } from "../lib/reference-sites";
+import LandingAtlas from "./LandingAtlas";
 
 export default function LandingSearch({
   selected,
@@ -248,12 +249,7 @@ export default function LandingSearch({
             <a href={missionSite.source_url} target="_blank" rel="noreferrer">Mission source</a>
           </p>
         )}
-        <iframe
-          className="landing-atlas"
-          title="Lunar Atlas 3D globe and 2D map"
-          src="/lunar-atlas/index.html"
-          loading="lazy"
-        />
+        <LandingAtlas selected={selected} onSelect={onSelected} />
         <div className="search-form-footer">
           <details className="search-advanced">
             <summary>
