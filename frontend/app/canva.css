@@ -1733,6 +1733,18 @@ td {
     font-size: 11px;
     min-height: 36px;
   }
+  @media (max-width: 380px) {
+    .lunar-topbar {
+      padding-inline: 10px;
+    }
+    .nav-pill {
+      gap: 2px;
+    }
+    .nav-pill > a,
+    .nav-pill > .more-menu-wrap > button {
+      padding-inline: 4px;
+    }
+  }
   .more-menu {
     position: fixed;
     top: 126px;
