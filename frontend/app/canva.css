@@ -1729,7 +1729,7 @@ td {
   }
   .nav-pill > a,
   .nav-pill > .more-menu-wrap > button {
-    padding: 9px 19px;
+    padding: 9px clamp(6px, calc((100vw - 260px) / 10), 19px);
     font-size: 11px;
     min-height: 36px;
   }

@@ -33,6 +33,7 @@ export const viewPaths = [
   "pre-results",
   "mission-lab",
   "account",
+  "education",
 ];
 export const toolItems = [
   { view: 12, label: "Mission lab", icon: FlaskConical, detail: "Scenarios, equipment & classroom activities" },
@@ -130,6 +131,7 @@ export default function Navigation({
         {[
           { label: "Search", view: 7 },
           { label: "Result", view: 8 },
+          { label: "Education", view: 14 },
         ].map((item) => (
           <a
             key={item.view}

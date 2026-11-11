@@ -34,11 +34,25 @@ type Props = Pick<
   | "onSelected"
   | "sites"
   | "onMap"
-> & { mission: Mission; onRestore: (m: Mission) => void };
+> & {
+  mission: Mission;
+  mode: ExperienceMode;
+  onModeChange: (mode: ExperienceMode) => void;
+  onRestore: (m: Mission) => void;
+};
 
-export default function MissionLab({ mission, onRestore, ...inputs }: Props) {
-  const [mode, setMode] = useState<ExperienceMode>("professional");
-  const [tab, setTab] = useState(7);
+export default function MissionLab({
+  mission,
+  mode,
+  onModeChange,
+  onRestore,
+  ...inputs
+}: Props) {
+  const [tabs, setTabs] = useState({ professional: 7, education: 7 });
+  const tab = tabs[mode];
+  const setTab = (next: number, targetMode = mode) => {
+    setTabs((previous) => ({ ...previous, [targetMode]: next }));
+  };
   const [weights, setWeights] = useState<Weights>({
     sunlight: 1,
     earth: 1,
@@ -87,8 +101,7 @@ export default function MissionLab({ mission, onRestore, ...inputs }: Props) {
           <button
             aria-pressed={mode === "professional"}
             onClick={() => {
-              setMode("professional");
-              setTab(7);
+              onModeChange("professional");
             }}
           >
             Professional
@@ -96,8 +109,7 @@ export default function MissionLab({ mission, onRestore, ...inputs }: Props) {
           <button
             aria-pressed={mode === "education"}
             onClick={() => {
-              setMode("education");
-              setTab(7);
+              onModeChange("education");
             }}
           >
             Education
@@ -223,11 +235,11 @@ export default function MissionLab({ mission, onRestore, ...inputs }: Props) {
           onRestore={(record) => {
             onRestore(record.mission);
             session.restore(record.locations, record.scenarios);
-            setMode(record.experience);
+            onModeChange(record.experience);
             setNotes(record.notes);
             setWeights(record.weights);
             setPriority("custom");
-            setTab(12);
+            setTab(12, record.experience);
           }}
         />
       )}
