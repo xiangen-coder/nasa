@@ -248,6 +248,12 @@ export default function LandingSearch({
             <a href={missionSite.source_url} target="_blank" rel="noreferrer">Mission source</a>
           </p>
         )}
+        <iframe
+          className="landing-atlas"
+          title="Lunar Atlas 3D globe and 2D map"
+          src="/lunar-atlas/index.html"
+          loading="lazy"
+        />
         <div className="search-form-footer">
           <details className="search-advanced">
             <summary>
