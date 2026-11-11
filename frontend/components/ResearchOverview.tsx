@@ -15,7 +15,7 @@ import { ResearchWindows } from "./ResearchComparisonReport";
 import ResearchElevationChart, { formatVisibilityTime as utc } from "./ResearchElevationChart";
 import ResearchSolarEstimate from "./ResearchSolarEstimate";
 import type { Site } from "../app/types";
-import { siteKey, terrainReference } from "./ComparisonPicker";
+import { inComparisonArea, siteKey, terrainReference } from "./ComparisonPicker";
 
 const evidence = () =>
   document.getElementById("landing-assessment")?.scrollIntoView({
@@ -25,11 +25,13 @@ const evidence = () =>
   });
 export default function ResearchOverview({
   result,
+  comparisonOrigin,
   onNavigate,
   onAddComparison,
   busy = false,
 }: {
   result: Research | null;
+  comparisonOrigin: Site;
   onNavigate: (view: number) => void;
   onAddComparison: (site: Site) => void;
   busy?: boolean;
@@ -167,6 +169,7 @@ export default function ResearchOverview({
               <p>The available terrain supports skyline estimates. Check the neighbourhood size and DEM resolution limit for slope scoring.</p>
             )}
             {result && result.factors.T.score == null &&
+              inComparisonArea(comparisonOrigin, terrainReference) &&
               siteKey(result.mission) !== siteKey(terrainReference) && (
                 <button className="text-button" onClick={() => onAddComparison(terrainReference)}>
                   Add Connecting Ridge to comparison <ArrowUpRight size={14} />

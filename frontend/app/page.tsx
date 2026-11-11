@@ -12,7 +12,7 @@ import PreferencesControls, {type Preferences} from "../components/Preferences";
 import ResearchOverview from "../components/ResearchOverview";
 import ResearchComparisonReport from "../components/ResearchComparisonReport";
 import PreliminaryComparison from "../components/PreliminaryComparison";
-import ComparisonPicker, { siteKey } from "../components/ComparisonPicker";
+import ComparisonPicker, { comparisonAreaMessage, inComparisonArea, siteKey } from "../components/ComparisonPicker";
 import type { SearchRecord } from "../lib/search-record";
 import { referenceSites } from "../lib/reference-sites";
 const Account = dynamic(() => import("../components/Account"));
@@ -619,7 +619,7 @@ export default function Page() {
   };
   const searchRecord: SearchRecord = {
     version: 1, mission: mission(), priority: researchPriority,
-    alternatives: chosenAlternatives.filter(s => siteKey(s) !== siteKey(selected)),
+    alternatives: chosenAlternatives.filter(s => siteKey(s) !== siteKey(selected) && inComparisonArea(selected, s)),
   };
   const assessComparison = (alternatives: Site[]) => {
     const actions = researchActions.current;
@@ -633,6 +633,8 @@ export default function Page() {
     const alternatives = searchRecord.alternatives;
     if ([selected, ...alternatives].some(site => siteKey(site) === key)) {
       setComparisonNotice(`${point.name} is already in the comparison cards.`);
+    } else if (!inComparisonArea(selected, point)) {
+      setComparisonNotice(comparisonAreaMessage);
     } else if (alternatives.length >= 2) {
       setComparisonNotice("Remove a comparison point below before adding another.");
     } else {
@@ -820,7 +822,7 @@ export default function Page() {
                 : <p className="info" role="status">{researchBusy ? "Waiting for the current assessment…" : "Run an assessment or open More Info on a comparison card to prepare its mission report."}</p>}
             </>
           )}
-          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy}/>}
+          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} comparisonOrigin={selected} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy}/>}
           <div hidden={![0,1,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>

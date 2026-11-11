@@ -6,6 +6,20 @@ export { terrainReference } from "../lib/reference-sites";
 
 export const siteKey = (s: Site) =>
   `${s.latitude.toFixed(6)},${(Math.abs(s.latitude) === 90 ? 0 : s.longitude === 180 ? -180 : s.longitude).toFixed(6)}`;
+
+export const comparisonRadiusKm = 20;
+export const comparisonAreaMessage = `Choose a comparison point within ${comparisonRadiusKm} km of the first landing point.`;
+
+export function inComparisonArea(first: Site, candidate: Site) {
+  const radians = Math.PI / 180;
+  const latitude = first.latitude * radians;
+  const otherLatitude = candidate.latitude * radians;
+  const halfLongitudeDifference = (candidate.longitude - first.longitude) * radians / 2;
+  const haversine = Math.sin((otherLatitude - latitude) / 2) ** 2
+    + Math.cos(latitude) * Math.cos(otherLatitude) * Math.sin(halfLongitudeDifference) ** 2;
+  const distanceKm = 2 * 1737.4 * Math.asin(Math.sqrt(Math.min(1, haversine)));
+  return distanceKm <= comparisonRadiusKm;
+}
 type Candidate = {
   location: Site;
   distance_m: number;
@@ -57,10 +71,11 @@ export default function ComparisonPicker({
   const [lon, setLon] = useState("");
   const [error, setError] = useState("");
   const key = siteKey(mission);
-  const selected = chosen.filter((s) => siteKey(s) !== key);
+  const selected = chosen.filter((s) => siteKey(s) !== key && inComparisonArea(mission, s));
   const options = [...referenceSites, ...sites.filter((s) => s.id !== "connecting-ridge")].filter(
     (s, i, all) =>
       siteKey(s) !== key &&
+      inComparisonArea(mission, s) &&
       !selected.some((point) => siteKey(point) === siteKey(s)) &&
       all.findIndex((p) => siteKey(p) === siteKey(s)) === i,
   );
@@ -68,8 +83,10 @@ export default function ComparisonPicker({
   const searchKey = `${key}:${radius}`;
   const screened = suggestions?.key === searchKey ? suggestions.data : undefined;
   const canAdd = (site: Site) =>
-    !busy && selected.length < 2 && !selected.some((s) => siteKey(s) === siteKey(site));
+    !busy && selected.length < 2 && inComparisonArea(mission, site) &&
+    ![mission, ...selected].some((s) => siteKey(s) === siteKey(site));
   function add(site: Site) {
+    if (!inComparisonArea(mission, site)) return setError(comparisonAreaMessage);
     if (selected.length >= 2)
       return setError("Choose at most two alternatives.");
     if ([mission, ...selected].some((s) => siteKey(s) === siteKey(site)))
@@ -113,11 +130,12 @@ export default function ComparisonPicker({
       open
     >
       <summary>Choose comparison sites</summary>
+      <p>{comparisonAreaMessage}</p>
       <div className="account-actions">
         <label>
           Reference point{" "}
           <select value={reference ? siteKey(reference) : ""} onChange={(e) => setEntry(e.target.value)} disabled={!reference}>
-            {!reference && <option value="">All references added</option>}
+            {!reference && <option value="">No nearby references available</option>}
             {options.map((s) => (
               <option key={siteKey(s)} value={siteKey(s)}>
                 {s.name}

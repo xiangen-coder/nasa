@@ -2,7 +2,7 @@
 import { ArrowUpRight } from "lucide-react";
 import type { Mission, Site } from "../app/types";
 import type { Research, ResearchComparison } from "./LandingResearch";
-import { siteKey } from "./ComparisonPicker";
+import { comparisonRadiusKm, siteKey } from "./ComparisonPicker";
 const key = (s: Site) => `${s.latitude},${s.longitude}`;
 const score = (r: Research | undefined, k: string) =>
   !r ? "—" : r.factors[k]?.score == null
@@ -45,7 +45,7 @@ export default function PreliminaryComparison({
         <div>
           <span className="eyebrow">PRELIMINARY ASSESSMENT</span>
           <p>
-            Compare up to three sites using the same mission window.
+            Compare the first landing point with up to two alternatives within {comparisonRadiusKm} km using the same mission window.
           </p>
           <small>
             {mission.start.replace("T", " ")} → {mission.end.replace("T", " ")}{" "}
@@ -53,6 +53,10 @@ export default function PreliminaryComparison({
           </small>
         </div>
         <div className="preliminary-controls">
+          {!!state?.results.length && <a className="button subtle" href="#research-report" onClick={(event) => {
+            event.preventDefault();
+            document.getElementById("research-report")?.scrollIntoView({ block: "start" });
+          }}>Comparison and exports</a>}
           <button className="button subtle" onClick={onSearch}>
             Back to Search
           </button>
