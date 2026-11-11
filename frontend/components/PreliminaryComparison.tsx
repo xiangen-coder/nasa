@@ -31,6 +31,9 @@ export default function PreliminaryComparison({
 }) {
   const planned = [mission, ...alternatives];
   const selected = state?.results.find((r) => key(r.mission) === key(mission));
+  const hasUnfinished = planned.some((site) =>
+    !state?.results.some((result) => siteKey(result.mission) === siteKey(site)),
+  );
   return (
     <section
       className="preliminary-comparison"
@@ -42,7 +45,7 @@ export default function PreliminaryComparison({
         <div>
           <span className="eyebrow">PRELIMINARY ASSESSMENT</span>
           <p>
-            Start with your selected location. Choose up to two alternatives below to compare under the same mission window and research limits.
+            Add up to two alternatives below. Each one is assessed automatically for the same mission window and research limits.
           </p>
           <small>
             {mission.start.replace("T", " ")} → {mission.end.replace("T", " ")}{" "}
@@ -53,9 +56,11 @@ export default function PreliminaryComparison({
           <button className="button subtle" onClick={onSearch}>
             Back to Search
           </button>
-          {!selected && !state?.busy && (
+          {hasUnfinished && !state?.busy && (
             <button className="button primary" onClick={onEvaluate}>
-              Evaluate selected site
+              {state?.error || Object.keys(state?.failures ?? {}).length
+                ? "Retry unfinished assessments"
+                : alternatives.length ? "Assess saved points" : "Evaluate selected site"}
             </button>
           )}
           {state?.busy && (
@@ -174,6 +179,9 @@ export default function PreliminaryComparison({
                         : ""}
                     </dd>
                     {r && r.factors.T.score == null && <dd>{r.factors.T.explanation}</dd>}
+                    {r?.factors.T.score == null && r?.horizon.available && (
+                      <dd>The regional terrain map supports skyline and visibility estimates here. Footprint scoring needs its own coverage.</dd>
+                    )}
                   </div>
                   <div>
                     <dt>TEMPERATURE SUITABILITY</dt>
@@ -220,7 +228,7 @@ export default function PreliminaryComparison({
                 {isSelected && (
                   <button
                     className="button subtle"
-                    disabled={!r || state?.busy}
+                    disabled={state?.busy}
                     onClick={onCompare}
                   >
                     Choose alternatives

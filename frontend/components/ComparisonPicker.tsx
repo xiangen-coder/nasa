@@ -23,7 +23,6 @@ export default function ComparisonPicker({
   chosen,
   onChange,
   onAdd,
-  onCompare,
   busy,
 }: {
   mission: Mission;
@@ -31,7 +30,6 @@ export default function ComparisonPicker({
   chosen: Site[];
   onChange: (sites: Site[]) => void;
   onAdd: (site: Site) => void;
-  onCompare: () => void;
   busy: boolean;
 }) {
   const [suggestions, setSuggestions] = useState<{
@@ -105,7 +103,7 @@ export default function ComparisonPicker({
       <summary>Choose comparison sites</summary>
       <p>
         Compare up to two points with {mission.name}, using the same dates and
-        research limits. Added points appear in the cards above.
+        research limits. Adding a point starts its assessment in the cards above.
       </p>
       <div className="account-actions">
         <label>
@@ -237,13 +235,6 @@ export default function ComparisonPicker({
           </button>
         </div>
       ))}
-      <button
-        className="button primary"
-        disabled={busy || !selected.length}
-        onClick={onCompare}
-      >
-        Compare selected sites ({selected.length + 1})
-      </button>
     </details>
   );
 }

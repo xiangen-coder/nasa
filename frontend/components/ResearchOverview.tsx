@@ -202,6 +202,9 @@ export default function ResearchOverview({
                 ? `${result.terrain.resolution_m} m native pixels. Boulder/crater hazards remain incomplete.`
                 : result?.terrain.reason || "Awaiting site assessment."}
             </p>
+            {result?.factors.T.score == null && result?.horizon.available && (
+              <p>The regional terrain map supports skyline and visibility estimates here. Footprint scoring needs its own coverage.</p>
+            )}
             {result && result.factors.T.score == null &&
               siteKey(result.mission) !== siteKey(terrainReference) && (
                 <button className="text-button" onClick={() => onAddComparison(terrainReference)}>

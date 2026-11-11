@@ -297,13 +297,13 @@ export default function LandingResearch({
     setError("");
     setFailures({});
     setCandidates(unique);
-    // Expanding alternatives keeps the selected assessment from this unchanged request.
-    // Mission/limit changes already invalidate results in the request-key effect above.
+    // Reuse completed assessments for the same mission window and limits.
+    // The request-key effect invalidates these when inputs change.
     const retained = compare
-      ? results.filter((r) => locationKey(r.mission) === locationKey(mission))
+      ? results.filter((r) => unique.some((site) => locationKey(site) === locationKey(r.mission)))
       : [];
     setResults(retained);
-    setDetailKey(retained.length ? locationKey(mission) : null);
+    setDetailKey(retained.some((r) => locationKey(r.mission) === locationKey(mission)) ? locationKey(mission) : null);
     setDetail(0);
     setSample(0);
     setImagery(null);

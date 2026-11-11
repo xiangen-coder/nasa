@@ -592,6 +592,12 @@ export default function Page() {
     version: 1, mission: mission(), priority: researchPriority,
     alternatives: chosenAlternatives.filter(s => siteKey(s) !== siteKey(selected)),
   };
+  const assessComparison = (alternatives: Site[]) => {
+    const actions = researchActions.current;
+    if (!actions) return;
+    if (alternatives.length) void actions.compare(alternatives);
+    else void actions.evaluate();
+  };
   const addComparisonSite = ({ name, latitude, longitude }: Site) => {
     const point = { name, latitude, longitude };
     const key = siteKey(point);
@@ -601,8 +607,10 @@ export default function Page() {
     } else if (alternatives.length >= 2) {
       setComparisonNotice("Remove a comparison point below before adding another.");
     } else {
-      setChosenAlternatives([...alternatives, point]);
-      setComparisonNotice(`${point.name} added. Run the comparison to assess it for this mission window.`);
+      const next = [...alternatives, point];
+      setChosenAlternatives(next);
+      setComparisonNotice("");
+      assessComparison(next);
     }
     setView(11);
     requestAnimationFrame(() => {
@@ -735,7 +743,7 @@ export default function Page() {
       ? "Terrain-screened geometry"
       : "Reference-sphere geometry";
   return (
-    <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} style={{"--ui-scale":preferences.scale} as CSSProperties}>
+    <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} data-classroom-theme={labOpen && education ? "" : undefined} style={{"--ui-scale":preferences.scale} as CSSProperties}>
       <div className="stars" aria-hidden="true"/><Navigation view={view} education={education} onNavigate={setView} health={health} preferences={preferences} onPreferences={updatePreferences}/><NewsSidebar/>
       <div className="main-shell">
         <div className="workspace-with-news"><main id="main-content">
@@ -754,11 +762,11 @@ export default function Page() {
           {view!==7&&view!==11&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div></div></>}
           {view===7&&<section className="search-layout revised-search" aria-label="Search for a lunar landing site">
             <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration"><div className="hero-copy"><span className="eyebrow">A NEW PERSPECTIVE ON THE MOON</span><h1>Find your place<br/>on the <em>Moon.</em></h1><p>Every mission starts with a possibility. Explore lunar locations through real sunlight, communication and terrain data.</p><div className="hero-hairline"/><span className="hero-footnote">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}>Explore the Moon <ArrowRight size={15}/></button></div><CinematicHero animate={preferences.animate}/></section>
-            <LandingSearch selected={selected} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{void researchActions.current?.evaluate();setView(11);}} onMap={()=>setView(0)}/>
+            <LandingSearch selected={selected} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{assessComparison(searchRecord.alternatives);setView(11);}} onMap={()=>setView(0)}/>
             <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(13)}>Account & saved searches</button><button className="button subtle" onClick={()=>setView(12)}>Mission lab</button></div>
           </section>}
-          {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} notice={comparisonNotice} onEvaluate={()=>{void researchActions.current?.evaluate();}} onCompare={()=>document.getElementById("choose-comparison-sites")?.scrollIntoView({block:"start"})} onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
-          {view===11&&<ComparisonPicker mission={mission()} sites={sites} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} onCompare={()=>{setComparisonNotice("");void researchActions.current?.compare(searchRecord.alternatives);}} busy={researchBusy}/>}
+          {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)} onCompare={()=>document.getElementById("choose-comparison-sites")?.scrollIntoView({block:"start"})} onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
+          {view===11&&<ComparisonPicker mission={mission()} sites={sites} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
           {view===13&&<Account record={searchRecord} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}
           {labVisited&&<div hidden={!labOpen}><MissionLab mode={education?"education":"professional"} linkedTool={view===15?8:view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
           {view===8&&<><ResearchOverview result={researchResult} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy}/><div className="account-actions"><button className="button subtle" onClick={()=>setView(13)}>Save search</button><button className="button subtle" onClick={()=>setView(11)}>Compare sites</button></div></>}
