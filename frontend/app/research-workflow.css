@@ -89,12 +89,67 @@
   height: auto;
 }
 
+.lunar-app[data-result-tools] .lunar-topbar {
+  height: auto;
+  grid-template-rows: auto auto;
+  row-gap: 8px;
+  padding-block: 8px 12px;
+}
+.lunar-app[data-result-tools] .main-shell {
+  padding-top: calc(var(--result-header-height, 190px) + 12px);
+}
+.lunar-app[data-result-tools] .lunar-brand,
+.lunar-app[data-result-tools] .topbar-actions {
+  grid-row: 2;
+}
+.lunar-app[data-result-tools] .nav-pill {
+  grid-row: 2;
+}
+.result-tools {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.result-tools-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: max-content;
+  min-width: 100%;
+  padding-block: 4px;
+}
+.result-tools .button {
+  flex: none;
+  white-space: nowrap;
+}
+@media (max-width: 850px) {
+  .lunar-app[data-result-tools] .lunar-topbar {
+    grid-template-rows: auto auto auto;
+  }
+  .lunar-app[data-result-tools] .nav-pill {
+    grid-row: 3;
+  }
+  .lunar-app[data-result-tools] .more-menu {
+    max-height: calc(100dvh - var(--result-header-height, 190px) - 16px);
+  }
+}
+@media (max-width: 600px) {
+  .lunar-app[data-result-tools] .more-menu {
+    top: var(--result-header-height, 190px);
+  }
+}
+
 #result-visibility,
 #result-terrain {
   scroll-margin-top: 100px;
 }
 
 @media print {
+  .result-tools { display: none !important; }
+  .lunar-app[data-result-tools] .main-shell { padding-top: 0; }
   @page research-report {
     margin: 13mm;
   }

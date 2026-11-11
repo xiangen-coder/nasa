@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Archive,
   ArrowUpRight,
@@ -51,6 +51,7 @@ export default function Navigation({
   health,
   preferences,
   onPreferences,
+  resultTools,
 }: {
   view: number;
   education: boolean;
@@ -58,6 +59,7 @@ export default function Navigation({
   health: string;
   preferences: Preferences;
   onPreferences: (value: Preferences) => void;
+  resultTools?: ReactNode;
 }) {
   const [more, setMore] = useState(false);
   const dropdown = useRef<HTMLDivElement>(null);
@@ -77,6 +79,7 @@ export default function Navigation({
   };
   return (
     <header className="lunar-topbar">
+      {resultTools}
       <a
         className="lunar-brand"
         href="#search"
