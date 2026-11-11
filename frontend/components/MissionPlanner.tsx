@@ -350,6 +350,17 @@ export default function MissionPlanner({
               {eta && <small>through {new Date(eta[1]).toUTCString()}</small>}
             </div>
           </div>
+          <details className="explanation"><summary>How was this calculated? — vehicle worksheet</summary>
+            <p>All specifications below are user inputs, not observations or verified vehicle capabilities.</p>
+            <p>Platform diameter = footprint ({vehicle.diameter || "missing"} m) + 2 × clearance ({vehicle.margin || "missing"} m) = {platform ?? "unavailable"} m. Area = π × (diameter / 2)² = {platform === null ? "unavailable" : (Math.PI*(platform/2)**2).toFixed(3)} m².</p>
+            <p>Panel count = ceil({vehicle.power || "missing"} W × (1 + {vehicle.reserve || "missing"}% / 100) / {vehicle.panel || "missing"} W) = {panels ?? "unavailable"} panels. Assumes each panel delivers the entered usable output; no illumination or storage model is applied.</p>
+            <p>Arrival centre = launch ({launch || "missing"} UTC) + {vehicle.transit || "missing"} hours. Range = centre ± {vehicle.tolerance || "missing"} hours. This is a user-entered tolerance, not a validated prediction interval or confidence interval. Uncertainty not yet quantified.</p>
+          </details>
+          {eta && <div className="eta-range" role="img" aria-label={`Arrival tolerance range ${eta[0]} through ${eta[1]}; central estimate ${new Date((Date.parse(eta[0])+Date.parse(eta[1]))/2).toISOString()}`}>
+            <strong>Arrival centre: {new Date((Date.parse(eta[0])+Date.parse(eta[1]))/2).toUTCString()}</strong>
+            <p>Earlier: {new Date(eta[0]).toUTCString()} ← ± {vehicle.tolerance} hours → Later: {new Date(eta[1]).toUTCString()}</p>
+            <p>User-specified tolerance · uncertainty not yet quantified</p>
+          </div>}
           <p className="muted">
             No values are prefilled from unverified rocket specifications.
             Footprint, power and ETA estimates do not establish landing safety
@@ -407,6 +418,8 @@ export default function MissionPlanner({
               aria-label="Launch weather result"
             >
               <p className="info">{weather.message}</p>
+              <div className="uncertainty-banner"><strong>Uncertainty not yet quantified</strong><p>Forecast for {launch.slice(0,10)} UTC at the selected launch area. No validated prediction interval, historical error metric or actual observations are supplied. Precipitation probability describes the chance of precipitation; it is not forecast accuracy.</p></div>
+              <details className="explanation"><summary>How was this calculated? — weather</summary><p>Inputs: {pad}, {launch.slice(0,10)} UTC. The backend requests hourly temperature (°C), precipitation probability (%), 10 m wind (km/h), and cloud cover (%) from Open-Meteo. Values are returned model forecasts, not locally calculated predictions. The service does not provide the underlying model breakdown or validated error range in this response. Missing values stay unknown.</p></details>
               {weather.fetched_at && (
                 <p className="muted">
                   Retrieved {new Date(weather.fetched_at).toUTCString()} ·{" "}

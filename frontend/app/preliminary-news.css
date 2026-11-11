@@ -1,0 +1,318 @@
+.preliminary-comparison {
+  margin-top: 26px;
+  scroll-margin-top: 160px;
+}
+.preliminary-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+.preliminary-intro p {
+  max-width: 620px;
+  color: #b4c7e1;
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 12px 0;
+}
+.preliminary-intro small {
+  font-size: 10px;
+  color: #8fa7c9;
+  line-height: 1.8;
+}
+.preliminary-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.pre-result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+.pre-result-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 24px 22px;
+  border: 1px solid #dce9ff36;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #a5bee62e, #a5bee61a);
+}
+.pre-result-card h2 {
+  font:
+    400 29px/1.3 Fraunces,
+    Georgia,
+    serif;
+  letter-spacing: -0.025em;
+  margin: 0 0 24px;
+}
+.pre-point {
+  border-top: 1px solid #dce9ff26;
+  padding-top: 16px;
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pre-point .eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+.pre-point strong,
+.pre-point > span:last-child {
+  font-size: 12px;
+  font-weight: 400;
+  color: #d7e3f5;
+  overflow-wrap: anywhere;
+}
+.pre-score {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 24px 0;
+}
+.pre-score strong {
+  font:
+    400 61px/1 Fraunces,
+    Georgia,
+    serif;
+  letter-spacing: -0.05em;
+  text-shadow: 0 0 30px #cbe1ff25;
+}
+.pre-score > span {
+  font-size: 12px;
+  color: #a9c0df;
+}
+.pre-result-card dl {
+  margin: 0;
+}
+.pre-result-card dl > div {
+  border-top: 1px solid #dce9ff26;
+  padding: 14px 0;
+}
+.pre-result-card dt {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  color: #b2c5e1;
+  margin-bottom: 7px;
+}
+.pre-result-card dd {
+  margin: 0;
+  color: #d4dfef;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.pre-result-card dd + dd {
+  color: #aebfda;
+  margin-top: 6px;
+  font-size: 11px;
+}
+.pre-comparison-note {
+  font-size: 11px;
+  color: #b1c5e0;
+  line-height: 1.8;
+  margin-bottom: 100px;
+}
+.pre-result-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 20px;
+}
+.pre-result-actions .button {
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 10px 14px;
+}
+.preliminary-disclosure {
+  max-width: 1000px;
+  color: #9fb4d0;
+  font-size: 11px;
+  line-height: 1.9;
+  margin: 24px 0 30px;
+}
+.news-launcher {
+  position: fixed;
+  right: 24px;
+  bottom: 100px;
+  width: 56px;
+  height: 56px;
+  min-height: 56px;
+  border: 1px solid #dce9ff45;
+  border-radius: 50%;
+  z-index: 85;
+  display: grid;
+  place-items: center;
+  color: #dfebfb;
+  background: linear-gradient(135deg, #566d8cc9, #22354fef);
+  backdrop-filter: blur(18px);
+  box-shadow:
+    inset 0 1px 1px #ffffff15,
+    0 10px 40px #02071166;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.news-launcher:active {
+  cursor: grabbing;
+}
+.news-launcher:hover {
+  background: #425c80;
+}
+.news-launcher[aria-expanded="true"] {
+  border-color: #dce9ff9c;
+}
+.news-launcher .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.lunar-app .news-sidebar.news-popover {
+  position: fixed;
+  z-index: 84;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  resize: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: 20px;
+  background: #14243df5;
+  backdrop-filter: blur(22px);
+  box-shadow: 0 20px 70px #02071188;
+  grid-column: auto;
+  grid-row: auto;
+}
+.news-popover .panel-heading {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #14243dfa;
+  backdrop-filter: blur(16px);
+  display: flex;
+  gap: 12px;
+}
+.news-popover .panel-heading h2 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.news-popover .news-state {
+  margin-left: auto;
+}
+.news-popover .news-minimize {
+  min-width: 36px;
+}
+.news-popover .news-reader {
+  position: relative;
+  padding: 22px;
+}
+.news-popover .news-reader h3 {
+  font-size: 19px;
+  line-height: 1.5;
+}
+.news-popover .news-reader > p {
+  font-size: 13px;
+  line-height: 1.9;
+}
+.news-popover .reader-close {
+  float: right;
+}
+@media (max-width: 1050px) {
+  .pre-result-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .preliminary-intro {
+    flex-direction: column;
+  }
+  .preliminary-controls {
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 650px) {
+  .pre-result-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pre-result-card {
+    padding: 23px;
+  }
+  .preliminary-intro p {
+    font-size: 12px;
+  }
+  .preliminary-controls .button {
+    font-size: 12px;
+  }
+  .news-launcher {
+    right: 18px;
+    bottom: 100px;
+  }
+  .preliminary-intro small {
+    overflow-wrap: anywhere;
+  }
+  .pre-result-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Compact summary cards follow the interaction reference; complete factors stay inspectable. */
+.pre-result-card h2 {
+  margin-bottom: 20px;
+}
+.pre-point {
+  min-height: 84px;
+}
+.pre-score {
+  margin: 18px 0;
+}
+.pre-result-card dl > div {
+  padding: 12px 0;
+}
+.pre-extra {
+  border-top: 1px solid #dce9ff26;
+  margin-top: 0;
+}
+.pre-extra summary {
+  font-size: 10px;
+  color: #b2c5e1;
+  cursor: pointer;
+  min-height: 36px;
+  padding: 11px 0;
+}
+.pre-extra[open] {
+  margin-bottom: 12px;
+}
+.pre-extra dl {
+  padding: 0 4px;
+}
+.pre-result-card:nth-child(n + 2) {
+  animation: pre-result-reveal 0.32s ease-out both;
+}
+@keyframes pre-result-reveal {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pre-result-card:nth-child(n + 2) {
+    animation: none;
+  }
+}

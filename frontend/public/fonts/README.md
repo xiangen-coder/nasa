@@ -1,0 +1,1 @@
+DM Sans and Fraunces variable Latin fonts, bundled from @fontsource-variable/dm-sans@5.3.0 and @fontsource-variable/fraunces@5.3.0 via npm. Licensed under SIL OFL 1.1; see the adjacent license files. Served locally; no Google Fonts or Canva SDK requests are needed.

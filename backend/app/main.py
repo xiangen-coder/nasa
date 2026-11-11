@@ -13,6 +13,9 @@ from .sites import SITES
 from .science import initialize, ephemeris, visible, metrics, ROOT
 from .terrain import terrain
 from .external import news, weather, PADS
+from .astronomy import router as astronomy_router
+from .landing_research import router as research_router
+from .landing_reliability import router as reliability_router
 from datetime import date as Date
 
 CACHE_LOCK = RLock()
@@ -33,6 +36,9 @@ async def lifespan(app):
     yield
 
 app = FastAPI(title='Lunar Landing Site Navigator', version=ALGORITHM_VERSION, lifespan=lifespan)
+app.include_router(astronomy_router)
+app.include_router(research_router)
+app.include_router(reliability_router)
 
 @app.exception_handler(Exception)
 async def failure(request, exc):

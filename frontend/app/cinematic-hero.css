@@ -1,0 +1,40 @@
+/* Original concept scene inspired by the cinematic treatment in the supplied reference. */
+.lunar-hero.cinematic-hero { margin-inline:calc(-1 * clamp(24px,4.5vw,76px)); min-height:clamp(610px,calc(100svh - 100px),860px); padding:70px clamp(24px,4.5vw,76px) 110px; align-items:center; background:#030a19; }
+.cinematic-hero .hero-copy { width:68%; padding:0; }
+.cinematic-hero .hero-copy h1 { font-size:clamp(55px,6.2vw,94px); line-height:1.1; text-shadow:0 4px 32px #03091680; }
+.cinematic-hero .hero-copy .eyebrow { margin-bottom:30px; font-size:12px; letter-spacing:3px; }
+.cinematic-hero .hero-copy p { max-width:440px; color:#e0e7f2; margin-top:25px; text-shadow:0 2px 16px #030a19; }
+.cinematic-hero .hero-copy .hero-mantra { margin-top:25px; }
+.cinematic-visual { position:absolute; inset:0; z-index:-1; overflow:hidden; }
+.cinematic-canvas,.cinematic-canvas canvas,.cinematic-poster,.cinematic-shade { position:absolute; inset:0; width:100%; height:100%; }
+.cinematic-canvas { transition:opacity .5s ease; }
+.cinematic-canvas canvas { display:block; pointer-events:none; }
+.cinematic-poster { background:#030a19 url('/illustration/spacecraft-poster.svg') center/cover no-repeat; }
+.cinematic-shade { background:linear-gradient(90deg,#030a19f2 0%,#030a19c9 31%,#030a1966 55%,#030a190d 78%),linear-gradient(0deg,#071225 0%,transparent 30%,#06101d22 100%); pointer-events:none; }
+.cinematic-caption { position:absolute; bottom:30px; left:clamp(24px,4.5vw,76px); z-index:3; display:flex; flex-direction:column; gap:4px; padding-right:65px; color:#c8d5e9; font-size:11px; letter-spacing:.4px; pointer-events:none; }
+.cinematic-caption span:first-child { font-size:9px; letter-spacing:2.6px; color:#93aacb; }
+.cinematic-pause { position:absolute; z-index:4; right:calc(clamp(24px,4.5vw,76px) + 64px); bottom:30px; width:46px; height:46px; display:grid; place-items:center; color:#edf4ff; border:1px solid #d6e6ff8c; border-radius:50%; background:#07122580; backdrop-filter:blur(12px); }
+.cinematic-pause:hover { background:#abc8ff25; }
+.cinematic-cta { pointer-events:auto; margin-top:27px; border-radius:36px; display:inline-flex; align-items:center; gap:14px; padding:13px 24px; min-height:48px; font-size:15px; background:#edf3fa; color:#0a172e; border:1px solid #bed8ff; box-shadow:0 5px 34px #adcaff2b; }
+.cinematic-cta:hover { background:white; box-shadow:0 5px 40px #adcaff50; }
+.cinematic-hero + .search-console { margin-top:26px; }
+@media(max-width:850px) {
+ .lunar-hero.cinematic-hero { min-height:690px; padding-top:58px; padding-bottom:150px; }
+ .cinematic-hero .hero-copy { width:90%; }
+ .cinematic-hero .hero-copy h1 { font-size:clamp(54px,8vw,72px); }
+ .cinematic-shade { background:linear-gradient(90deg,#030a19df,#030a1977 65%,#030a1944),linear-gradient(0deg,#071225,transparent 40%); }
+}
+@media(max-width:500px) {
+ .lunar-hero.cinematic-hero { margin-inline:-20px; min-height:680px; padding:42px 20px 128px; align-items:flex-start; }
+ .cinematic-hero .hero-copy { width:100%; }
+ .cinematic-hero .hero-copy h1 { font-size:53px; line-height:1.1; }
+ .cinematic-hero .hero-copy .eyebrow { font-size:10px; letter-spacing:2px; margin-bottom:25px; }
+ .cinematic-hero .hero-copy p { font-size:14px; max-width:315px; width:92%; }
+ .cinematic-hero .hero-copy .hero-mantra { font-size:10px; margin-top:22px; }
+ .cinematic-cta { font-size:14px; padding:12px 20px; }
+ .cinematic-caption { bottom:27px; left:20px; font-size:10px; max-width:calc(100% - 140px); padding-right:0; }
+ .cinematic-pause { right:84px; bottom:25px; }
+ .cinematic-shade { background:linear-gradient(180deg,#030a19bf,#030a1977 40%,#030a191a 72%,#071225),linear-gradient(90deg,#030a1977,transparent); }
+}
+@media(prefers-reduced-motion:reduce) { .cinematic-canvas { transition:none; } }
+@media print { .cinematic-visual,.cinematic-pause,.cinematic-caption { display:none; } }

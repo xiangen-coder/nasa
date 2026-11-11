@@ -58,10 +58,10 @@ test("real API → simulator → comparison → report and export", async ({
   await expect(page.locator("tbody tr")).toHaveCount(3);
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: "Mission report", exact: true })
+    .getByRole("button", { name: "Lunar mission archive", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Data, assumptions & limitations" }),
+    page.frameLocator('iframe[title="Lunar mission archive and interactive 3D paths"]').getByRole("heading", { name: "Follow the path beyond Earth." }),
   ).toBeVisible();
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "JSON", exact: true }).click();
@@ -149,10 +149,10 @@ test("mobile map selection, navigation, and layout", async ({ page }) => {
   });
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: "Mission report", exact: true })
+    .getByRole("button", { name: "Lunar mission archive", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Your mission, documented." }),
+    page.getByRole("heading", { name: "Explore the missions before us." }),
   ).toBeVisible();
 });
 

@@ -1,8 +1,23 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
+import { CalculationDetails, Uncertainty } from "../components/ResultExplanation";
 import NewsSidebar from "../components/NewsSidebar";
-import MissionPlanner from "../components/MissionPlanner";
+import LandingResearch, { type Research, type ResearchActions, type ResearchComparison } from "../components/LandingResearch";
+import type { ResearchPriority } from "../components/SearchConsole";
+import LandingSearch from "../components/LandingSearch";
+import Navigation, {viewPaths} from "../components/Navigation";
+import PreferencesControls, {type Preferences} from "../components/Preferences";
+import ResearchOverview from "../components/ResearchOverview";
+import PreliminaryComparison from "../components/PreliminaryComparison";
+import ComparisonPicker, { siteKey } from "../components/ComparisonPicker";
+import type { SearchRecord } from "../lib/search-record";
+const Account = dynamic(() => import("../components/Account"));
+const MissionLab = dynamic(() => import("../components/mission-lab/MissionLab"));
+import TerrainAssessment from "../components/TerrainAssessment";
+import {AlternativeCards} from "../components/AssessmentOverview";
+const CinematicHero = dynamic(() => import("../components/CinematicHero"), { ssr: false });
+const AstronomySimulation = dynamic(() => import("../components/AstronomySimulation"), { ssr: false, loading: () => <div className="panel empty">Loading astronomical simulation…</div> });
 const CelestialViewer = dynamic(() => import("../components/CelestialViewer"), {
   ssr: false,
   loading: () => <div className="panel empty">Loading 3D viewer…</div>,
@@ -19,15 +34,12 @@ import {
 } from "recharts";
 import {
   Activity,
-  ArrowDownToLine,
   ArrowRight,
   Check,
   ChevronRight,
-  CircleHelp,
   Compass,
   Earth,
   ExternalLink,
-  FileText,
   Layers,
   MapPin,
   Maximize2,
@@ -41,8 +53,6 @@ import {
   X,
   ZoomIn,
   ZoomOut,
-  Orbit,
-  Rocket,
 } from "lucide-react";
 
 import type { Site, Mission, Analysis, Comparison } from "./types";
@@ -51,19 +61,10 @@ const views = [
   "Horizon simulator",
   "Terrain analysis",
   "Site comparison",
-  "Mission report",
+  "Lunar mission archive",
   "3D observatory",
-  "Mission planner",
 ];
-const icons = [
-  Compass,
-  Activity,
-  Layers,
-  SlidersHorizontal,
-  FileText,
-  Orbit,
-  Rocket,
-];
+
 const fmt = (x: number | null | undefined, suffix = "", digits = 1) =>
   x == null ? "Unavailable" : `${x.toFixed(digits)}${suffix}`;
 const utc = (time: string) =>
@@ -124,18 +125,28 @@ function PolarMap({
     panY: number;
     moved: boolean;
   } | null>(null);
+  // Stabilize SVG-only pixels across server/browser math libraries; scientific coordinates stay unchanged.
+  const pixel = (n: number) => Number(n.toFixed(6));
   const project = (lat: number, lon: number) => {
     const r =
       (250 * Math.tan(((90 + lat) * Math.PI) / 360)) /
       Math.tan((5 * Math.PI) / 180);
     return {
-      x: 320 + r * Math.sin((lon * Math.PI) / 180),
-      y: 300 - r * Math.cos((lon * Math.PI) / 180),
+      x: pixel(320 + r * Math.sin((lon * Math.PI) / 180)),
+      y: pixel(300 - r * Math.cos((lon * Math.PI) / 180)),
     };
   };
   const point = project(selected.latitude, selected.longitude);
+  const [inspected, setInspected] = useState<Site | null>(null);
+  const detail = inspected || selected;
+  const theta = ((detail.longitude % 360) + 360) % 360;
+  const rho = 2 * 1737.4 * Math.tan((90 + detail.latitude) * Math.PI / 360);
   return (
     <div className="map-shell">
+      <div className="polar-definition">
+        <strong>South-pole polar map</strong>
+        <p>Centre: 90° S. Radius r is stereographic distance from the pole (km); rings show angular distance 2°, 4°, 6°, 8°, 10°. θ is east longitude: 0° at top, increasing clockwise to 360° = 0°.</p><p>Ring radii: 2° ≈ 61 km; 4° ≈ 121 km; 6° ≈ 182 km; 8° ≈ 243 km; 10° ≈ 304 km.</p>
+      </div>
       <div className="map-overlay">
         <span className="tag">
           <span className="live-dot" /> SOUTH POLAR REGION
@@ -224,14 +235,14 @@ function PolarMap({
                 <circle
                   cx="320"
                   cy="300"
-                  r={r}
+                  r={pixel(r)}
                   fill="none"
                   stroke="#9aa99b"
                   strokeOpacity=".22"
                   strokeDasharray="2 5"
                 />
-                <text x={325 + r} y="296" fill="#829185" fontSize="9">
-                  {lat}°
+                <text x={pixel(320+r*0.15)} y={pixel(300+r*0.85)} fill="#829185" fontSize="16">
+                  {90+lat}°
                 </text>
               </g>
             );
@@ -249,19 +260,19 @@ function PolarMap({
                   strokeOpacity=".15"
                 />
                 <text
-                  x={320 + (p.x - 320) * 1.065}
-                  y={303 + (p.y - 300) * 1.065}
+                  x={pixel(320 + (p.x - 320) * 1.065)}
+                  y={pixel(303 + (p.y - 300) * 1.065)}
                   textAnchor="middle"
                   fill="#8f9d91"
-                  fontSize="10"
+                  fontSize="16"
                 >
-                  {lon > 180 ? lon - 360 : lon}°
+                  {lon}°
                 </text>
               </g>
             );
           })}
           <path d="M310 300h20M320 290v20" stroke="#a0af9c" strokeWidth=".6" />
-          <text x="328" y="317" fill="#b5c1ac" fontSize="9">
+          <text x="130" y="320" fill="#b5c1ac" fontSize="16">
             SOUTH POLE
           </text>
           {sites.map((s, i) => {
@@ -269,6 +280,10 @@ function PolarMap({
             return (
               <g
                 key={s.id}
+                onFocus={() => setInspected(s)}
+                onMouseEnter={() => setInspected(s)}
+                onMouseLeave={() => setInspected(null)}
+                onBlur={() => setInspected(null)}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -276,7 +291,7 @@ function PolarMap({
                 }}
                 role="button"
                 tabIndex={0}
-                aria-label={`Select ${s.name}`}
+                aria-label={`Select ${s.name}; polar radius ${(2*1737.4*Math.tan((90+s.latitude)*Math.PI/360)).toFixed(2)} km; east longitude ${((s.longitude+360)%360).toFixed(2)} degrees; uncertainty not supplied`}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
@@ -296,18 +311,18 @@ function PolarMap({
                   x={p.x}
                   y={p.y + 3}
                   fill="#d7dfcc"
-                  fontSize="8"
+                  fontSize="16"
                   textAnchor="middle"
                 >
                   {i + 1}
                 </text>
                 <text
-                  x={p.x + 13}
-                  y={p.y + (i % 2 ? 22 : -12)}
+                  x={390}
+                  y={380 + i * 28}
                   fill="#d0dac5"
-                  fontSize="10"
+                  fontSize="16"
                 >
-                  {s.name.replace(" vicinity", "").replace(" reference", "")}
+                  {i+1}. {s.name.replace(" vicinity", "").replace(" reference", "")}
                 </text>
               </g>
             );
@@ -328,6 +343,12 @@ function PolarMap({
           )}
         </g>
       </svg>
+      <div className="polar-detail" aria-live="polite">
+        <strong>{detail.name}</strong>
+        <p>{detail.latitude <= -80 ? `r = ${rho.toFixed(2)} km; θ = ${theta.toFixed(2)}° E` : "Outside the displayed 80°–90° S region"} · latitude {detail.latitude.toFixed(4)}°, longitude {detail.longitude.toFixed(4)}° E.</p>
+        <p>Coordinate uncertainty not supplied. Overlapping sites remain individually selectable in the location list.</p>
+        <details><summary>Polar scale and coordinate method</summary><p>r = 2R tan((90° + latitude)/2), R = 1737.4 km. Domain: 0–{(2*1737.4*Math.tan(5*Math.PI/180)).toFixed(2)} km. Screen radius = 250 × r / outer radius. This projection distance is not surface travel distance. θ is undefined exactly at the pole; the entered longitude is retained. Signed east longitude −180°…180° is normalized to 0°…360°. No Cartesian source conversion is needed.</p></details>
+      </div>
       <div className="map-tools">
         <button
           aria-label="Zoom in"
@@ -382,10 +403,10 @@ function VisibilityChart({ analysis }: { analysis: Analysis }) {
                 month: "short",
               })
             }
-            tick={{ fill: "#84918e", fontSize: 10 }}
+            tick={{ fill: "#84918e", fontSize: 16 }}
             minTickGap={60}
           />
-          <YAxis unit="°" tick={{ fill: "#84918e", fontSize: 10 }} width={35} />
+          <YAxis unit="°" tick={{ fill: "#84918e", fontSize: 16 }} width={55} />
           <Tooltip
             contentStyle={{
               background: "#172326",
@@ -456,7 +477,30 @@ function Timeline({ analysis }: { analysis: Analysis }) {
 }
 
 export default function Page() {
-  const [view, setView] = useState(0);
+  const [view, setViewState] = useState(7);
+  const [preferences,setPreferences] = useState<Preferences>({animate:true,scale:1,detailed:true});
+  const [researchPriority,setResearchPriority] = useState<ResearchPriority>("T");
+  const [researchBusy,setResearchBusy] = useState(false);
+  const [researchResult,setResearchResult] = useState<Research|null>(null);
+  const [researchComparison,setResearchComparison]=useState<ResearchComparison|null>(null);
+  const [chosenAlternatives, setChosenAlternatives] = useState<Site[]>([]);
+  const [comparisonNotice, setComparisonNotice] = useState("");
+  const [education, setEducation] = useState(false);
+  const [labVisited, setLabVisited] = useState(false);
+  const labOpen = [12, 14, 15, 16].includes(view);
+  useEffect(() => {
+    if (labOpen) setLabVisited(true);
+    if (view === 14) setEducation(true);
+    if (view === 7 || view === 12) setEducation(false);
+  }, [view, labOpen]);
+  const researchActions=useRef<ResearchActions|null>(null);
+  const setView=(next:number)=>{if(!viewPaths[next]||next===6)return;setViewState(next);if(location.hash!==`#${viewPaths[next]}`)location.hash=viewPaths[next];window.scrollTo({top:0,behavior:"instant"});};
+  useEffect(()=>{const sync=()=>{const n=viewPaths.indexOf(location.hash.slice(1));if(n>=0&&n!==6)setViewState(n);};sync();window.addEventListener("hashchange",sync);try{const p=JSON.parse(localStorage.getItem("lunar-preferences-v1")||"null");if(p&&typeof p.animate==="boolean"&&typeof p.scale==="number")setPreferences({animate:p.animate,scale:Math.max(.95,Math.min(1.08,p.scale)),detailed:p.detailed!==false});}catch{}return()=>window.removeEventListener("hashchange",sync);},[]);
+  const updatePreferences=(p:Preferences)=>{setPreferences(p);try{localStorage.setItem("lunar-preferences-v1",JSON.stringify(p));}catch{}};
+  const full=preferences.detailed??true;
+  const [astronomyVisited, setAstronomyVisited] = useState(false);
+  const [observatoryMode, setObservatoryMode] = useState<"system" | "surface">("system");
+  useEffect(() => { if (view === 5 && observatoryMode === "system") setAstronomyVisited(true); }, [view, observatoryMode]);
   const [sites, setSites] = useState<Site[]>([]);
   const [selected, setSelected] = useState<Site>({
     name: "Shackleton vicinity",
@@ -465,6 +509,8 @@ export default function Page() {
   });
   const [start, setStart] = useState("2026-10-01");
   const [end, setEnd] = useState("2026-10-08");
+  const [startTime, setStartTime] = useState("00:00");
+  const [endTime, setEndTime] = useState("00:00");
   const [interval, setIntervalMinutes] = useState(60);
   const [clearance, setClearance] = useState(0);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -508,12 +554,13 @@ export default function Page() {
   }, []);
   useEffect(() => {
     generation.current++;
+    setResearchResult(null);
     setAnalysis(pendingExample.current);
     pendingExample.current = null;
     setComparison(null);
     setPlaying(false);
     setIndex(0);
-  }, [selected, start, end, interval, clearance]);
+  }, [selected, start, end, startTime, endTime, interval, clearance]);
   useEffect(() => {
     comparisonGeneration.current++;
     setComparison(null);
@@ -528,11 +575,50 @@ export default function Page() {
   }, [playing, analysis]);
   const mission = (): Mission => ({
     ...selected,
-    start: `${start}T00:00:00Z`,
-    end: `${end}T00:00:00Z`,
+    start: `${start}T${startTime}:00Z`,
+    end: `${end}T${endTime}:00Z`,
     interval_minutes: interval,
     clearance_deg: clearance,
   });
+  const restoreMission = (m: Mission) => {
+    const begin = new Date(m.start).toISOString();
+    const finish = new Date(m.end).toISOString();
+    setSelected({name:m.name, latitude:m.latitude, longitude:m.longitude});
+    setStart(begin.slice(0,10)); setStartTime(begin.slice(11,16));
+    setEnd(finish.slice(0,10)); setEndTime(finish.slice(11,16));
+    setIntervalMinutes(m.interval_minutes); setClearance(m.clearance_deg);
+  };
+  const searchRecord: SearchRecord = {
+    version: 1, mission: mission(), priority: researchPriority,
+    alternatives: chosenAlternatives.filter(s => siteKey(s) !== siteKey(selected)),
+  };
+  const assessComparison = (alternatives: Site[]) => {
+    const actions = researchActions.current;
+    if (!actions) return;
+    if (alternatives.length) void actions.compare(alternatives);
+    else void actions.evaluate();
+  };
+  const addComparisonSite = ({ name, latitude, longitude }: Site) => {
+    const point = { name, latitude, longitude };
+    const key = siteKey(point);
+    const alternatives = searchRecord.alternatives;
+    if ([selected, ...alternatives].some(site => siteKey(site) === key)) {
+      setComparisonNotice(`${point.name} is already in the comparison cards.`);
+    } else if (alternatives.length >= 2) {
+      setComparisonNotice("Remove a comparison point below before adding another.");
+    } else {
+      const next = [...alternatives, point];
+      setChosenAlternatives(next);
+      setComparisonNotice("");
+      assessComparison(next);
+    }
+    setView(11);
+    requestAnimationFrame(() => {
+      const cards = document.getElementById("comparison-cards");
+      cards?.focus({ preventScroll: true });
+      cards?.scrollIntoView({ block: "start" });
+    });
+  };
   const run = async () => {
     const gen = generation.current;
     setBusy(true);
@@ -601,6 +687,7 @@ export default function Page() {
       });
       setStart("2026-10-01");
       setEnd("2026-10-08");
+      setStartTime("00:00"); setEndTime("00:00");
       setIntervalMinutes(60);
       setClearance(0);
       setNotice(
@@ -656,111 +743,48 @@ export default function Page() {
       ? "Terrain-screened geometry"
       : "Reference-sphere geometry";
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <a className="brand" href="/" aria-label="Lunar Navigator home">
-          <div className="brand-mark">
-            <Moon size={22} />
-          </div>
-          <div>
-            LUNAR<span>NAVIGATOR</span>
-          </div>
-        </a>
-        <div className="side-label">MISSION WORKSPACE</div>
-        <nav>
-          {views.map((label, i) => {
-            const Icon = icons[i];
-            return (
-              <button
-                aria-label={label}
-                className={view === i ? "active" : ""}
-                onClick={() => setView(i)}
-                key={label}
-              >
-                <Icon size={18} />
-                <span>{label}</span>
-                {view === i && <ChevronRight size={14} />}
-              </button>
-            );
-          })}
-        </nav>
-        <div className="side-bottom">
-          <div className="mission-badge">
-            <span className="live-dot" /> NASA SPACE APPS <b>2026</b>
-          </div>
-          <p>
-            Explore possibilities.
-            <br />
-            Understand the constraints.
-          </p>
-          <a
-            href="https://naif.jpl.nasa.gov/naif/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <CircleHelp size={15} /> Science & data reference{" "}
-            <ExternalLink size={12} />
-          </a>
-          <div className="version">
-            EXPLORATORY TOOL <span>v1.0</span>
-          </div>
-        </div>
-      </aside>
+    <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} data-classroom-theme={labOpen && education ? "" : undefined} style={{"--ui-scale":preferences.scale} as CSSProperties}>
+      <div className="stars" aria-hidden="true"/><Navigation view={view} education={education} onNavigate={setView} health={health} preferences={preferences} onPreferences={updatePreferences}/><NewsSidebar/>
       <div className="main-shell">
-        <header className="topbar">
-          <div className="breadcrumb">
-            Workspace <ChevronRight size={13} /> <span>{views[view]}</span>
-          </div>
-          <div className="system-state">
-            <span
-              className={health === "SPICE online" ? "live-dot" : "offline-dot"}
-            />
-            {health}
-            <span className="separator" /> <span className="avatar">LN</span>
-          </div>
-        </header>
-        <div className="workspace-with-news">
-          <main>
-            <div className="page-heading">
-              <div>
-                <div className="eyebrow">
-                  LUNAR SOUTH POLE / MISSION PLANNING
-                </div>
-                <h1>
-                  {
-                    [
-                      "Find your next horizon.",
-                      "See beyond the horizon.",
-                      "Read the lunar landscape.",
-                      "Compare the possibilities.",
-                      "Your mission, documented.",
-                      "A new perspective on space.",
-                      "Plan the journey, explicitly.",
-                    ][view]
-                  }
-                </h1>
-                <p>
-                  {
-                    [
-                      "Explore landing locations. Understand sunlight, communication, and the terrain between.",
-                      "Follow the Sun and Earth across the local sky, one moment at a time.",
-                      "Inspect elevation, slope, and obstructions from a verified lunar DEM.",
-                      "Weigh operational trade-offs across the same mission window.",
-                      "Trace every result back to its data, methods, and assumptions.",
-                      "Explore the supplied 3D models and your computed local sky.",
-                      "Record vehicle assumptions, inspect launch weather, and save your mission plans.",
-                    ][view]
-                  }
-                </p>
-              </div>
-              <button
-                className="button subtle report-button"
-                onClick={() => setView(4)}
-              >
-                <FileText size={16} /> Mission report <ArrowRight size={15} />
+        <div className="workspace-with-news"><main id="main-content">
+          {(view === 7 || view === 14) && (
+            <section className="home-mode-cards" aria-label="Choose your experience">
+              <button type="button" aria-pressed={view === 7} onClick={() => setView(7)}>
+                <strong>Professional Mode</strong>
+                <span>Advanced Lunar Mission Investigation</span>
               </button>
-            </div>
-            <div className="science-notice">
+              <button type="button" aria-pressed={view === 14} onClick={() => setView(14)}>
+                <strong>Education Mode</strong>
+                <span>Explore and Learn About Lunar Landing Sites</span>
+              </button>
+            </section>
+          )}
+          {view!==7&&view!==11&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div></div></>}
+          {view===7&&<section className="search-layout revised-search" aria-label="Search for a lunar landing site">
+            <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration"><div className="hero-copy"><span className="eyebrow">A NEW PERSPECTIVE ON THE MOON</span><h1>Find your place<br/>on the <em>Moon.</em></h1><p>Every mission starts with a possibility. Explore lunar locations through real sunlight, communication and terrain data.</p><div className="hero-hairline"/><span className="hero-footnote">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}>Explore the Moon <ArrowRight size={15}/></button></div><CinematicHero animate={preferences.animate}/></section>
+            <LandingSearch selected={selected} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{assessComparison(searchRecord.alternatives);setView(11);}} onMap={()=>setView(0)}/>
+            <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(13)}>Account & saved searches</button><button className="button subtle" onClick={()=>setView(12)}>Mission lab</button></div>
+          </section>}
+          {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)} onCompare={()=>document.getElementById("choose-comparison-sites")?.scrollIntoView({block:"start"})} onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
+          {view===11&&<ComparisonPicker mission={mission()} sites={sites} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
+          {view===13&&<Account record={searchRecord} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}
+          {labVisited&&<div hidden={!labOpen}><MissionLab mode={education?"education":"professional"} linkedTool={view===15?8:view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
+          {view===8&&<><ResearchOverview result={researchResult} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy}/><div className="account-actions"><button className="button subtle" onClick={()=>setView(13)}>Save search</button><button className="button subtle" onClick={()=>setView(11)}>Compare sites</button></div></>}
+          <div hidden={![0,1,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
+            <section className="task-intro panel">
+              <h2>Which location and mission window should I investigate?</h2>
+              <p>Choose a site and dates, calculate how often the Sun and Earth are both visible, then compare alternatives. These exploratory results do not establish landing safety.</p>
+            </section>
+            <Uncertainty analysis={analysis} />
+            {analysis && <section className="result-summary panel" aria-label="Main result">
+              <span>Calculated simultaneous visibility · {analysis.mission.name}</span>
+              <strong>{fmt(analysis.metrics.simultaneous_pct, "%")}</strong>
+              <p>of {analysis.mission.start.slice(0,10)} to {analysis.mission.end.slice(0,10)} UTC, in {analysis.mode === "terrain_screened" ? "terrain-screened" : "reference-sphere"} geometry.</p>
+              <p>Uncertainty not yet quantified. {analysis.terrain.available ? "Terrain sampling and model limitations apply." : "Local terrain obstruction is unknown."}</p>
+              <CalculationDetails analysis={analysis} />
+              <button className="button primary" onClick={() => setView(3)}>Next: compare locations <ArrowRight size={16}/></button>
+            </section>}
+            <div className="science-notice full-only">
               <span className="notice-icon">
                 <Satellite size={17} />
               </span>
@@ -784,11 +808,11 @@ export default function Page() {
                 {notice}
               </div>
             )}
-            <div className="mission-controls">
+            <div className="mission-controls" hidden={view===8}>
               <div className="mission-control-title">
                 <SlidersHorizontal size={16} />
                 <span>Mission window</span>
-                <small>UTC</small>
+                <small>UTC · {startTime} → {endTime}</small>
               </div>
               <label>
                 Start date
@@ -811,7 +835,7 @@ export default function Page() {
                   onChange={(e) => setEnd(e.target.value)}
                 />
               </label>
-              <label>
+              <label className="full-only">
                 Time step
                 <select
                   value={interval}
@@ -826,7 +850,7 @@ export default function Page() {
                   ))}
                 </select>
               </label>
-              <label title="Additional angle above the reference or terrain horizon for the Earth center.">
+              <label className="full-only" title="Additional angle above the reference or terrain horizon for the Earth center.">
                 Link clearance
                 <input
                   type="number"
@@ -846,6 +870,8 @@ export default function Page() {
                 {busy ? "Calculating…" : "Analyze site"}{" "}
                 {!busy && <ArrowRight size={15} />}
               </button>
+            </div>
+            {!full && view!==0 && <p className="active-settings">Current settings: {startTime} → {endTime} UTC · {interval}-minute sampling · {clearance}° Earth clearance. Adjust in Full View.</p>}
             </div>
             {view === 0 && (
               <>
@@ -981,7 +1007,7 @@ export default function Page() {
                 </div>
               </>
             )}
-            {analysis && (
+            {analysis && view !== 4 && (view !== 5 || observatoryMode === "surface") && (
               <div className="metrics-grid">
                 {[
                   {
@@ -1019,6 +1045,8 @@ export default function Page() {
                       <m.icon size={17} className={m.color} />
                     </div>
                     <strong>{m.value}</strong>
+                    <small>Uncertainty not yet quantified</small>
+                    <CalculationDetails analysis={analysis} metric={m.label} />
                     <small>
                       {analysis.mode === "terrain_screened"
                         ? "Local terrain included"
@@ -1057,7 +1085,7 @@ export default function Page() {
                   empty
                 ) : (
                   <>
-                    <VisibilityChart analysis={analysis} />
+                    <div className="full-only"><VisibilityChart analysis={analysis} /></div>
                     <Timeline analysis={analysis} />
                     {view === 0 ? (
                       <div className="panel-bottom">
@@ -1118,7 +1146,7 @@ export default function Page() {
                                     x="15"
                                     y={169 - el * 6}
                                     fill="#96a29c"
-                                    fontSize="11"
+                                    fontSize="16"
                                   >
                                     {el}°
                                   </text>
@@ -1138,7 +1166,7 @@ export default function Page() {
                                     y="260"
                                     textAnchor="middle"
                                     fill="#96a29c"
-                                    fontSize="11"
+                                    fontSize="16"
                                   >
                                     {
                                       [
@@ -1277,118 +1305,7 @@ export default function Page() {
                 )}
               </section>
             )}
-            {view === 2 && (
-              <section className="panel analysis-panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>
-                      <Layers size={18} /> Local terrain assessment
-                    </h2>
-                    <p>LOLA elevations · slopes · horizon obstructions</p>
-                  </div>
-                  <a
-                    className="text-button"
-                    href="https://pds-geosciences.wustl.edu/missions/lro/lola.htm"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    NASA PDS / LOLA <ExternalLink size={14} />
-                  </a>
-                </div>
-                {!analysis ? (
-                  empty
-                ) : (
-                  <div className="terrain-content">
-                    <div className="terrain-summary">
-                      <div>
-                        <span>Elevation</span>
-                        <strong>
-                          {fmt(analysis.terrain.elevation_m, " m")}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Local slope</span>
-                        <strong>{fmt(analysis.terrain.slope_deg, "°")}</strong>
-                      </div>
-                      <div>
-                        <span>Pixel spacing</span>
-                        <strong>
-                          {fmt(analysis.terrain.resolution_m, " m")}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Horizon coverage</span>
-                        <strong>
-                          {analysis.terrain.available
-                            ? "20 km / 360°"
-                            : "Unavailable"}
-                        </strong>
-                      </div>
-                    </div>
-                    {analysis.terrain.reason && (
-                      <div className="info">{analysis.terrain.reason}</div>
-                    )}
-                    {analysis.terrain.grid.length > 0 && (
-                      <div
-                        className="terrain-grid"
-                        role="img"
-                        aria-label="Local elevation heatmap over 10 by 10 km, north is up"
-                      >
-                        {(() => {
-                          const values = analysis.terrain.grid.flatMap((p) =>
-                            p.elevation_m === null ? [] : [p.elevation_m],
-                          );
-                          const low = Math.min(...values),
-                            high = Math.max(...values);
-                          return [...analysis.terrain.grid]
-                            .sort(
-                              (a, b) =>
-                                b.north_m - a.north_m || a.east_m - b.east_m,
-                            )
-                            .map((p, i) => (
-                              <div
-                                key={i}
-                                title={`${p.east_m} m E, ${p.north_m} m N: ${fmt(p.elevation_m, " m")}`}
-                                style={{
-                                  background:
-                                    p.elevation_m === null
-                                      ? "#242e33"
-                                      : `hsl(${75 + ((p.elevation_m - low) / (high - low || 1)) * 50} 25% ${20 + ((p.elevation_m - low) / (high - low || 1)) * 55}%)`,
-                                }}
-                              />
-                            ));
-                        })()}
-                      </div>
-                    )}
-                    <p className="muted">
-                      {analysis.terrain.method ||
-                        "No terrain layer is drawn without measured elevation data. Configure LOLA_MANIFEST on the backend; see the README for the required CRS, vertical datum, provenance, and checksum."}
-                    </p>
-                    <div className="reference-links">
-                      <a
-                        href="https://quickmap.lroc.asu.edu/"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        LROC QuickMap <ExternalLink size={14} />
-                      </a>
-                      <a
-                        href="https://trek.nasa.gov/moon/"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        NASA Moon Trek <ExternalLink size={14} />
-                      </a>
-                    </div>
-                    <p className="muted">
-                      External map references only. This app does not assume or
-                      proxy an undocumented imagery API. Subpixel rocks,
-                      roughness, and landing hazards remain unassessed.
-                    </p>
-                  </div>
-                )}
-              </section>
-            )}
+            {view === 2 && <TerrainAssessment location={selected} onSelect={setSelected}/> }
             {view === 3 && (
               <section className="panel analysis-panel">
                 <div className="panel-heading">
@@ -1509,7 +1426,13 @@ export default function Page() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="ranking-explanation">
+                    <div className="uncertainty-banner">Uncertainty not yet quantified. Scores apply only to the displayed mission dates; small differences may not be meaningful.</div>
+                    <details className="explanation"><summary>How was this calculated? — ranking</summary>
+                    <p>{comparison.explanation}</p>
+                    <p>User weights: sunlight {weights.sunlight}, Earth {weights.earth}, simultaneous {weights.simultaneous}. Score = (sunlight % × sunlight weight + Earth % × Earth weight + simultaneous % × simultaneous weight) / total weight. No hazard or safety score is included.</p>
+                    {comparison.ranking.map(r => <p key={r.mission.name}>{r.mission.name}: {r.mission.start} to {r.mission.end}; {Object.entries(r.contributions).map(([k,v]) => `${k}: ${v.toFixed(3)} points`).join(" + ")} = {r.score.toFixed(3)} / 100.</p>)}
+                    </details>
+                    <div className="ranking-explanation full-only">
                       <h3>What drives the ranking?</h3>
                       <p>{comparison.explanation}</p>
                       {comparison.ranking.map((r) => (
@@ -1554,124 +1477,19 @@ export default function Page() {
               </section>
             )}
             {view === 4 && (
-              <section className="panel analysis-panel">
-                <div className="panel-heading">
-                  <div>
-                    <h2>
-                      <FileText size={18} /> Mission analysis report
-                    </h2>
-                    <p>
-                      {analysis
-                        ? `${analysis.mission.name} · ${utc(analysis.mission.start)} — ${utc(analysis.mission.end)} UTC`
-                        : "Run an analysis to prepare your report"}
-                    </p>
-                  </div>
-                  {analysis && (
-                    <div className="export-buttons">
-                      <button
-                        className="button subtle"
-                        disabled={busy}
-                        onClick={() => download("csv")}
-                      >
-                        <ArrowDownToLine size={14} /> CSV
-                      </button>
-                      <button
-                        className="button subtle"
-                        disabled={busy}
-                        onClick={() => download("json")}
-                      >
-                        <ArrowDownToLine size={14} /> JSON
-                      </button>
-                      <button
-                        className="button subtle"
-                        onClick={() => window.print()}
-                      >
-                        Print / PDF
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {!analysis ? (
-                  empty
-                ) : (
-                  <>
-                    <div className="report-body">
-                      <h3>{mode}</h3>
-                      <p>
-                        {analysis.mission.latitude.toFixed(4)}° N,{" "}
-                        {analysis.mission.longitude.toFixed(4)}° E ·{" "}
-                        {analysis.mission.interval_minutes}-minute cadence ·{" "}
-                        {analysis.mission.clearance_deg}° communication
-                        clearance
-                      </p>
-                      <VisibilityChart analysis={analysis} />
-                      <Timeline analysis={analysis} />
-                      <h3>Operational windows</h3>
-                      {analysis.metrics.operational_windows.length ? (
-                        <div className="table-scroll">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Start (UTC)</th>
-                                <th>End (UTC)</th>
-                                <th>Duration</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {analysis.metrics.operational_windows.map((w) => (
-                                <tr key={w.start}>
-                                  <td>{utc(w.start)}</td>
-                                  <td>{utc(w.end)}</td>
-                                  <td>{w.hours.toFixed(2)} h</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <p>
-                          No simultaneous visibility within the sampled mission
-                          window.
-                        </p>
-                      )}
-                      <h3>Data, assumptions & limitations</h3>
-                      <p>
-                        {analysis.provenance.ephemeris} ·{" "}
-                        {analysis.provenance.orientation}
-                      </p>
-                      <ul>
-                        {analysis.provenance.assumptions.map((a) => (
-                          <li key={a}>{a}</li>
-                        ))}
-                      </ul>
-                      <div className="info">
-                        {analysis.terrain.reason || analysis.terrain.method}
-                      </div>
-                      <div className="reference-links">
-                        <a
-                          href="https://ssd.jpl.nasa.gov/planets/eph_export.html"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          JPL ephemerides <ExternalLink size={13} />
-                        </a>
-                        <a
-                          href="https://naif.jpl.nasa.gov/naif/"
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          NAIF SPICE <ExternalLink size={13} />
-                        </a>
-                      </div>
-                    </div>
-                  </>
-                )}
+              <section className="panel" aria-label="Historical lunar missions">
+                {analysis && <div className="panel-heading" style={{padding:20}}><span>Current site analysis exports</span><div className="export-buttons"><button className="button subtle" disabled={busy} onClick={() => download("csv")}>CSV</button><button className="button subtle" disabled={busy} onClick={() => download("json")}>JSON</button></div></div>}
+                <iframe title="Lunar mission archive and interactive 3D paths" src="/mission-archive/index.html" style={{width:"100%",height:"min(1200px, 85vh)",minHeight:640,border:0,borderRadius:12,display:"block"}} />
               </section>
             )}
             {view === 5 && (
               <>
-                <CelestialViewer sample={current} />
-                {analysis && (
+                <div className="panel astro-camera-controls" role="group" aria-label="Observatory view" style={{padding:16}}>
+                  <button className={`button ${observatoryMode === "system" ? "primary" : "subtle"}`} aria-pressed={observatoryMode === "system"} onClick={() => setObservatoryMode("system")}>Sun–Earth–Moon simulation</button>
+                  <button className={`button ${observatoryMode === "surface" ? "primary" : "subtle"}`} aria-pressed={observatoryMode === "surface"} onClick={() => setObservatoryMode("surface")}>Reference models & local sky</button>
+                </div>
+                {observatoryMode === "surface" && <CelestialViewer sample={current} />}
+                {observatoryMode === "surface" && analysis && (
                   <section className="panel playback-panel">
                     <div className="panel-heading">
                       <h2>Computed sample · {utc(current!.time)} UTC</h2>
@@ -1700,25 +1518,14 @@ export default function Page() {
                     </div>
                   </section>
                 )}
-                {!analysis && <div className="panel">{empty}</div>}
+                {observatoryMode === "surface" && !analysis && <div className="panel">{empty}</div>}
               </>
             )}
-            {view === 6 && (
-              <MissionPlanner
-                mission={mission()}
-                onRestore={(m) => {
-                  setSelected({
-                    name: m.name,
-                    latitude: m.latitude,
-                    longitude: m.longitude,
-                  });
-                  setStart(m.start.slice(0, 10));
-                  setEnd(m.end.slice(0, 10));
-                  setIntervalMinutes(m.interval_minutes);
-                  setClearance(m.clearance_deg);
-                }}
-              />
-            )}
+            <div hidden={![0,3,8].includes(view)}><LandingResearch onComparisonChange={setResearchComparison} onResultChange={setResearchResult} actionRef={researchActions} priority={researchPriority} onBusyChange={setResearchBusy} mission={mission()} sites={sites} onAddComparison={addComparisonSite} onSelect={site => { setSelected(site); setView(7); }} /></div>
+            <div hidden={view !== 5 || observatoryMode !== "system"}>{astronomyVisited && <AstronomySimulation active={view === 5 && observatoryMode === "system"} />}</div>
+            {view===3&&comparison&&<AlternativeCards comparison={comparison} onInspect={r=>{setSelected({name:r.mission.name,latitude:r.mission.latitude,longitude:r.mission.longitude});setView(0);}}/>}
+            {view===9&&<section className="about-grid"><article className="about-intro glass"><span className="eyebrow">EXPLORATION, INFORMED BY EVIDENCE</span><h2>A place to ask<br/>better questions.</h2><p>LUNAR is a NASA Space Apps 2026 research demonstrator for investigating lunar landing locations, mission windows and backup possibilities.</p><p>The cinematic spacecraft is an illustration. Its motion and scales are artistic. The observatory retrieves actual Sun–Earth–Moon vectors separately.</p><button className="button primary" onClick={()=>setView(7)}>Start exploring <ArrowRight size={15}/></button></article><article className="about-method glass"><h3>Real data. Transparent limits.</h3><p>NASA Horizons and the existing SPICE workflow provide astronomical geometry. Regional LOLA, LROC and historical Diviner products support available terrain and temperature evidence. Missing factors remain unavailable.</p><h3>A score is not a promise.</h3><p>The five-factor NASA research score and reference-sphere visibility comparison are distinct models. Neither establishes landing safety, a fuel-feasible diversion or a probability of success.</p><h3>Terrain and spacecraft evidence</h3><p>The regional 20 m DEM screens finite horizons. The 5 m footprint product has limited coverage. Apollo LM uncertainty and backup searches retain their published limitations.</p><div className="reference-links"><a href="https://github.com/xiangen-coder/nasa/blob/public-preview/docs/WIDE_TERRAIN.md" target="_blank" rel="noreferrer">Terrain methods & coverage</a><a href="https://ssd-api.jpl.nasa.gov/doc/horizons.html" target="_blank" rel="noreferrer">JPL Horizons</a></div><button className="text-button" onClick={()=>setView(8)}>Review assessment & provenance <ArrowRight size={14}/></button></article></section>}
+            {view===10&&<section className="preferences-page glass"><span className="eyebrow">YOUR EXPERIENCE</span><h2>Settings.</h2><PreferencesControls value={preferences} onChange={updatePreferences}/><button className="button subtle" onClick={()=>setView(7)}>Back to Search <ArrowRight size={14}/></button></section>}
             <footer className="footer">
               <span>
                 <Moon size={13} /> LUNAR LANDING SITE NAVIGATOR <span> / </span>{" "}
@@ -1729,7 +1536,7 @@ export default function Page() {
               </span>
             </footer>
           </main>
-          <NewsSidebar />
+
         </div>
       </div>
     </div>

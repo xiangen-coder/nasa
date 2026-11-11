@@ -1,0 +1,119 @@
+.lunar-app[data-classroom-theme] {
+  --classroom-ink: #17324d;
+  --classroom-muted: #435b68;
+  --classroom-accent: #146b73;
+  --classroom-border: #bacdce;
+  --text: var(--classroom-ink);
+  --muted: var(--classroom-muted);
+  --line: var(--classroom-border);
+  background: radial-gradient(ellipse at 85% 3%, #dcefe9 0%, transparent 38rem), #f6f7f0;
+  color: var(--classroom-ink);
+  color-scheme: light;
+}
+
+.lunar-app[data-classroom-theme] > .stars {
+  display: none;
+}
+
+.lunar-app[data-classroom-theme] .lunar-topbar {
+  background: #f6f7f0f5;
+  border-bottom: 1px solid var(--classroom-border);
+}
+
+[data-classroom-theme] .lunar-brand,
+[data-classroom-theme] .brand-caption,
+[data-classroom-theme] .system-state,
+[data-classroom-theme] .workspace-breadcrumb,
+[data-classroom-theme] .page-heading h1,
+[data-classroom-theme] .page-heading p,
+[data-classroom-theme] .footer {
+  color: var(--classroom-ink);
+}
+
+[data-classroom-theme] .page-heading .eyebrow,
+[data-classroom-theme] .menu-caption {
+  color: var(--classroom-muted);
+}
+
+[data-classroom-theme] .workspace-breadcrumb button {
+  color: var(--classroom-accent);
+}
+
+[data-classroom-theme] .mission-lab .button.subtle,
+[data-classroom-theme] .mission-lab .text-button {
+  background: #fff;
+  color: #145b63;
+  border-color: var(--classroom-border);
+  box-shadow: none;
+}
+
+[data-classroom-theme] .mission-lab .button.primary,
+[data-classroom-theme] .mission-lab .button[aria-pressed="true"] {
+  background: var(--classroom-accent);
+  border-color: var(--classroom-accent);
+  color: #fff;
+  box-shadow: none;
+}
+
+[data-classroom-theme] .mission-lab .button.subtle:hover,
+[data-classroom-theme] .mission-lab .text-button:hover {
+  background: #e3f1ee;
+}
+
+[data-classroom-theme] .mission-lab .button.primary:hover {
+  background: #10555c;
+  color: #fff;
+}
+
+.lunar-app[data-classroom-theme] .nav-pill,
+[data-classroom-theme] .header-mode-switch,
+[data-classroom-theme] .settings-trigger,
+[data-classroom-theme] .settings-dialog,
+.lunar-app[data-classroom-theme] .more-menu {
+  background: #fff;
+  border-color: var(--classroom-border);
+  color: var(--classroom-ink);
+  box-shadow: none;
+}
+
+[data-classroom-theme] .nav-pill > a,
+[data-classroom-theme] .nav-pill > .more-menu-wrap > button,
+[data-classroom-theme] .more-menu button,
+[data-classroom-theme] .more-menu button small,
+[data-classroom-theme] .header-mode-switch button {
+  color: var(--classroom-ink);
+}
+
+[data-classroom-theme] .nav-pill > a[aria-current="page"],
+[data-classroom-theme] .nav-pill > .more-menu-wrap > button.active,
+[data-classroom-theme] .header-mode-switch button[aria-pressed="true"] {
+  background: var(--classroom-accent);
+  color: #fff;
+  box-shadow: none;
+}
+
+[data-classroom-theme] .nav-pill > a:not([aria-current]):hover,
+[data-classroom-theme] .more-menu button:hover,
+[data-classroom-theme] .more-menu button[aria-current="page"] {
+  background: #e3f1ee;
+}
+
+[data-classroom-theme] .home-mode-cards button {
+  border-color: var(--classroom-border);
+  background: #ffffffd9;
+  color: var(--classroom-ink);
+}
+
+[data-classroom-theme] .home-mode-cards button[aria-pressed="true"] {
+  border-color: var(--classroom-accent);
+  background: #dcefe9;
+}
+
+[data-classroom-theme] .live-dot {
+  background: var(--classroom-accent);
+}
+
+[data-classroom-theme] :is(button, a, summary):focus-visible {
+  outline: 2px solid var(--classroom-accent);
+  outline-offset: 3px;
+}

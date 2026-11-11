@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/ayushsingh01042003/MOON",
+  "source_file": "https://github.com/ayushsingh01042003/MOON/blob/main/lunar_path.json",
+  "source_git_blob_sha": "0a08bcb9f9235fe692ac173bbd66af469641e87e",
+  "retrieved_date": "2026-11-01",
+  "waypoint_count": 10,
+  "purpose": "Illustrative lunar surface route; not an orbit or transfer trajectory",
+  "source_frame": "Not documented in JSON",
+  "display_assumption": "Planetocentric latitude and east-positive longitude in degrees",
+  "display_radius_km": 1737.4,
+  "terrain_elevation": "Not supplied",
+  "uncertainty": "Not quantified",
+  "upstream_3d": "Cesium ion asset 2684829; not bundled or fetched",
+  "license_note": "No LICENSE file was present in the inspected repository root. Upstream script and embedded access token are not copied into this app."
+}

@@ -8,6 +8,7 @@ RUN --mount=type=secret,id=proxy_ca \
     pip install --no-cache-dir -r requirements.txt
 COPY --chown=10001:10001 backend/app ./backend/app
 COPY --chown=10001:10001 data/kernels ./data/kernels
+COPY --chown=10001:10001 data/lunar_preview ./data/lunar_preview
 RUN mkdir -p /app/data/runtime && useradd --uid 10001 --create-home navigator && chown -R navigator:navigator /app/data/runtime
 ENV CACHE_PATH=/app/data/runtime/cache.sqlite
 USER navigator

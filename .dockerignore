@@ -10,3 +10,13 @@ data/terrain
 data/examples
 data/*.sqlite*
 .env*
+work
+**/work
+outputs
+data/lunar
+**/.next-research
+**/.next-preview
+**/.next-ux
+**/.next-reliability
+data/lunar_preview/horizon_dem.tif
+**/.next-canva

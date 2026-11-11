@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-os.environ['CACHE_PATH'] = '/tmp/lunar-navigator-tests.sqlite'
+os.environ['CACHE_PATH'] = str(Path(__file__).resolve().parents[2] / 'work/lunar-navigator-tests.sqlite')
 
 @pytest.fixture
 def mission():
