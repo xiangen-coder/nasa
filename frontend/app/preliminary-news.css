@@ -76,6 +76,18 @@
 .plan-b-card .plan-b-progress {
   margin-top: 12px;
 }
+.plan-b-card .what-if-mode,
+.plan-b-card .comparison-picker {
+  margin: 12px 0;
+}
+.plan-b-card .comparison-picker {
+  padding: 12px;
+}
+.plan-b-card .comparison-picker .account-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
 .plan-b-card p {
   margin: 8px 0;
 }

@@ -197,6 +197,10 @@ def plan_b_sites(request:ResearchRequest):
         'candidates':[{'location':{key:row['location'][key] for key in ('name','latitude','longitude')}, 'bounds':row['assessment']['bounds'],
                        'screening_radius_m':row['assessment']['screening_radius_m']}
                       for row in result['candidates']],
+        'exploration_candidates':[
+            {'location':{key:row['location'][key] for key in ('name','latitude','longitude')}}
+            for row in result['exploration_candidates']
+        ],
         **{key:result[key] for key in ('searched','overlap_excluded','outside_or_missing','failed_limits','passing_terrain_candidates')},
     }
 

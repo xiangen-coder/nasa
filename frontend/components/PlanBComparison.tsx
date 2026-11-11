@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Research } from "./LandingResearch";
 import type { ResearchPriority } from "./SearchConsole";
 import type { SolarSettings } from "./mission-lab/scenario-science";
 import {
   comparableScores, comparableTerrain, findPlanB, initialProgress, latestTouchdown,
-  rankOptions, searchDates, solarEstimate, type PlanBMode, type PlanBOption, type PlanBWindow,
+  rankOptions, searchDates, solarEstimate, type PlanBMode, type PlanBForecast, type PlanBWindow,
 } from "../lib/plan-b";
 
 const number = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
@@ -19,7 +19,7 @@ function metric(value: number | undefined, unit: string, baseline?: number) {
 }
 
 function OptionDetails({ option, original, equipment }: {
-  option: PlanBOption;
+  option: Omit<PlanBForecast, "reasons">;
   original: Research;
   equipment: SolarSettings;
 }) {
@@ -62,10 +62,11 @@ function OptionDetails({ option, original, equipment }: {
   );
 }
 
-export default function PlanBComparison({ original, priority, equipment }: {
+export default function PlanBComparison({ original, priority, equipment, alternativePicker }: {
   original?: Research;
   priority: ResearchPriority;
   equipment: SolarSettings;
+  alternativePicker: ReactNode;
 }) {
   const [mode, setMode] = useState<PlanBMode>("delay");
   const [range, setRange] = useState<PlanBWindow>("month");
@@ -111,7 +112,7 @@ export default function PlanBComparison({ original, priority, equipment }: {
   }
 
   const ranked = status !== "running" ? rankOptions(progress.options, priority, mode).slice(0, 3) : [];
-  const incomplete = status === "cancelled" || status === "error" || progress.clipped || progress.unavailable > 0;
+  const incomplete = status === "cancelled" || status === "error" || progress.clipped || progress.unavailable > 0 || progress.forecastsUnavailable > 0;
   const done = status !== "idle" && status !== "running";
   const resetResult = () => { setStatus("idle"); setMessage(""); setProgress(initialProgress); };
   return (
@@ -120,19 +121,20 @@ export default function PlanBComparison({ original, priority, equipment }: {
       <details className="pre-extra">
         <summary>How the search works</summary>
         <p>What IF keeps the mission duration, equipment settings, and limits from Pre-Result 1. It tests the site or dates you choose. Longer windows are sampled, with extra checks around promising dates.</p>
-        <p>Sites must clear terrain, hazard, and historical temperature checks before the search calculates sunlight, Earth visibility, and solar power. For a delay, the earliest passing touchdown tested comes first. For a site change on the same date, the selected assessment priority sets the order.</p>
+        <p>NASA JPL predicts Sun and Earth positions for the selected UTC dates. Measured terrain and historical temperature data inform the landing checks. When a site fails those checks or lacks evidence, What IF can still show a limited outlook for its sunlight, Earth visibility, and solar energy.</p>
       </details>
+      <label className="what-if-mode">Search mode
+        <select disabled={status === "running"} value={mode} onChange={(event) => { setMode(event.target.value as PlanBMode); resetResult(); }}>
+          <option value="delay">Same location, later touchdown</option>
+          <option value="relocate">Nearby location, same touchdown</option>
+          <option value="both">Nearby location, later touchdown</option>
+        </select>
+      </label>
+      {mode === "relocate" && alternativePicker}
       {!original ? <p>Evaluate Pre-Result 1 to use its mission settings for a backup search.</p> : (
         <>
           <form onSubmit={(event) => { event.preventDefault(); void run(); }}>
             <fieldset disabled={status === "running"}>
-              <label>Search mode
-                <select value={mode} onChange={(event) => { setMode(event.target.value as PlanBMode); resetResult(); }}>
-                  <option value="delay">Same location, later touchdown</option>
-                  <option value="relocate">Nearby location, same touchdown</option>
-                  <option value="both">Nearby location, later touchdown</option>
-                </select>
-              </label>
               {mode !== "relocate" && (
                 <>
                   <label>Search window
@@ -166,7 +168,7 @@ export default function PlanBComparison({ original, priority, equipment }: {
             <div role="status" className="plan-b-progress">
               {status === "running" && <p>{progress.stage || "Preparing backup search…"}</p>}
               {status === "running" && progress.scheduled > 0 && (
-                <progress aria-label="Options checked" max={progress.scheduled} value={progress.evaluated + progress.unavailable + progress.skipped} />
+                <progress aria-label="Options checked" max={progress.scheduled} value={progress.evaluated + progress.unavailable + progress.skipped + progress.forecasts.length + progress.forecastsUnavailable} />
               )}
               <p>{progress.evaluated} {progress.evaluated === 1 ? "option" : "options"} evaluated
                 {progress.unavailable > 0 && ` · ${progress.unavailable} could not be evaluated`}
@@ -190,9 +192,23 @@ export default function PlanBComparison({ original, priority, equipment }: {
                 </>
               )}
               {progress.sampled && <p>The search checks selected touchdown times within your date window.</p>}
-              {progress.skipped > 0 && <p>Skipped dates share a site with a failed check or missing evidence. Those site checks apply to every date.</p>}
+              {progress.skipped > 0 && <p>Those dates share a site with a failed check or missing evidence. The outlook samples the first and last touchdown times for that site.</p>}
               {(progress.limits > 0 || progress.missing > 0) && <p>{progress.limits} exceeded limits · {progress.missing} lacked required evidence.</p>}
-              {progress.shortlist && <p>Terrain screening covered {progress.shortlist.searched} points: {progress.shortlist.outside_or_missing} lacked evidence, {progress.shortlist.failed_limits} exceeded limits, {progress.shortlist.overlap_excluded} overlapped, and {progress.shortlist.passing_terrain_candidates} passed. Up to three passing points enter mission assessment.</p>}
+              {progress.shortlist && <p>Terrain screening covered {progress.shortlist.searched} points: {progress.shortlist.outside_or_missing} lacked evidence, {progress.shortlist.failed_limits} exceeded limits, {progress.shortlist.overlap_excluded} overlapped, and {progress.shortlist.passing_terrain_candidates} passed.</p>}
+              {progress.forecastsUnavailable > 0 && <p>{progress.forecastsUnavailable} outlooks could not be calculated.</p>}
+              {progress.forecasts.length > 0 && (
+                <section aria-label="Forecasts for comparison">
+                  <h3>Forecasts for comparison</h3>
+                  {progress.forecasts.map((option, index) => (
+                    <details key={JSON.stringify(option.result.mission)} className="pre-extra" open={index === 0}>
+                      <summary>{option.result.mission.name} · {utc(option.result.mission.start)}</summary>
+                      <p>Landing checks unresolved or exceeded. {option.reasons.join(" ")}</p>
+                      <p>{option.result.geometry.mode === "terrain_screened" ? "Visibility accounts for the mapped terrain skyline." : "Visibility uses a smooth reference horizon. Local shadows and obstructions are unknown."}</p>
+                      <OptionDetails option={option} original={original} equipment={equipment} />
+                    </details>
+                  ))}
+                </section>
+              )}
               {progress.reasons.length > 0 && (
                 <details className="pre-extra" open={ranked.length === 0}><summary>Assessment notes</summary>
                   <ul>{progress.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>

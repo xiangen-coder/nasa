@@ -113,6 +113,7 @@ test("location and combined searches keep the baseline and enforce the 20 km lim
   });
   const plan = await openCompare(page);
   await plan.getByLabel("Search mode").selectOption("relocate");
+  await expect(plan.getByText("Choose alternative sites")).toBeVisible();
   await expect(plan.getByLabel("Search window")).toHaveCount(0);
   await plan.getByRole("button", { name: "Run What IF" }).click();
   await expect(plan.getByRole("heading", { name: "Best of the options evaluated" })).toBeVisible();
@@ -120,6 +121,7 @@ test("location and combined searches keep the baseline and enforce the 20 km lim
   expect(candidates).toHaveLength(2);
   expect(candidates.every((mission) => Date.parse(mission.start) === Date.parse(start))).toBeTruthy();
   await plan.getByLabel("Search mode").selectOption("both");
+  await expect(plan.getByText("Choose alternative sites")).toHaveCount(0);
   await plan.getByLabel("Search window").selectOption("custom");
   await plan.getByLabel("Search end date (UTC)").fill("2028-12-01");
   await plan.getByLabel("Alternate UTC touchdown time").fill("12:30");
@@ -131,6 +133,22 @@ test("location and combined searches keep the baseline and enforce the 20 km lim
   expectMissionSettings(candidates);
 });
 
+test("nominal terrain candidates get a forecast for the original window", async ({ page }) => {
+  const point = { name: "Unverified ridge", latitude: -89.52, longitude: 0 };
+  await page.route("**/api/reliability/plan-b-sites", (route) => route.fulfill({
+    json: { candidates: [], exploration_candidates: [{ location: point }], searched: 1,
+      outside_or_missing: 1, failed_limits: 0, overlap_excluded: 0, passing_terrain_candidates: 0 },
+  }));
+  const plan = await openCompare(page);
+  await plan.getByLabel("Search mode").selectOption("relocate");
+  await plan.getByRole("button", { name: "Run What IF" }).click();
+  const forecast = plan.getByRole("region", { name: "Forecasts for comparison" });
+  await expect(forecast).toContainText("Unverified ridge");
+  await expect(forecast).toContainText("2026-10-01 00:00:00 UTC");
+  await expect(forecast).toContainText("Footprint and uncertainty evidence is incomplete.");
+  await expect(plan.getByRole("heading", { name: "No viable backup found in this search" })).toBeVisible();
+});
+
 test("missing evidence blocks recommendations, and cancellation marks a search incomplete", async ({ page }) => {
   await page.route("**/api/research/plan-b", (route) => route.fulfill({
     json: { status: "missing", reasons: ["Mapped hazard fraction is unavailable."] },
@@ -140,6 +158,10 @@ test("missing evidence blocks recommendations, and cancellation marks a search i
   await plan.getByRole("button", { name: "Run What IF" }).click();
   await expect(plan.getByRole("heading", { name: "No viable backup found in this search" })).toBeVisible();
   await expect(plan.getByRole("status")).toContainText("1 option evaluated");
+  const forecasts = plan.getByRole("region", { name: "Forecasts for comparison" });
+  await expect(forecasts).toContainText("2026-10-02");
+  await expect(forecasts).toContainText("2027-10-01");
+  await expect(forecasts).toContainText("Estimated solar energy");
   await expect(plan).toContainText("1 lacked required evidence");
   await expect(plan.getByText("Assessment notes")).toBeVisible();
   await expect(plan).toContainText("Mapped hazard fraction is unavailable.");

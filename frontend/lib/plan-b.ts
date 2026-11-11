@@ -12,6 +12,7 @@ export type TerrainBounds = Partial<Record<"slope_mean_deg" | "slope_max_deg" | 
 export type PlanBSite = { location: Site; bounds?: TerrainBounds; screening_radius_m?: number };
 export type PlanBShortlist = {
   candidates: PlanBSite[];
+  exploration_candidates?: PlanBSite[];
   searched: number;
   overlap_excluded: number;
   outside_or_missing: number;
@@ -21,6 +22,7 @@ export type PlanBShortlist = {
 type Rejection = { status: "missing" | "limits" | "unavailable"; reasons: string[] };
 export type PlanBAssessment = Rejection | { status: "evaluated"; result: Research };
 export type PlanBOption = PlanBSite & { result: Research; energy: number };
+export type PlanBForecast = PlanBSite & { result: Research; energy?: number; reasons: string[] };
 
 export function latestTouchdown(mission: Mission) {
   return ephemerisEnd - (Date.parse(mission.end) - Date.parse(mission.start));
@@ -145,6 +147,8 @@ export type PlanBProgress = {
   shortlist?: PlanBShortlist;
   reasons: string[];
   options: PlanBOption[];
+  forecasts: PlanBForecast[];
+  forecastsUnavailable: number;
   stage: string;
 };
 
@@ -175,7 +179,7 @@ async function planBRequest<T>(path: string, body: unknown, signal: AbortSignal,
 
 export const initialProgress: PlanBProgress = {
   evaluated: 0, unavailable: 0, limits: 0, missing: 0, skipped: 0, scheduled: 0,
-  sampled: false, clipped: false, reasons: [], options: [], stage: "",
+  sampled: false, clipped: false, reasons: [], options: [], forecasts: [], forecastsUnavailable: 0, stage: "",
 };
 
 export async function findPlanB({
@@ -193,6 +197,7 @@ export async function findPlanB({
   const mission = original.mission;
   const limits = original.limits;
   let locations: PlanBSite[] = [{ location: mission }];
+  let exploration: PlanBSite[] = [];
   const progress = { ...initialProgress, clipped: dates.clipped };
   const report = (stage: string) => update({ ...progress, stage });
   const addReasons = (reasons: string[]) => {
@@ -205,12 +210,14 @@ export async function findPlanB({
     locations = progress.shortlist.candidates.filter(({ location }, index, candidates) =>
       siteKey(location) !== siteKey(mission) && inComparisonArea(mission, location) &&
       candidates.findIndex((candidate) => siteKey(candidate.location) === siteKey(location)) === index);
+    exploration = (progress.shortlist.exploration_candidates ?? []).filter(({ location }) =>
+      siteKey(location) !== siteKey(mission) && inComparisonArea(mission, location));
   }
 
   const coarse = sampledDays(dates.count, mode === "both" ? 6 : 10);
-  progress.sampled = coarse.length < dates.count && locations.length > 0;
+  progress.sampled = coarse.length < dates.count && (locations.length > 0 || exploration.length > 0);
   progress.scheduled = coarse.length * locations.length;
-  const blocked = new Set<PlanBSite>();
+  const blocked = new Map<PlanBSite, string[]>();
   const seeds = new Map<PlanBSite, { index: number; energy: number; score: number; viable: boolean }[]>();
 
   async function evaluate(site: PlanBSite, index: number) {
@@ -230,7 +237,7 @@ export async function findPlanB({
         progress[assessment.status]++;
         addReasons(assessment.reasons);
         if (assessment.status !== "unavailable") {
-          blocked.add(site);
+          blocked.set(site, assessment.reasons);
           progress.evaluated++;
         }
       } else {
@@ -284,6 +291,32 @@ export async function findPlanB({
     }).sort((a, b) => a.index - b.index);
     progress.scheduled += refinements.length;
     for (const { site, index } of refinements) await evaluate(site, index);
+  }
+  // A site-wide evidence gap still allows a limited outlook for the selected dates.
+  const outlookSites = [...blocked, ...exploration.map((site): [PlanBSite, string[]] =>
+    [site, ["Available terrain supports comparison. Footprint and uncertainty evidence is incomplete."]])];
+  const outlookDates = [...new Set([coarse[0], coarse[coarse.length - 1]])];
+  progress.scheduled += outlookSites.length * outlookDates.length;
+  for (const [site, reasons] of outlookSites) {
+    for (const index of outlookDates) {
+      signal.throwIfAborted();
+      const candidate = candidateMission(mission, site.location, touchdownAt(dates.first, index));
+      report(`Forecasting ${candidate.name} · ${candidate.start.slice(0, 10)} UTC…`);
+      try {
+        const result = await planBRequest<Research>("/api/research/evaluate", { mission: candidate, limits }, signal,
+          (data) => data.geometry.available);
+        signal.throwIfAborted();
+        if (!sameMission(candidate, result.mission)) throw Error("The forecast returned a different site or mission window.");
+        if (!result.geometry.available) throw Error(result.geometry.reason || "Future visibility is unavailable for this window.");
+        const energy = solarEstimate(result, equipment)?.total_kwh;
+        progress.forecasts = [...progress.forecasts, { ...site, result, energy, reasons }];
+      } catch (error) {
+        signal.throwIfAborted();
+        progress.forecastsUnavailable++;
+        addReasons([error instanceof Error ? error.message : "An outlook could not be calculated."]);
+      }
+      report(progress.stage);
+    }
   }
   signal.throwIfAborted();
   report("");

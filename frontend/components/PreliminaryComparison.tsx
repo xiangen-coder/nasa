@@ -1,6 +1,6 @@
 "use client";
 import { ArrowUpRight } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import type { Mission, Site } from "../app/types";
 import type { Research, ResearchComparison } from "./LandingResearch";
 import type { ResearchPriority } from "./SearchConsole";
@@ -20,7 +20,7 @@ export default function PreliminaryComparison({
   priority,
   equipment,
   notice,
-  onCompare,
+  alternativePicker,
   onEvaluate,
   onInspect,
   onSearch,
@@ -32,7 +32,7 @@ export default function PreliminaryComparison({
   priority: ResearchPriority;
   equipment: SolarSettings;
   notice: string;
-  onCompare: () => void;
+  alternativePicker: ReactNode;
   onEvaluate: () => void;
   onInspect: (r: Research) => void;
   onSearch: () => void;
@@ -62,9 +62,6 @@ export default function PreliminaryComparison({
           </small>
         </div>
         <div className="preliminary-controls">
-          <button type="button" className="button subtle" onClick={onCompare}>
-            Compare alternative sites
-          </button>
           {!!state?.results.length && <a className="button subtle" href="#research-report" onClick={(event) => {
             event.preventDefault();
             const report = document.getElementById("research-report");
@@ -237,8 +234,9 @@ export default function PreliminaryComparison({
               </div>
             </article>
             {i === 0 && <PlanBComparison
-              key={JSON.stringify([mission, selected?.limits, priority, equipment])}
+              key={JSON.stringify([mission, priority, equipment])}
               original={selected} priority={priority} equipment={equipment}
+              alternativePicker={alternativePicker}
             />}
             </Fragment>
           );
