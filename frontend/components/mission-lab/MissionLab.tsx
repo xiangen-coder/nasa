@@ -50,6 +50,9 @@ export default function MissionLab({
 }: Props) {
   const [tabs, setTabs] = useState({ professional: 7, education: 7 });
   const tab = tabs[mode];
+  const nextMode = mode === "education" ? "professional" : "education";
+  const modeLabel = mode === "education" ? "Education" : "Professional";
+  const nextModeLabel = nextMode === "education" ? "Education" : "Professional";
   const setTab = (next: number, targetMode = mode) => {
     setTabs((previous) => ({ ...previous, [targetMode]: next }));
   };
@@ -97,22 +100,13 @@ export default function MissionLab({
       aria-label="Mission lab"
     >
       <div className="panel mission-lab-intro">
-        <div className="experience-switch" aria-label="Mission lab mode">
+        <div className="experience-switch">
           <button
-            aria-pressed={mode === "professional"}
-            onClick={() => {
-              onModeChange("professional");
-            }}
+            type="button"
+            aria-label={`${modeLabel} mode. Switch to ${nextModeLabel}.`}
+            onClick={() => onModeChange(nextMode)}
           >
-            Professional
-          </button>
-          <button
-            aria-pressed={mode === "education"}
-            onClick={() => {
-              onModeChange("education");
-            }}
-          >
-            Education
+            {modeLabel} <span aria-hidden="true">→</span> {nextModeLabel}
           </button>
         </div>
         <p>
