@@ -127,9 +127,13 @@
     align-self: flex-start;
   }
 }
-@media (min-width: 851px) and (max-width: 1100px) {
+@media (max-width: 1100px) {
   .lunar-app .lunar-topbar {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+@media (min-width: 851px) and (max-width: 1100px) {
+  .lunar-app .lunar-topbar {
     grid-template-rows: auto auto;
     height: 125px;
     padding-block: 10px;
@@ -166,6 +170,19 @@
   }
 }
 @media (max-width: 500px) {
+  .lunar-app .lunar-topbar:has(.header-login) .lunar-brand {
+    gap: 6px;
+    font-size: 14px;
+  }
+  .lunar-app .lunar-topbar:has(.header-login) .lunar-brand > svg {
+    width: 19px;
+  }
+  .lunar-app .lunar-topbar:has(.header-login) .brand-caption {
+    display: none;
+  }
+  .lunar-app .header-login span {
+    max-width: 3.5rem;
+  }
   .home-mode-cards {
     gap: 8px;
     margin-bottom: 14px;
