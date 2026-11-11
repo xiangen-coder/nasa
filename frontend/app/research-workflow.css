@@ -121,7 +121,7 @@
 .lunar-app .result-tools-trigger {
   position: fixed;
   z-index: 30;
-  inset: auto 0 max(100px, calc(env(safe-area-inset-bottom) + 80px)) auto;
+  inset: auto 0 max(172px, calc(env(safe-area-inset-bottom) + 72px)) auto;
   display: inline-flex;
   align-items: center;
   gap: 7px;

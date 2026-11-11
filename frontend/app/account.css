@@ -101,6 +101,7 @@
 }
 
 .lunar-auth-card h2 {
+  display: block;
   margin: 0;
   font-size: clamp(2rem, 4vw, 2.9rem);
   line-height: 1.05;
