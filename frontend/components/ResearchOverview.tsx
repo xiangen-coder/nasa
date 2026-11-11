@@ -13,6 +13,7 @@ import {
 import type { Research } from "./LandingResearch";
 import { ResearchWindows } from "./ResearchComparisonReport";
 import ResearchElevationChart, { formatVisibilityTime as utc } from "./ResearchElevationChart";
+import ResearchSolarEstimate from "./ResearchSolarEstimate";
 import type { Site } from "../app/types";
 import { siteKey, terrainReference } from "./ComparisonPicker";
 
@@ -126,7 +127,7 @@ export default function ResearchOverview({
                   <p>Gold: Sun azimuth. Blue: Earth azimuth. The 20 km skyline excludes terrain beyond the sampled rays.</p>
                 </details>
               )}
-              {result && <ResearchWindows result={result} />}
+              {result && <><ResearchSolarEstimate result={result} /><ResearchWindows result={result} /></>}
             </>
           ) : (
             <div className="outlook-chart-empty" role="status">

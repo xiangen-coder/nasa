@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ArrowUpRight, MapPin, SlidersHorizontal } from "lucide-react";
 import type { Site } from "../app/types";
+import { referenceSites } from "../lib/reference-sites";
 
 export default function LandingSearch({
   selected,
@@ -47,6 +48,9 @@ export default function LandingSearch({
 }) {
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
+  const reference = referenceSites.findIndex((site) =>
+    site.name === selected.name && site.latitude === selected.latitude && site.longitude === selected.longitude);
+  const custom = reference < 0;
   // Prevent edits to the server-rendered form from being lost before React binds it.
   useEffect(() => {
     setReady(true);
@@ -64,6 +68,10 @@ export default function LandingSearch({
           setError("End date and time must be later than the start.");
           return;
         }
+        if ((b - a) / 86400000 > 31 || (b - a) / 60000 / interval > 400) {
+          setError("Shorten the mission window or increase the time step. Research allows up to 31 days and 400 intervals.");
+          return;
+        }
         setError("");
         onSubmit();
       }}
@@ -74,8 +82,7 @@ export default function LandingSearch({
         aria-label="Mission parameters"
       >
         <div className="search-group-title">
-          <span>01 / MISSION TIMELINE & PRIORITY</span>
-          <span>ALL TIMES UTC</span>
+          <span>Mission window</span>
         </div>
         <div className="search-fields timeline-fields">
           <label className="search-field">
@@ -124,6 +131,7 @@ export default function LandingSearch({
               value={priority}
               onChange={(e) => onPriority(e.target.value)}
             >
+              <option value="overall">Overall consideration</option>
               <option value="T">Terrain safety</option>
               <option value="S">Sunlight availability</option>
               <option value="C">Earth communication</option>
@@ -131,14 +139,26 @@ export default function LandingSearch({
           </label>
         </div>
         <div className="search-group-title">
-          <span>02 / TARGET COORDINATES</span>
-          <button type="button" className="search-map-link" onClick={onMap}>
+          <span>Landing location</span>
+          {custom && <button type="button" className="search-map-link" onClick={onMap}>
             <MapPin size={13} /> Choose on map <ArrowUpRight size={13} />
-          </button>
+          </button>}
         </div>
         <div className="search-fields coordinate-fields">
           <label className="search-field location-field">
             Location name
+            <select value={custom ? "custom" : String(reference)} onChange={(event) => {
+              const value = event.target.value;
+              onSelected(value === "custom"
+                ? { name: "Custom location", latitude: selected.latitude, longitude: selected.longitude }
+                : referenceSites[Number(value)]);
+            }}>
+              {referenceSites.map((site, index) => <option key={site.name} value={index}>{site.name}</option>)}
+              <option value="custom">Custom location</option>
+            </select>
+          </label>
+          {custom && <label className="search-field custom-location-name">
+            Custom location name
             <input
               type="text"
               required
@@ -148,7 +168,7 @@ export default function LandingSearch({
                 onSelected({ ...selected, name: e.target.value })
               }
             />
-          </label>
+          </label>}
           <label className="search-field">
             Latitude <span className="field-unit">° N</span>
             <input
@@ -164,7 +184,7 @@ export default function LandingSearch({
               onChange={(e) =>
                 onSelected({
                   ...selected,
-                  name: "Custom location",
+                  name: custom ? selected.name : "Custom location",
                   latitude:
                     e.target.value === "" ? NaN : Number(e.target.value),
                 })
@@ -186,7 +206,7 @@ export default function LandingSearch({
               onChange={(e) =>
                 onSelected({
                   ...selected,
-                  name: "Custom location",
+                  name: custom ? selected.name : "Custom location",
                   longitude:
                     e.target.value === "" ? NaN : Number(e.target.value),
                 })
@@ -206,12 +226,6 @@ export default function LandingSearch({
           </button>
         </div>
         <div className="search-form-footer">
-          <p>
-            Planetocentric latitude · east-positive longitude · 1901–2052
-            <br />
-            Focus highlights a factor. Five-factor scoring weights remain fixed;
-            missing terrain stays unavailable.
-          </p>
           <details className="search-advanced">
             <summary>
               <SlidersHorizontal size={13} /> Sampling & link settings
@@ -243,11 +257,7 @@ export default function LandingSearch({
                   onChange={(e) => onClearance(Number(e.target.value))}
                 />
               </label>
-              <p>
-                Earth-center clearance above the reference or measured terrain
-                horizon. Mission windows may span up to 31 days and 2,000
-                intervals.
-              </p>
+              <p>Up to 31 days and 400 research intervals.</p>
             </div>
           </details>
         </div>

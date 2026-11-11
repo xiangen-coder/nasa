@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -11,6 +12,12 @@ import {
   YAxis,
 } from "recharts";
 import type { Research } from "./LandingResearch";
+const curves = [
+  { key: "sun_elevation", label: "Sun elevation", stroke: "var(--elevation-sun, #eacb89)" },
+  { key: "earth_elevation", label: "Earth elevation", stroke: "var(--elevation-earth, #9ecff2)" },
+  { key: "sun_horizon_deg", label: "Sun terrain horizon", stroke: "var(--elevation-sun, #eacb89)", dash: "4 5" },
+  { key: "earth_horizon_deg", label: "Earth horizon + clearance", stroke: "var(--elevation-earth, #9ecff2)", dash: "4 5" },
+] as const;
 export const formatVisibilityTime = (value: string | number) =>
   new Date(value).toLocaleString("en-GB", {
     timeZone: "UTC",
@@ -28,10 +35,13 @@ export default function ResearchElevationChart({
   result: Research;
   selectedTime?: string;
 }) {
+  const [isolated, setIsolated] = useState<string | null>(null);
   const rows = result.geometry.available ? (result.geometry.series ?? []) : [];
   if (!rows.length)
     return <p>Elevation graph unavailable. {result.geometry.reason}</p>;
   const plotRows = rows.map((row) => ({ ...row, epoch: Date.parse(row.time) }));
+  const available = curves.filter(({ key }) => rows.some((row) => typeof row[key] === "number"));
+  const active = available.find(({ key }) => key === isolated);
   return (
     <div className="research-elevation-chart">
       <div
@@ -66,11 +76,11 @@ export default function ResearchElevationChart({
                 })
               }
               minTickGap={50}
-              tick={{ fill: "var(--elevation-axis, #a8bfdc)", fontSize: 10 }}
+              tick={{ fill: "var(--elevation-axis, #a8bfdc)", fontSize: 14 }}
             />
             <YAxis
               unit="°"
-              tick={{ fill: "var(--elevation-axis, #a8bfdc)", fontSize: 10 }}
+              tick={{ fill: "var(--elevation-axis, #a8bfdc)", fontSize: 14 }}
             />
             <Tooltip
               labelFormatter={(v) => `${formatVisibilityTime(Number(v))} UTC`}
@@ -89,60 +99,27 @@ export default function ResearchElevationChart({
                 strokeDasharray="3 4"
               />
             )}
-            <Line
-              type="linear"
-              dataKey="sun_elevation"
-              name="Sun elevation"
-              stroke="var(--elevation-sun, #eacb89)"
-              dot={false}
-              strokeWidth={2}
-              isAnimationActive={false}
-            />
-            <Line
-              type="linear"
-              dataKey="earth_elevation"
-              name="Earth elevation"
-              stroke="var(--elevation-earth, #9ecff2)"
-              dot={false}
-              strokeWidth={2}
-              isAnimationActive={false}
-            />
-            <Line
-              type="linear"
-              dataKey="sun_horizon_deg"
-              name="Sun skyline"
-              stroke="var(--elevation-sun, #eacb89)"
-              strokeDasharray="4 5"
-              dot={false}
-              isAnimationActive={false}
-            />
-            <Line
-              type="linear"
-              dataKey="earth_horizon_deg"
-              name="Earth skyline incl. clearance"
-              stroke="var(--elevation-earth, #9ecff2)"
-              strokeDasharray="4 5"
-              dot={false}
-              isAnimationActive={false}
-            />
+            {(active ? [active] : available).map((curve) => (
+              <Line key={curve.key} type="linear" dataKey={curve.key} name={curve.label}
+                stroke={curve.stroke} strokeDasharray={"dash" in curve ? curve.dash : undefined}
+                strokeWidth={"dash" in curve ? 1 : 2} dot={false} isAnimationActive={false} />
+            ))}
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div className="outlook-legend">
-        <span>
-          <i />
-          Sun
-        </span>
-        <span>
-          <i />
-          Earth
-        </span>
-        <span>
-          {result?.horizon.available
-            ? "Dashed curves: terrain thresholds"
-            : "Terrain horizon unavailable · reference geometry"}
-        </span>
+      <div className="elevation-series" role="group" aria-label="Graph series">
+        {available.map((curve) => (
+          <button key={curve.key} type="button" className="button subtle" aria-pressed={active?.key === curve.key}
+            onClick={() => setIsolated(active?.key === curve.key ? null : curve.key)}>
+            <span className="elevation-swatch" aria-hidden="true" style={{
+              borderColor: curve.stroke, borderTopStyle: "dash" in curve ? "dashed" : "solid",
+            }} />
+            {curve.label}
+          </button>
+        ))}
+        {active && <button type="button" className="button subtle elevation-show-all" onClick={() => setIsolated(null)}>Show all curves</button>}
       </div>
+      {!result.horizon.available && <p className="muted">Terrain horizon unavailable · reference geometry</p>}
     </div>
   );
 }

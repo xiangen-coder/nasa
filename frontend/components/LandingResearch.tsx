@@ -206,7 +206,7 @@ export default function LandingResearch({
   onSelect,
   onAddComparison,
   actionRef,
-  priority = "T",
+  priority = "overall",
   onBusyChange,
   onResultChange,
   onComparisonChange,
@@ -440,12 +440,13 @@ export default function LandingResearch({
         </p>
         <p className="priority-label">
           Your focus:{" "}
-          {priority === "T"
+          {priority === "overall"
+            ? "Overall consideration"
+            : priority === "T"
             ? "Terrain safety"
             : priority === "S"
               ? "Sunlight availability"
               : "Earth communication"}
-          . Highlighted below; all five factors retain their published weights.
         </p>
         <p className="muted">
           0.35 Terrain + 0.25 Sunlight + 0.20 Communication + 0.15 Temperature +

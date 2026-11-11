@@ -60,6 +60,29 @@
 .research-skyline {
   margin-block: 12px;
 }
+.revised-search .search-field,
+.revised-search .search-group-title,
+.landing-search .search-map-link,
+.landing-search .search-advanced,
+.landing-search .field-unit {
+  font-size: 14px;
+}
+@media (min-width: 701px) {
+  .revised-search .coordinate-fields:has(.custom-location-name) {
+    grid-template-columns: 1.5fr 1.5fr 1fr 1fr;
+  }
+}
+.elevation-series {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 12px;
+}
+.elevation-series .button { font-size: 14px; }
+.elevation-series [aria-pressed="true"] { border-color: currentColor; }
+.elevation-swatch { display: inline-block; width: 16px; border-top-width: 2px; }
+.research-solar { margin-block: 18px; }
+.research-solar p { font-size: 14px; }
 .research-report th,
 .research-report td {
   white-space: normal;
@@ -184,6 +207,9 @@
   #research-report .outlook-legend { color: #111; }
   #research-report .outlook-legend i { background: var(--elevation-sun); print-color-adjust: exact; }
   #research-report .outlook-legend span:nth-child(2) i { background: var(--elevation-earth); }
+  #research-report .elevation-series .button { color: #111; padding: 4px; }
+  #research-report .elevation-series:has([aria-pressed="true"]) [aria-pressed="false"],
+  #research-report .elevation-show-all { display: none; }
   #research-report tr { break-inside: avoid; }
   #research-report h2,
   #research-report h3,

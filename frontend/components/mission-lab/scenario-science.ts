@@ -95,7 +95,8 @@ export function missionError(m: Mission): string {
   return "";
 }
 const rad = (deg: number) => (deg * Math.PI) / 180;
-export function panelPower(row: Row, s: SolarSettings): number {
+type SolarRow = Pick<Row, "time" | "sun_visible" | "sun_elevation" | "sun_azimuth">;
+export function panelPower(row: SolarRow, s: SolarSettings): number {
   if (!row.sun_visible) return 0;
   // Local ENU frame: azimuth clockwise from north; tilt of normal from zenith.
   const incidence = s.tracking
@@ -121,7 +122,7 @@ export type EnergySample = {
   soc_pct: number | null;
   unmet_kwh: number;
 };
-export function solarEnergy(a: Analysis, s: SolarSettings) {
+export function solarEnergy(a: { mission: Analysis["mission"]; series: SolarRow[] }, s: SolarSettings) {
   if (!validSolar(s)) throw Error("Invalid solar or battery assumptions.");
   let battery = (s.battery_kwh * s.initial_soc_pct) / 100,
     total = 0,

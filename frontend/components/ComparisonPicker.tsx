@@ -1,16 +1,11 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import type { Mission, Site } from "../app/types";
+import { referenceSites } from "../lib/reference-sites";
+export { terrainReference } from "../lib/reference-sites";
 
 export const siteKey = (s: Site) =>
   `${s.latitude.toFixed(6)},${(Math.abs(s.latitude) === 90 ? 0 : s.longitude === 180 ? -180 : s.longitude).toFixed(6)}`;
-export const terrainReference: Site = {
-  name: "Connecting Ridge DEM centre",
-  latitude: -89.463162834,
-  longitude: -137.489552922,
-  description:
-    "NASA PGDA raster reference. This point has finer local terrain coverage; its suitability depends on the mission window.",
-};
 type Candidate = {
   location: Site;
   distance_m: number;
@@ -62,12 +57,14 @@ export default function ComparisonPicker({
   const [lon, setLon] = useState("");
   const [error, setError] = useState("");
   const key = siteKey(mission);
-  const options = [terrainReference, ...sites].filter(
+  const selected = chosen.filter((s) => siteKey(s) !== key);
+  const options = [...referenceSites, ...sites.filter((s) => s.id !== "connecting-ridge")].filter(
     (s, i, all) =>
       siteKey(s) !== key &&
+      !selected.some((point) => siteKey(point) === siteKey(s)) &&
       all.findIndex((p) => siteKey(p) === siteKey(s)) === i,
   );
-  const selected = chosen.filter((s) => siteKey(s) !== key);
+  const reference = options.find((s) => siteKey(s) === entry) ?? options[0];
   const searchKey = `${key}:${radius}`;
   const screened = suggestions?.key === searchKey ? suggestions.data : undefined;
   const canAdd = (site: Site) =>
@@ -116,15 +113,11 @@ export default function ComparisonPicker({
       open
     >
       <summary>Choose comparison sites</summary>
-      <p>
-        Compare up to two points with {mission.name}, using the same dates and
-        research limits. Adding a point starts its assessment in the cards above.
-      </p>
       <div className="account-actions">
         <label>
           Reference point{" "}
-          <select value={entry} onChange={(e) => setEntry(e.target.value)}>
-            <option value="">Choose a point</option>
+          <select value={reference ? siteKey(reference) : ""} onChange={(e) => setEntry(e.target.value)} disabled={!reference}>
+            {!reference && <option value="">All references added</option>}
             {options.map((s) => (
               <option key={siteKey(s)} value={siteKey(s)}>
                 {s.name}
@@ -136,12 +129,11 @@ export default function ComparisonPicker({
           className="button subtle"
           disabled={
             busy ||
-            !options.some((s) => siteKey(s) === entry) ||
+            !reference ||
             selected.length >= 2
           }
           onClick={() => {
-            const s = options.find((s) => siteKey(s) === entry);
-            if (s) add(s);
+            if (reference) add(reference);
           }}
         >
           Add reference
@@ -162,18 +154,15 @@ export default function ComparisonPicker({
           {loading ? "Screening nearby terrain…" : "Suggest nearby backups"}
         </button>
       </div>
-      {options.find((s) => siteKey(s) === entry)?.description && (
-        <p className="muted">
-          {options.find((s) => siteKey(s) === entry)?.description}
-        </p>
-      )}
       {screened && (
         <div>
           <p className="info" role="status">
-            {screened.candidates.length ? "Nearby points passed the available Apollo terrain checks." : "No nearby point passed the available Apollo terrain checks."}
-            {" "}{screened.searched} grid points · {screened.overlap_excluded} excluded for overlap · {screened.outside_or_missing} lack sufficient evidence · {screened.failed_limits} exceeded limits · {screened.passing_terrain_candidates} passed.
+            {screened.passing_terrain_candidates} passed Apollo terrain screening · {screened.exploration_candidates?.length ?? 0} terrain comparison points
           </p>
-          <p className="muted">{screened.scope}</p>
+          <details><summary>Screening details</summary>
+            <p>{screened.searched} searched · {screened.overlap_excluded} overlapping · {screened.outside_or_missing} lacked Apollo evidence · {screened.failed_limits} exceeded limits.</p>
+            <p>{screened.scope}</p>
+          </details>
           {screened.candidates.map((c) => (
             <div key={siteKey(c.location)} className="saved-search">
               <span>

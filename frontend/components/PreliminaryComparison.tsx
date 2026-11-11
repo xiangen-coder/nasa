@@ -45,7 +45,7 @@ export default function PreliminaryComparison({
         <div>
           <span className="eyebrow">PRELIMINARY ASSESSMENT</span>
           <p>
-            Add up to two alternatives below. Each one is assessed automatically for the same mission window and research limits.
+            Compare up to three sites using the same mission window.
           </p>
           <small>
             {mission.start.replace("T", " ")} → {mission.end.replace("T", " ")}{" "}
@@ -241,10 +241,7 @@ export default function PreliminaryComparison({
         })}
       </div>
       <p className="preliminary-disclosure">
-        Scores are research screening results, not landing-success
-        probabilities. Terrain suggestions screen nearby footprints. Each chosen
-        candidate still needs its own sunlight, communications and thermal
-        evaluation. Use More Info for source data and Apollo LM assumptions.
+        Provisional research scores. See More Info for evidence and coverage.
       </p>
     </section>
   );

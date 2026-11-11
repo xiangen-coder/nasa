@@ -3,7 +3,7 @@ export type SearchRecord = {
   version: 1;
   mission: Mission;
   alternatives: Site[];
-  priority: "T" | "S" | "C";
+  priority: "overall" | "T" | "S" | "C";
 };
 export function validRecord(value: unknown): value is SearchRecord {
   if (!value || typeof value !== "object") return false;
@@ -33,6 +33,6 @@ export function validRecord(value: unknown): value is SearchRecord {
     Array.isArray(r.alternatives) &&
     r.alternatives.length <= 2 &&
     r.alternatives.every(site) &&
-    ["T", "S", "C"].includes(r.priority)
+    ["overall", "T", "S", "C"].includes(r.priority)
   );
 }

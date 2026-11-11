@@ -13,6 +13,7 @@ import ResearchComparisonReport from "../components/ResearchComparisonReport";
 import PreliminaryComparison from "../components/PreliminaryComparison";
 import ComparisonPicker, { siteKey } from "../components/ComparisonPicker";
 import type { SearchRecord } from "../lib/search-record";
+import { referenceSites } from "../lib/reference-sites";
 const Account = dynamic(() => import("../components/Account"));
 const MissionLab = dynamic(() => import("../components/mission-lab/MissionLab"));
 import TerrainAssessment from "../components/TerrainAssessment";
@@ -486,7 +487,7 @@ function jumpToResultSection(id: string) {
 export default function Page() {
   const [view, setViewState] = useState(7);
   const [preferences,setPreferences] = useState<Preferences>({animate:true,scale:1,detailed:true});
-  const [researchPriority,setResearchPriority] = useState<ResearchPriority>("T");
+  const [researchPriority,setResearchPriority] = useState<ResearchPriority>("overall");
   const [researchBusy,setResearchBusy] = useState(false);
   const [researchResult,setResearchResult] = useState<Research|null>(null);
   const resultToolsRef = useRef<HTMLElement>(null);
@@ -932,10 +933,14 @@ export default function Page() {
                         </h2>
                         <p>Click to select · drag to pan · zoom to explore</p>
                       </div>
+                      <button className="button primary" onClick={() => {
+                        setView(7);
+                        requestAnimationFrame(() => document.getElementById("landing-search-form")?.scrollIntoView({ block: "start" }));
+                      }}>Use point in Configure</button>
                       <span className="small-label">80°–90° S</span>
                     </div>
                     <PolarMap
-                      sites={sites}
+                      sites={[...referenceSites, ...sites.filter((site) => site.id === "connecting-ridge")]}
                       selected={selected}
                       onSelect={setSelected}
                     />

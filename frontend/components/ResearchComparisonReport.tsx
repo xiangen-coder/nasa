@@ -5,6 +5,7 @@ import type { Mission, Site } from "../app/types";
 import { siteKey } from "./ComparisonPicker";
 import type { Research, ResearchSpan } from "./LandingResearch";
 import ResearchElevationChart from "./ResearchElevationChart";
+import ResearchSolarEstimate from "./ResearchSolarEstimate";
 
 const format = (value: number | null | undefined, unit = "") =>
   value == null ? "Unavailable" : `${value.toFixed(1)}${unit}`;
@@ -142,6 +143,7 @@ export default function ResearchComparisonReport({ mission, sites, results, sing
         <h3 id="report-elevation-title">Sun and Earth elevation over time</h3>
         <ResearchElevationChart result={complete[0]} />
       </section>}
+      {singleSite && <ResearchSolarEstimate result={complete[0]} />}
       <div className="table-scroll">
         <table aria-label={singleSite ? "Mission assessment metrics" : "Side-by-side research comparison"}>
           <thead><tr><th scope="col">Evidence</th>{sites.map((s) => <th scope="col" key={siteKey(s)}>{s.name}</th>)}</tr></thead>
