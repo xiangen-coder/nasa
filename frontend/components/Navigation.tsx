@@ -47,6 +47,7 @@ export const toolItems = [
 export default function Navigation({
   view,
   education,
+  classroomNavRef,
   accountName,
   onNavigate,
   preferences,
@@ -54,6 +55,7 @@ export default function Navigation({
 }: {
   view: number;
   education: boolean;
+  classroomNavRef: (element: HTMLDivElement | null) => void;
   accountName?: string | null;
   onNavigate: (view: number) => void;
   preferences: Preferences;
@@ -91,6 +93,7 @@ export default function Navigation({
           LUNAR<span className="brand-caption">A NEW PERSPECTIVE</span>
         </span>
       </a>
+      {education && <div className="classroom-nav" ref={classroomNavRef} />}
       {!education && <nav className="nav-pill glass" aria-label="Main navigation">
         {[
           { label: "Configure", view: 7 },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { Mission } from "../../app/types";
 import {
   useMissionSession,
@@ -37,6 +38,7 @@ type Props = Pick<
 > & {
   mission: Mission;
   mode: ExperienceMode;
+  classroomNav: HTMLDivElement | null;
   linkedTool?: 14;
   onModeChange: (mode: ExperienceMode) => void;
   onRestore: (m: Mission) => void;
@@ -45,6 +47,7 @@ type Props = Pick<
 export default function MissionLab({
   mission,
   mode,
+  classroomNav,
   linkedTool,
   onModeChange,
   onRestore,
@@ -93,6 +96,27 @@ export default function MissionLab({
       void session.calculate();
     },
   };
+  const tools = (
+    <div className="account-actions" role="group" aria-label={mode === "education" ? "Classroom tools" : "Mission lab tools"}>
+      {[
+        { id: 7, label: "Configure" },
+        { id: 12, label: "Compare scenarios" },
+        { id: 8, label: "Scenario evidence" },
+        { id: 13, label: "Investigation library" },
+        { id: 14, label: "Vehicle worksheet" },
+      ].map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          className={`button ${tab === id ? "primary" : "subtle"}`}
+          aria-pressed={tab === id}
+          onClick={() => setTab(id)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
   return (
     <section
       className="mission-lab"
@@ -104,24 +128,9 @@ export default function MissionLab({
           Explore how location, dates and equipment change visibility and power.
           {mode === "professional" && " The lab uses the SPICE visibility model. The main Result view uses the separate NASA research assessment."}
         </p>
-        <div className="account-actions" role="group" aria-label={mode === "education" ? "Classroom tools" : "Mission lab tools"}>
-          {[
-            [7, "Configure"],
-            [12, "Compare scenarios"],
-            [8, "Scenario evidence"],
-            [13, "Investigation library"],
-            [14, "Vehicle worksheet"],
-          ].map(([id, label]) => (
-            <button
-              key={id}
-              className={`button ${tab === id ? "primary" : "subtle"}`}
-              aria-pressed={tab === id}
-              onClick={() => setTab(Number(id))}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {mode === "education"
+          ? classroomNav && createPortal(tools, classroomNav)
+          : tools}
       </div>
       {tab === 7 &&
         (mode === "education" ? (

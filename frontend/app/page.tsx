@@ -508,6 +508,7 @@ export default function Page() {
   const [chosenAlternatives, setChosenAlternatives] = useState<Site[]>([]);
   const [comparisonNotice, setComparisonNotice] = useState("");
   const education = view === 14;
+  const [classroomNav, setClassroomNav] = useState<HTMLDivElement | null>(null);
   const [labVisited, setLabVisited] = useState(false);
   const labOpen = [12, 14, 16].includes(view);
   useEffect(() => {
@@ -761,7 +762,7 @@ export default function Page() {
   return (
     <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} data-classroom-theme={education ? "" : undefined} style={{"--ui-scale":preferences.scale} as CSSProperties}>
       <div className="stars" aria-hidden="true"/>
-      <Navigation view={view} education={education} accountName={accountName} onNavigate={setView} preferences={preferences} onPreferences={updatePreferences}/>
+      <Navigation view={view} education={education} classroomNavRef={setClassroomNav} accountName={accountName} onNavigate={setView} preferences={preferences} onPreferences={updatePreferences}/>
       {showResultTools && (
         <ResultTools key={view} actions={[
           ...(view === 15 ? [{ label: "Back to Result", select: () => setView(8) }] : []),
@@ -798,7 +799,7 @@ export default function Page() {
           {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)} onCompare={()=>document.getElementById("choose-comparison-sites")?.scrollIntoView({block:"start"})} onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
           {view===11&&<ComparisonPicker mission={mission()} sites={sites} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
           {view===13&&<Account record={searchRecord} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}
-          {labVisited&&<div hidden={!labOpen}><MissionLab mode={education?"education":"professional"} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
+          {labVisited&&<div hidden={!labOpen}><MissionLab mode={education?"education":"professional"} classroomNav={classroomNav} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
           {view===15&&(
             <>
               {!researchResult&&<div className="account-actions"><button className="button primary" onClick={()=>setView(7)}>Configure an assessment</button></div>}
