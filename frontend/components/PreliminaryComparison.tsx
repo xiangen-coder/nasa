@@ -1,8 +1,13 @@
 "use client";
 import { ArrowUpRight } from "lucide-react";
+import { Fragment } from "react";
 import type { Mission, Site } from "../app/types";
 import type { Research, ResearchComparison } from "./LandingResearch";
-import { comparisonRadiusKm, siteKey } from "./ComparisonPicker";
+import type { ResearchPriority } from "./SearchConsole";
+import type { SolarSettings } from "./mission-lab/scenario-science";
+import { comparisonRadiusKm } from "./ComparisonPicker";
+import { sameMission } from "../lib/plan-b";
+import PlanBComparison from "./PlanBComparison";
 const key = (s: Site) => `${s.latitude},${s.longitude}`;
 const score = (r: Research | undefined, k: string) =>
   !r ? "—" : r.factors[k]?.score == null
@@ -12,6 +17,8 @@ export default function PreliminaryComparison({
   mission,
   state,
   alternatives,
+  priority,
+  equipment,
   notice,
   onCompare,
   onEvaluate,
@@ -22,6 +29,8 @@ export default function PreliminaryComparison({
   mission: Mission;
   state: ResearchComparison | null;
   alternatives: Site[];
+  priority: ResearchPriority;
+  equipment: SolarSettings;
   notice: string;
   onCompare: () => void;
   onEvaluate: () => void;
@@ -30,9 +39,9 @@ export default function PreliminaryComparison({
   onCancel: () => void;
 }) {
   const planned = [mission, ...alternatives];
-  const selected = state?.results.find((r) => key(r.mission) === key(mission));
+  const selected = state?.results.find((r) => sameMission(r.mission, mission));
   const hasUnfinished = planned.some((site) =>
-    !state?.results.some((result) => siteKey(result.mission) === siteKey(site)),
+    !state?.results.some((result) => sameMission(result.mission, { ...mission, ...site })),
   );
   return (
     <section
@@ -45,7 +54,7 @@ export default function PreliminaryComparison({
         <div>
           <span className="eyebrow">PRELIMINARY ASSESSMENT</span>
           <p>
-            Compare the first landing point with up to two alternatives within {comparisonRadiusKm} km using the same mission window.
+            Compare up to two sites within {comparisonRadiusKm} km using the original mission window, or use Plan B to search for a later touchdown.
           </p>
           <small>
             {mission.start.replace("T", " ")} → {mission.end.replace("T", " ")}{" "}
@@ -53,10 +62,15 @@ export default function PreliminaryComparison({
           </small>
         </div>
         <div className="preliminary-controls">
+          <button type="button" className="button subtle" onClick={onCompare}>
+            Compare alternative sites
+          </button>
           {!!state?.results.length && <a className="button subtle" href="#research-report" onClick={(event) => {
             event.preventDefault();
-            document.getElementById("research-report")?.scrollIntoView({ block: "start" });
-          }}>Comparison and exports</a>}
+            const report = document.getElementById("research-report");
+            report?.focus({ preventScroll: true });
+            report?.scrollIntoView({ block: "start" });
+          }}>Mission report and exports</a>}
           <button className="button subtle" onClick={onSearch}>
             Back to Search
           </button>
@@ -88,9 +102,7 @@ export default function PreliminaryComparison({
       {notice && <p className="info" role="status">{notice}</p>}
       <div className="pre-result-grid">
         {planned.map((site, i) => {
-          const r = state?.results.find(
-              (value) => siteKey(value.mission) === siteKey(site),
-            ),
+          const r = state?.results.find((value) => sameMission(value.mission, { ...mission, ...site })),
             failure = state?.failures[key(site)],
             isSelected = key(site) === key(mission);
           const comparable = !!(
@@ -105,9 +117,9 @@ export default function PreliminaryComparison({
               ? r.score - selected.score
               : null;
           return (
+            <Fragment key={key(site)}>
             <article
               className="pre-result-card glass"
-              key={key(site)}
               aria-label={`Pre-result ${i + 1}: ${site.name}`}
             >
               <h2>Pre-Result {i + 1}</h2>
@@ -159,25 +171,10 @@ export default function PreliminaryComparison({
                     {r?.factors.C.score != null ? "geometric visibility" : ""}
                   </dd>
                 </div>
-                <div>
-                  <dt>ENVIRONMENT & LIMITS</dt>
-                  <dd>
-                    {failure ||
-                      (!r
-                        ? "Real data will appear after assessment."
-                        : r.constraints_failed.length
-                          ? r.constraints_failed.join(" ")
-                          : "Landing safety is not established.")}
-                  </dd>
-                </div>
-              </dl>
-              <details className="pre-extra">
-                <summary>Terrain, temperature & ice details</summary>
-                <dl>
                   <div>
                     <dt>TERRAIN SAFETY</dt>
                     <dd>
-                      {score(r, "T")}
+                      {r ? score(r, "T") : failure ? "Assessment unavailable" : "Awaiting assessment"}
                       {r?.terrain.slope_p95_deg != null
                         ? ` · ${r.terrain.slope_p95_deg.toFixed(1)}° p95 slope`
                         : ""}
@@ -191,23 +188,30 @@ export default function PreliminaryComparison({
                   <div>
                     <dt>TEMPERATURE SUITABILITY</dt>
                     <dd>{score(r, "H")}</dd>
+                    {r?.temperature.available && <dd>
+                      Observed seasonal range {r.temperature.minimum_k?.toFixed(1)}–{r.temperature.maximum_k?.toFixed(1)} K
+                    </dd>}
                   </div>
                   <div>
                     <dt>WATER ICE POTENTIAL</dt>
                     <dd>{r?.ice?.radius_m && r.factors.I.score != null ? `${r.factors.I.score.toFixed(1)}% mapped permanent shadow` : score(r, "I")}</dd>
-                    {r && <dd>{r.factors.I.explanation}</dd>}
                   </div>
-                  {r && (
-                    <div>
-                      <dt>DATA WARNINGS</dt>
-                      <dd>
-                        {r.warnings.join(" ") ||
-                          "Review full sources and limitations in More Info."}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </details>
+                  <div>
+                    <dt>ENVIRONMENT & LIMITS</dt>
+                    <dd>{failure || (!r
+                      ? "Evaluate this site to check the mission limits."
+                      : r.constraints_failed.join(" ") || "No limit failures in the available evidence. Landing safety still requires verification.")}</dd>
+                    {r?.limits?.max_slope_deg != null && <dd>Maximum slope {r.limits.max_slope_deg}°</dd>}
+                    {r?.limits?.max_roughness_m != null && r.limits.max_relief_m != null && <dd>
+                      Maximum roughness {r.limits.max_roughness_m} m · maximum relief {r.limits.max_relief_m} m
+                    </dd>}
+                  </div>
+              </dl>
+              {r && <details className="pre-extra">
+                <summary>Evidence and warnings</summary>
+                <p>{r.factors.I.explanation}</p>
+                <p>{r.warnings.join(" ") || "Review sources and limitations in More Info."}</p>
+              </details>}
               {!isSelected && r && selected && (
                 <p className="pre-comparison-note">
                   {r.constraints_failed.length
@@ -230,17 +234,13 @@ export default function PreliminaryComparison({
                 <button className="button subtle" onClick={onSearch}>
                   Back to Search
                 </button>
-                {isSelected && (
-                  <button
-                    className="button subtle"
-                    disabled={state?.busy}
-                    onClick={onCompare}
-                  >
-                    Choose alternatives
-                  </button>
-                )}
               </div>
             </article>
+            {i === 0 && <PlanBComparison
+              key={JSON.stringify([mission, selected?.limits, priority, equipment])}
+              original={selected} priority={priority} equipment={equipment}
+            />}
+            </Fragment>
           );
         })}
       </div>

@@ -115,16 +115,32 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
             'safety_status':'fails_configured_limits' if failures else 'not_established',
             'formula':'0.35T + 0.25S + 0.20C + 0.15H + 0.05I; available weights renormalized for provisional scores only.'}
 
-def research(request):
+def research(request, *, plan_b=False):
     mission=request.mission;limits=request.limits
     t=rasters.local_terrain(mission,limits.radius_m,allow_regional=True)
     observer_height={'available':True,'value':t['elevation_m'],'source':t['source']} if t.get('available') else rasters.measurement('horizon_dem',mission)
-    screening=rasters.horizon(mission,observer_height['value']) if observer_height.get('available') else {'available':False,'profile':None,'reason':'Observer terrain height unavailable.'}
     hazards=rasters.measurement('hazards',mission);ice=rasters.ice_evidence(mission,limits.radius_m)
     lo=rasters.measurement('temperature_min',mission);hi=rasters.measurement('temperature_max',mission)
     thermal={'available':False,'minimum':lo,'maximum':hi}
     if lo['available'] and hi['available'] and lo['value']<=hi['value'] and lo['source'].get('observation_period')==hi['source'].get('observation_period'):
         thermal.update(available=True,minimum_k=lo['value'],maximum_k=hi['value'],source=lo['source'])
+    if plan_b:
+        topography=score_factors(t,{},thermal,hazards,ice,limits)
+        failed=topography['constraints_failed']
+        missing=[]
+        if topography['factors']['T']['score'] is None:
+            missing.append(topography['factors']['T']['explanation'])
+        if not hazards['available']:
+            missing.append('Mapped hazard fraction is unavailable.')
+        if not thermal['available']:
+            missing.append('A matched historical temperature range is unavailable.')
+        elif thermal['minimum_k']<limits.min_temperature_k or thermal['maximum_k']>limits.max_temperature_k:
+            failed.append('The historical temperature range extends beyond the configured operating limits.')
+        if failed or missing:
+            return {'status':'limits' if failed else 'missing', 'reasons':failed+missing}
+    screening=rasters.horizon(mission,observer_height['value']) if observer_height.get('available') else {'available':False,'profile':None,'reason':'Observer terrain height unavailable.'}
+    if plan_b and not screening['available']:
+        return {'status':'missing', 'reasons':[screening.get('reason') or 'The local terrain skyline is unavailable.']}
     try:
         geometry=surface_observations(mission,observer_height['value'] if observer_height.get('available') else 0)
         for row in geometry['series']:
@@ -149,12 +165,25 @@ def research(request):
                 'Sampling uses left endpoints; transition timing is uncertain by one interval per boundary. Before 1962 Horizons UT is UT1; future leap seconds are unknown.',
                 'DEM and observation frame alignment must be checked for mission use; finite horizon rays exclude distant and subpixel obstruction.']}
 
-@router.post('/evaluate')
-def evaluate(request:ResearchRequest):
+def check_research_intervals(request:ResearchRequest):
     # Bound work and keep cold requests within web-proxy timeouts.
     if (request.mission.end-request.mission.start).total_seconds()/60/request.mission.interval_minutes>400:
         raise HTTPException(422,'Research evaluation allows 400 intervals per site. Increase the time step.')
+
+@router.post('/evaluate')
+def evaluate(request:ResearchRequest):
+    check_research_intervals(request)
     return research(request)
+
+@router.post('/plan-b')
+def evaluate_plan_b(request:ResearchRequest):
+    check_research_intervals(request)
+    result=research(request,plan_b=True)
+    if 'status' in result:
+        return result
+    if not result['geometry']['available']:
+        return {'status':'unavailable', 'reasons':[result['geometry']['reason']]}
+    return {'status':'evaluated', 'result':result}
 
 @router.get('/terrain')
 def terrain(latitude:float=Query(ge=-90,le=90),longitude:float=Query(ge=-180,le=180),radius_m:int=Query(default=100,ge=25,le=500)):

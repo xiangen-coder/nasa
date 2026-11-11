@@ -89,15 +89,19 @@ def screened(location,limits,vehicle):
 
 
 
-def alternatives(request,baseline):
+def alternatives(request,baseline,*,search_radius_m=None):
 
-    v=request.vehicle;maximum=min(v.search_radius_m,v.diversion_range_m) if v.diversion_range_m is not None else v.search_radius_m
+    v=request.vehicle
+    radius_limit=v.search_radius_m if search_radius_m is None else search_radius_m
+    maximum=min(radius_limit,v.diversion_range_m) if v.diversion_range_m is not None else radius_limit
 
     rows=[];inspection=[];unverified=[];rejected=0;outside=0;overlap=0
 
-    # 24 deterministic geodesic candidates; never fabricate an elevation or reuse source-site lighting.
-
-    for radius in [maximum/3,maximum*2/3,maximum]:
+    # Include nearby footprints in the wider Plan B search as well as distant rings.
+    radii=[maximum/3,maximum*2/3,maximum]
+    if search_radius_m is not None:
+        radii=sorted(set(radii+[radius for radius in (500,1000,2000) if radius<maximum]))
+    for radius in radii:
 
         for azimuth in range(0,360,45):
             if radius<2*baseline['screening_radius_m']:overlap+=1;continue
@@ -133,7 +137,7 @@ def alternatives(request,baseline):
 
     selected=distinct_candidates(rows,baseline['screening_radius_m'])
     exploration=[] if selected else exploration_candidates(unverified,baseline['screening_radius_m'],request.limits)
-    return {'searched':24,'overlap_excluded':overlap,'outside_or_missing':outside,'failed_limits':rejected,'passing_terrain_candidates':len(rows),'candidates':selected,'inspection_candidates':inspection[:3] if not selected else [],
+    return {'searched':8*len(radii),'overlap_excluded':overlap,'outside_or_missing':outside,'failed_limits':rejected,'passing_terrain_candidates':len(rows),'candidates':selected,'inspection_candidates':inspection[:3] if not selected else [],
       'exploration_candidates':exploration,'search_radius_m':maximum,
 
       'scope':'Local terrain shortlist only. Candidate lighting, thermal suitability, boulders, fuel, navigation and flight reachability must be checked independently. No candidate is a certified landing site.'}
@@ -181,6 +185,20 @@ def shortlist(request:ReliabilityRequest):
     """Find local terrain candidates without calculating ephemerides."""
     request=request.model_copy(update={'limits':request.limits.model_copy(update={'max_slope_deg':min(request.limits.max_slope_deg,12),'good_slope_deg':min(request.limits.good_slope_deg,5.999)})})
     return alternatives(request,screened(request.mission,request.limits,request.vehicle))
+
+
+@router.post('/plan-b-sites')
+def plan_b_sites(request:ResearchRequest):
+    """Apply the existing Apollo terrain shortlist at the Compare page radius."""
+    request=ReliabilityRequest(mission=request.mission, limits=request.limits)
+    baseline=screened(request.mission,request.limits,request.vehicle)
+    result=alternatives(request,baseline,search_radius_m=20_000)
+    return {
+        'candidates':[{'location':{key:row['location'][key] for key in ('name','latitude','longitude')}, 'bounds':row['assessment']['bounds'],
+                       'screening_radius_m':row['assessment']['screening_radius_m']}
+                      for row in result['candidates']],
+        **{key:result[key] for key in ('searched','overlap_excluded','outside_or_missing','failed_limits','passing_terrain_candidates')},
+    }
 
 
 @router.post('/assess')

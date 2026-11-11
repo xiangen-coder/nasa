@@ -32,7 +32,7 @@
 }
 .pre-result-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 235px), 1fr));
   gap: 16px;
   align-items: stretch;
 }
@@ -52,6 +52,38 @@
     serif;
   letter-spacing: -0.025em;
   margin: 0 0 24px;
+}
+.plan-b-card form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-inline-size: 0;
+  display: grid;
+  gap: 12px;
+}
+.plan-b-card label,
+.plan-b-card .plan-b-progress {
+  display: grid;
+  gap: 6px;
+}
+.plan-b-card select,
+.plan-b-card input,
+.plan-b-card progress {
+  width: 100%;
+  min-width: 0;
+}
+.plan-b-card form > button,
+.plan-b-card .plan-b-progress {
+  margin-top: 12px;
+}
+.plan-b-card p {
+  margin: 8px 0;
+}
+.plan-b-card .plan-b-metrics {
+  margin-bottom: 12px;
+}
+.plan-b-card {
+  overflow-wrap: anywhere;
 }
 .pre-point {
   border-top: 1px solid #dce9ff26;

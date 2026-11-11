@@ -129,8 +129,8 @@ export default function ComparisonPicker({
       id="choose-comparison-sites"
       open
     >
-      <summary>Choose comparison sites</summary>
-      <p>{comparisonAreaMessage}</p>
+      <summary>Choose alternative sites</summary>
+      <p>{comparisonAreaMessage} Added sites are assessed automatically using the original mission window.</p>
       <div className="account-actions">
         <label>
           Reference point{" "}

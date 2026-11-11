@@ -505,7 +505,9 @@ export default function Page() {
   const [researchBusy,setResearchBusy] = useState(false);
   const [researchResult,setResearchResult] = useState<Research|null>(null);
   const [researchEquipment, setResearchEquipment] = useState(defaultSolar);
-  const showResultTools = view === 8 || view === 15;
+  const showResultTools = view === 8;
+  const [reportSite, setReportSite] = useState("");
+  const pendingReportFocus = useRef(false);
   const [researchComparison,setResearchComparison]=useState<ResearchComparison|null>(null);
   const [chosenAlternatives, setChosenAlternatives] = useState<Site[]>([]);
   const [comparisonNotice, setComparisonNotice] = useState("");
@@ -530,7 +532,20 @@ export default function Page() {
     form?.focus({ preventScroll: true });
     form?.scrollIntoView({ block: "start", behavior: "instant" });
   }, [view]);
-  useEffect(()=>{const sync=()=>{const n=viewPaths.indexOf(location.hash.slice(1));if(n>=0&&n!==6)setViewState(n);};sync();window.addEventListener("hashchange",sync);try{const p=JSON.parse(localStorage.getItem("lunar-preferences-v1")||"null");if(p&&typeof p.animate==="boolean"&&typeof p.scale==="number")setPreferences({animate:p.animate,scale:Math.max(.95,Math.min(1.08,p.scale)),detailed:p.detailed!==false});}catch{}return()=>window.removeEventListener("hashchange",sync);},[]);
+  useEffect(() => {
+    if (view !== 11 || !pendingReportFocus.current) return;
+    pendingReportFocus.current = false;
+    const report = document.getElementById("research-report");
+    report?.focus({ preventScroll: true });
+    report?.scrollIntoView({ block: "start" });
+  }, [view]);
+  useEffect(()=>{const sync=()=>{
+    const n=viewPaths.indexOf(location.hash.slice(1));
+    if(n===15) {
+      history.replaceState(history.state, "", `#${viewPaths[11]}`);
+      setViewState(11);
+    } else if(n>=0&&n!==6)setViewState(n);
+  };sync();window.addEventListener("hashchange",sync);try{const p=JSON.parse(localStorage.getItem("lunar-preferences-v1")||"null");if(p&&typeof p.animate==="boolean"&&typeof p.scale==="number")setPreferences({animate:p.animate,scale:Math.max(.95,Math.min(1.08,p.scale)),detailed:p.detailed!==false});}catch{}return()=>window.removeEventListener("hashchange",sync);},[]);
   const updatePreferences=(p:Preferences)=>{setPreferences(p);try{localStorage.setItem("lunar-preferences-v1",JSON.stringify(p));}catch{}};
   const full=preferences.detailed??true;
   const [astronomyVisited, setAstronomyVisited] = useState(false);
@@ -789,11 +804,14 @@ export default function Page() {
       <Navigation view={view} education={education} classroomNavRef={setClassroomNav} accountName={accountName} onNavigate={setView} preferences={preferences} onPreferences={updatePreferences}/>
       {showResultTools && (
         <ResultTools key={view} actions={[
-          ...(view === 15 ? [{ label: "Back to Result", select: () => setView(8) }] : []),
           ...(view === 8 && researchResult ? [
             { label: "Sun & Earth", select: () => jumpToResultSection("result-visibility") },
             { label: "Terrain evidence", select: () => jumpToResultSection("result-terrain") },
-            { label: "Open mission report", select: () => setView(15), primary: true },
+            { label: "Mission report in Compare", select: () => {
+              setReportSite(siteKey(researchResult.mission));
+              pendingReportFocus.current = true;
+              setView(11);
+            }, primary: true },
           ] : []),
           { label: "Compare sites", select: () => setView(11) },
           ...(researchResult ? [{ label: "Save search", select: () => setView(13) }] : []),
@@ -820,18 +838,17 @@ export default function Page() {
             <LandingSearch selected={selected} missionSites={missionSites} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{assessComparison(searchRecord.alternatives);setView(11);}} onMap={()=>setView(0)}/>
             <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(13)}>Account & saved searches</button><button className="button subtle" onClick={()=>setView(12)}>Mission lab</button></div>
           </section>}
-          {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)} onCompare={()=>document.getElementById("choose-comparison-sites")?.scrollIntoView({block:"start"})} onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
+          {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} priority={researchPriority} equipment={researchEquipment} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)} onCompare={()=>{
+            const picker = document.querySelector<HTMLDetailsElement>("#choose-comparison-sites");
+            if (!picker) return;
+            picker.open = true;
+            picker.scrollIntoView({block:"start"});
+            picker.querySelector("summary")?.focus({preventScroll:true});
+          }} onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
           {view===11&&<ComparisonPicker mission={mission()} sites={sites} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
+          {view===11&&<ResearchComparisonReport key={JSON.stringify(mission())} mission={mission()} sites={[selected,...searchRecord.alternatives]} results={researchComparison?.results??[]} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} equipment={researchEquipment}/>}
           {view===13&&<Account record={searchRecord} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}
           {labVisited&&<div hidden={!labOpen}><MissionLab mode={education?"education":"professional"} classroomNav={classroomNav} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
-          {view===15&&(
-            <>
-              {!researchResult&&<div className="account-actions"><button className="button primary" onClick={()=>setView(7)}>Configure an assessment</button></div>}
-              {researchResult
-                ? <ResearchComparisonReport mission={researchResult.mission} sites={[researchResult.mission]} results={[researchResult]} singleSite equipment={researchEquipment} />
-                : <p className="info" role="status">{researchBusy ? "Waiting for the current assessment…" : "Run an assessment or open More Info on a comparison card to prepare its mission report."}</p>}
-            </>
-          )}
           {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={selected} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment}/>}
           <div hidden={![0,1,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
             <section className="task-intro panel">

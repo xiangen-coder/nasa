@@ -54,6 +54,10 @@ const measurements: { label: string; value: (r: Research) => string }[] = [
     ? `${format(r.terrain.slope_p95_deg, "°")} / ${format(r.terrain.slope_max_deg, "°")}` : "Unavailable" },
   { label: "Neighbourhood roughness (RMS)", value: (r) => format(r.terrain.roughness_m, " m") },
   { label: "Neighbourhood relief", value: (r) => format(r.terrain.relief_m, " m") },
+  { label: "Mapped hazard fraction", value: (r) => r.hazards?.available && r.hazards.value != null
+    ? format(r.hazards.value * 100, "%") : "Unavailable" },
+  { label: "Observed seasonal temperature range", value: (r) => r.temperature.available
+    ? `${format(r.temperature.minimum_k)}–${format(r.temperature.maximum_k)} K` : "Unavailable" },
   { label: "Mapped permanent shadow", value: (r) => r.ice?.radius_m && r.ice.value != null ? format(100 * r.ice.value, "%") : "Unavailable" },
   { label: "Terrain screening", value: (r) => r.geometry.mode === "terrain_screened"
     ? "Terrain-screened" : r.geometry.available ? "Reference geometry only" : "Unavailable" },
@@ -96,11 +100,12 @@ const csvCell = (value: string) => {
   return `"${safe.replaceAll('"', '""')}"`;
 };
 
-export default function ResearchComparisonReport({ mission, sites, results, singleSite = false, equipment }: {
+export default function ResearchComparisonReport({ mission, sites, results, evidenceSite, onEvidenceSiteChange, equipment }: {
   mission: Mission;
   sites: Site[];
   results: Research[];
-  singleSite?: boolean;
+  evidenceSite: string;
+  onEvidenceSiteChange: (site: string) => void;
   equipment?: SolarSettings;
 }) {
   const [preferred, setPreferred] = useState("");
@@ -108,7 +113,8 @@ export default function ResearchComparisonReport({ mission, sites, results, sing
   const complete = assessed.filter((r): r is Research => !!r);
   if (!complete.length) return null;
   const choice = complete.find((r) => siteKey(r.mission) === preferred);
-  const advice = singleSite ? undefined : recommendation(complete, sites.length);
+  const evidence = complete.find((r) => siteKey(r.mission) === evidenceSite) ?? complete[0];
+  const advice = recommendation(complete, sites.length);
   const settings = [
     ["Start (UTC)", utc(mission.start)],
     ["End (UTC)", utc(mission.end)],
@@ -121,8 +127,8 @@ export default function ResearchComparisonReport({ mission, sites, results, sing
     ...measurements.map(({ label, value }) => [label, ...assessed.map((r) => r ? value(r) : "Awaiting assessment")]),
   ];
   return (
-    <section id="research-report" className="panel research-report" aria-labelledby="research-report-title">
-      <h2 id="research-report-title">{singleSite ? `Mission report · ${mission.name}` : "Site comparison and mission report"}</h2>
+    <section id="research-report" className="panel research-report" aria-labelledby="research-report-title" tabIndex={-1}>
+      <h2 id="research-report-title">Site comparison and mission report</h2>
       <dl className="research-report-settings">{settings.map(([label, value]) => (
         <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
       ))}</dl>
@@ -141,26 +147,12 @@ export default function ResearchComparisonReport({ mission, sites, results, sing
           })}
         </div>)}
       </figure>
-      {singleSite && <section aria-labelledby="report-elevation-title">
-        <h3 id="report-elevation-title">Sun and Earth elevation over time</h3>
-        <ResearchElevationChart result={complete[0]} />
-      </section>}
-      {singleSite && <ResearchSolarEstimate result={complete[0]} equipment={equipment} />}
       <div className="table-scroll">
-        <table aria-label={singleSite ? "Mission assessment metrics" : "Side-by-side research comparison"}>
+        <table aria-label="Side-by-side research comparison">
           <thead><tr><th scope="col">Evidence</th>{sites.map((s) => <th scope="col" key={siteKey(s)}>{s.name}</th>)}</tr></thead>
           <tbody>{grid.map(([label, ...cells]) => <tr key={label}><th scope="row">{label}</th>{cells.map((cell, i) => <td key={siteKey(sites[i])}>{cell}</td>)}</tr>)}</tbody>
         </table>
       </div>
-      {singleSite ? (
-        <>
-          <h3>Scoring and evidence</h3>
-          {complete[0].formula && <p>{complete[0].formula}</p>}
-          <ul>{Object.values(complete[0].factors).map((factor) => (
-            <li key={factor.name}><strong>{factor.name} · {format(factor.score, " / 100")}</strong><p>{factor.explanation}</p></li>
-          ))}</ul>
-        </>
-      ) : <>
       <h3>Trade-offs and recommendation</h3>
       <p>{advice}</p>
       <p>Research weights are 35% terrain, 25% sunlight, 20% Earth visibility, 15% temperature and 5% ice. Both visibility factors are required for a mission score. Missing factors redistribute their weight across the available evidence. Scores remain provisional where coverage or hazards are incomplete.</p>
@@ -171,7 +163,26 @@ export default function ResearchComparisonReport({ mission, sites, results, sing
         </select>
       </label>
       {choice && <p><strong>{choice.mission.name}</strong> selected for further study. {choice.constraints_failed.join(" ") || "Review the unresolved terrain and mission constraints before proceeding."}</p>}
-      </>}
+      <section className="research-report-site" aria-labelledby="report-evidence-title">
+        <h3 id="report-evidence-title">Mission evidence · {evidence.mission.name}</h3>
+        {complete.length > 1 && (
+          <label className="research-preferred">Site to inspect
+            <select value={siteKey(evidence.mission)} onChange={(event) => onEvidenceSiteChange(event.target.value)}>
+              {complete.map((r) => <option key={siteKey(r.mission)} value={siteKey(r.mission)}>{r.mission.name}</option>)}
+            </select>
+          </label>
+        )}
+        <h4>Sun and Earth elevation over time</h4>
+        <ResearchElevationChart key={siteKey(evidence.mission)} result={evidence} />
+        <ResearchSolarEstimate result={evidence} equipment={equipment} />
+        <details>
+          <summary>Scoring and evidence</summary>
+          {evidence.formula && <p>{evidence.formula}</p>}
+          <ul>{Object.entries(evidence.factors).map(([key, factor]) => (
+            <li key={key}><strong>{factor.name} · {format(factor.score, key === "S" || key === "C" ? "%" : " / 100")}</strong><p>{factor.explanation}</p></li>
+          ))}</ul>
+        </details>
+      </section>
       {complete.map((r) => (
         <article className="research-report-site" key={siteKey(r.mission)}>
           <h3>{r.mission.name}</h3>
@@ -179,7 +190,7 @@ export default function ResearchComparisonReport({ mission, sites, results, sing
           <p>{r.horizon.method ?? r.horizon.reason}</p>
           <ul>{Object.entries(r.geometry.sources ?? {}).map(([body, source]) => (
             <li key={body}>{body} · {source.ephemeris} · {source.orientation}</li>
-          ))}{[r.terrain.source, r.horizon.source, r.temperature.source, r.ice?.source].map((source, index) => source?.source_url && (
+          ))}{[r.terrain.source, r.horizon.source, r.temperature.source, r.hazards?.source, r.ice?.source].map((source, index) => source?.source_url && (
             <li key={index}><a href={source.source_url}>{source.name ?? "Dataset source"}</a>{source.resolution_m ? ` · ${format(source.resolution_m, " m")}` : ""}{source.observation_period ? ` · ${source.observation_period}` : ""}</li>
           ))}</ul>
           {r.warnings.length > 0 && <ul>{r.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
@@ -201,7 +212,7 @@ export default function ResearchComparisonReport({ mission, sites, results, sing
         <button className="button subtle" onClick={() => download([
           ["Evidence", ...sites.map((s) => s.name)], ...grid, [],
           ...settings, ...(advice ? [["Preferred point", choice?.mission.name ?? ""], ["Recommendation", advice]] : []),
-        ].map((row) => row.map(csvCell).join(",")).join("\r\n"), "csv")}>{singleSite ? "Export mission CSV" : "Export comparison CSV"}</button>
+        ].map((row) => row.map(csvCell).join(",")).join("\r\n"), "csv")}>Export comparison CSV</button>
       </div>
     </section>
   );

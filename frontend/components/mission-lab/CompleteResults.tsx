@@ -278,7 +278,7 @@ export default function CompleteResults({
         />
         <EnergyOnlyCharts analysis={a} energy={energy} />
       </section>
-      <section id="result-terrain" className="result-section">
+      <section id="scenario-terrain" className="result-section">
         <h2>Terrain & remaining unknowns</h2>
         <dl className="scenario-metrics">
           <div>
