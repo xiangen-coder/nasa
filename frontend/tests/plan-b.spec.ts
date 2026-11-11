@@ -42,8 +42,8 @@ async function openCompare(page: Page) {
   await configure.getByLabel("Start date", { exact: true }).fill(start.slice(0, 10));
   await configure.getByLabel("End date", { exact: true }).fill(end.slice(0, 10));
   await configure.getByRole("button", { name: "Go", exact: true }).click();
-  const plan = page.getByRole("article", { name: "Plan B" });
-  await expect(plan.getByRole("button", { name: "Find Plan B" })).toBeVisible();
+  const plan = page.getByRole("article", { name: "What IF" });
+  await expect(plan.getByRole("button", { name: "Run What IF" })).toBeVisible();
   return plan;
 }
 
@@ -78,7 +78,7 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
   const original = page.getByRole("article", { name: /Pre-result 1:/ });
   const originalText = await original.innerText();
   await expect(plan.getByLabel("Search mode")).toHaveValue("delay");
-  await plan.getByRole("button", { name: "Find Plan B" }).click();
+  await plan.getByRole("button", { name: "Run What IF" }).click();
   await expect(plan.getByRole("heading", { name: "Best of the options evaluated" })).toBeVisible();
   expect(candidates.length).toBeGreaterThan(10);
   expect(candidates[0].start).toBe("2026-10-02T00:00:00.000Z");
@@ -114,7 +114,7 @@ test("location and combined searches keep the baseline and enforce the 20 km lim
   const plan = await openCompare(page);
   await plan.getByLabel("Search mode").selectOption("relocate");
   await expect(plan.getByLabel("Search window")).toHaveCount(0);
-  await plan.getByRole("button", { name: "Find Plan B" }).click();
+  await plan.getByRole("button", { name: "Run What IF" }).click();
   await expect(plan.getByRole("heading", { name: "Best of the options evaluated" })).toBeVisible();
   await expect(plan.locator("dl").first()).toContainText("Near B");
   expect(candidates).toHaveLength(2);
@@ -123,7 +123,7 @@ test("location and combined searches keep the baseline and enforce the 20 km lim
   await plan.getByLabel("Search window").selectOption("custom");
   await plan.getByLabel("Search end date (UTC)").fill("2028-12-01");
   await plan.getByLabel("Alternate UTC touchdown time").fill("12:30");
-  await plan.getByRole("button", { name: "Find Plan B" }).click();
+  await plan.getByRole("button", { name: "Run What IF" }).click();
   await expect(plan.getByRole("heading", { name: "Best of the options evaluated" })).toBeVisible();
   expect(candidates.slice(2).every((mission) => Date.parse(mission.start) > Date.parse(start) && mission.start.includes("T12:30:00"))).toBeTruthy();
   expect(candidates.some((mission) => mission.start.startsWith("2028-12-01"))).toBeTruthy();
@@ -137,17 +137,17 @@ test("missing evidence blocks recommendations, and cancellation marks a search i
   }));
   const plan = await openCompare(page);
   await plan.getByLabel("Search window").selectOption("year");
-  await plan.getByRole("button", { name: "Find Plan B" }).click();
+  await plan.getByRole("button", { name: "Run What IF" }).click();
   await expect(plan.getByRole("heading", { name: "No viable backup found in this search" })).toBeVisible();
   await expect(plan.getByRole("status")).toContainText("1 option evaluated");
   await expect(plan).toContainText("1 lacked required evidence");
-  await plan.getByText("Assessment notes").click();
+  await expect(plan.getByText("Assessment notes")).toBeVisible();
   await expect(plan).toContainText("Mapped hazard fraction is unavailable.");
   await page.unroute("**/api/research/plan-b");
   await page.route("**/api/research/plan-b", () => {});
   await plan.getByLabel("Alternate UTC touchdown time").fill("18:00");
   const request = page.waitForRequest("**/api/research/plan-b");
-  await plan.getByRole("button", { name: "Find Plan B" }).click();
+  await plan.getByRole("button", { name: "Run What IF" }).click();
   await request;
   await plan.getByRole("button", { name: "Cancel search" }).click();
   await expect(plan.getByRole("status")).toContainText("Search incomplete · cancelled");

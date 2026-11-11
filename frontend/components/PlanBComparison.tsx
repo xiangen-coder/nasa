@@ -115,8 +115,13 @@ export default function PlanBComparison({ original, priority, equipment }: {
   const done = status !== "idle" && status !== "running";
   const resetResult = () => { setStatus("idle"); setMessage(""); setProgress(initialProgress); };
   return (
-    <article className="pre-result-card glass plan-b-card" aria-label="Plan B">
-      <h2>Plan B</h2>
+    <article className="pre-result-card glass plan-b-card" aria-label="What IF">
+      <h2>What IF</h2>
+      <details className="pre-extra">
+        <summary>How the search works</summary>
+        <p>What IF keeps the mission duration, equipment settings, and limits from Pre-Result 1. It tests the site or dates you choose. Longer windows are sampled, with extra checks around promising dates.</p>
+        <p>Sites must clear terrain, hazard, and historical temperature checks before the search calculates sunlight, Earth visibility, and solar power. For a delay, the earliest passing touchdown tested comes first. For a site change on the same date, the selected assessment priority sets the order.</p>
+      </details>
       {!original ? <p>Evaluate Pre-Result 1 to use its mission settings for a backup search.</p> : (
         <>
           <form onSubmit={(event) => { event.preventDefault(); void run(); }}>
@@ -152,7 +157,7 @@ export default function PlanBComparison({ original, priority, equipment }: {
                 </>
               )}
               {mode !== "delay" && <p>Nearby points are screened within 20 km of Pre-Result 1.</p>}
-              <button type="submit" className="button primary">Find Plan B</button>
+              <button type="submit" className="button primary">Run What IF</button>
             </fieldset>
             {status === "running" && <button type="button" className="button subtle" onClick={() => controller.current?.abort()}>Cancel search</button>}
           </form>
@@ -184,11 +189,12 @@ export default function PlanBComparison({ original, priority, equipment }: {
                   <p>Differences are relative to Pre-Result 1. Screening uses historical thermal observations and sampled visibility. Flight reachability and landing safety still require verification.</p>
                 </>
               )}
-              {progress.sampled && <p>The search sampled the selected date window. Other touchdown times may qualify.</p>}
+              {progress.sampled && <p>The search checks selected touchdown times within your date window.</p>}
+              {progress.skipped > 0 && <p>Skipped dates share a site with a failed check or missing evidence. Those site checks apply to every date.</p>}
               {(progress.limits > 0 || progress.missing > 0) && <p>{progress.limits} exceeded limits · {progress.missing} lacked required evidence.</p>}
               {progress.shortlist && <p>Terrain screening covered {progress.shortlist.searched} points: {progress.shortlist.outside_or_missing} lacked evidence, {progress.shortlist.failed_limits} exceeded limits, {progress.shortlist.overlap_excluded} overlapped, and {progress.shortlist.passing_terrain_candidates} passed. Up to three passing points enter mission assessment.</p>}
               {progress.reasons.length > 0 && (
-                <details className="pre-extra"><summary>Assessment notes</summary>
+                <details className="pre-extra" open={ranked.length === 0}><summary>Assessment notes</summary>
                   <ul>{progress.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
                 </details>
               )}

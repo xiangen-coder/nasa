@@ -54,7 +54,7 @@ export default function PreliminaryComparison({
         <div>
           <span className="eyebrow">PRELIMINARY ASSESSMENT</span>
           <p>
-            Compare up to two sites within {comparisonRadiusKm} km using the original mission window, or use Plan B to search for a later touchdown.
+            Compare up to two sites within {comparisonRadiusKm} km using the original mission window, or use What IF to test a different site or touchdown.
           </p>
           <small>
             {mission.start.replace("T", " ")} → {mission.end.replace("T", " ")}{" "}
