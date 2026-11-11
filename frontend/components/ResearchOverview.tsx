@@ -193,17 +193,17 @@ export default function ResearchOverview({
             <strong>
               {result?.terrain.available && result.terrain.slope_p95_deg != null
                 ? `${result.terrain.slope_p95_deg.toFixed(1)}° p95 slope`
-                : "Footprint terrain unavailable"}
+                : "Local terrain unavailable"}
             </strong>
             <p>
               {result && result.factors.T.score == null
                 ? result.factors.T.explanation
                 : result?.terrain.available
-                ? `${result.terrain.resolution_m} m native pixels. Boulder/crater hazards remain incomplete.`
+                ? `${result.terrain.resolution_m} m native pixels. ${result.terrain.coverage_type === "regional" ? "Regional screening; finer footprint slopes and hazards are unresolved." : "Boulder and crater hazards remain incomplete."}`
                 : result?.terrain.reason || "Awaiting site assessment."}
             </p>
             {result?.factors.T.score == null && result?.horizon.available && (
-              <p>The regional terrain map supports skyline and visibility estimates here. Footprint scoring needs its own coverage.</p>
+              <p>The available terrain supports skyline estimates. Check the neighbourhood size and DEM resolution limit for slope scoring.</p>
             )}
             {result && result.factors.T.score == null &&
               siteKey(result.mission) !== siteKey(terrainReference) && (
@@ -214,9 +214,10 @@ export default function ResearchOverview({
           </article>
           {result && (
             <article className="outlook-data glass">
-              <span className="eyebrow">WATER ICE POTENTIAL</span>
-              <strong>{result.factors.I.score == null ? "Unavailable" : `${result.factors.I.score.toFixed(1)} / 100`}</strong>
+              <span className="eyebrow">{result.ice?.radius_m ? "WATER ICE POTENTIAL · PERMANENT SHADOW PROXY" : "WATER ICE POTENTIAL"}</span>
+              <strong>{result.factors.I.score == null ? "Unavailable" : result.ice?.radius_m ? `${result.factors.I.score.toFixed(1)}% mapped shadow` : `${result.factors.I.score.toFixed(1)} / 100`}</strong>
               <p>{result.factors.I.explanation}</p>
+              {result.factors.I.source?.source_url && <a href={result.factors.I.source.source_url}>Dataset source</a>}
             </article>
           )}
           {[

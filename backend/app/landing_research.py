@@ -49,6 +49,7 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
     factors={k:{'name':NAMES[k],'weight':w,'score':None,'contribution':None,'quality':'unavailable','explanation':'No supported measurement.'} for k,w in WEIGHTS.items()}
     failures=[];warnings=[]
     t=terrain
+    regional=t.get('coverage_type')=='regional'
     if t.get('available'):
         if t['slope_max_deg']>limits.max_slope_deg: failures.append('Measured maximum neighbourhood slope exceeds the configured limit.')
         if t['roughness_m']>limits.max_roughness_m: failures.append('Measured detrended roughness exceeds the configured limit.')
@@ -60,6 +61,9 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
             penalty=limits.hazard_penalty*hazards['value'] if hazards.get('available') else 0
             factors['T'].update(score=clamp(.6*slope+.25*rough+.15*relief-penalty),quality='topographic screening; hazards incomplete' if not hazards.get('available') else 'topography plus mapped hazards',
                 explanation='60% slope component + 25% detrended roughness + 15% relief, minus configured hazard penalty × mapped hazard fraction. Missing hazards are not assumed absent; T and overall score remain provisional.',source=t['source'])
+            if regional:
+                factors['T']['quality']='regional DEM screening'
+                factors['T']['explanation']+=f" Regional screening uses {t['resolution_m']:g} m pixels; finer hazards and footprint slopes are unresolved."
         else:
             reason = f"The terrain raster has {t['resolution_m']:g} m pixels. The configured limit is {limits.max_resolution_m:g} m."
             factors['T']['explanation'] = reason
@@ -87,6 +91,11 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
     if ice.get('available'):
         factors['I'].update(score=clamp(100*ice['value']),quality=ice['source']['interpretation'],source=ice['source'],
             explanation='100 × registered mapped ice-evidence or PSR fraction. PSR is a resource-potential proxy, not confirmed ice abundance, accessibility or safety.')
+        if 'radius_m' in ice:
+            factors['I']['explanation']=(
+                f"{100 * ice['value']:.1f}% of sampled pixels within {ice['radius_m']:g} m "
+                "are mapped in permanent shadow by NASA LOLA. This is a cold-trap proxy; ice presence and abundance remain unverified."
+            )
     else:
         reason = ice.get('reason')
         factors['I']['explanation'] = (
@@ -97,7 +106,7 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
         )
     available=sum(v['weight'] for v in factors.values() if v['score'] is not None)
     missing=[k for k,v in factors.items() if v['score'] is None]
-    provisional=bool(missing or not hazards.get('available') or geometry.get('mode')!='terrain_screened' or thermal.get('available') or ice.get('source',{}).get('interpretation')=='psr_fraction')
+    provisional=bool(regional or missing or not hazards.get('available') or geometry.get('mode')!='terrain_screened' or thermal.get('available') or ice.get('source',{}).get('interpretation')=='psr_fraction')
     for f in factors.values():
         f['effective_weight']=f['weight']/available if available and f['score'] is not None else 0
         if f['score'] is not None: f['contribution']=f['score']*f['effective_weight']
@@ -108,10 +117,10 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
 
 def research(request):
     mission=request.mission;limits=request.limits
-    t=rasters.local_terrain(mission,limits.radius_m)
+    t=rasters.local_terrain(mission,limits.radius_m,allow_regional=True)
     observer_height={'available':True,'value':t['elevation_m'],'source':t['source']} if t.get('available') else rasters.measurement('horizon_dem',mission)
     screening=rasters.horizon(mission,observer_height['value']) if observer_height.get('available') else {'available':False,'profile':None,'reason':'Observer terrain height unavailable.'}
-    hazards=rasters.measurement('hazards',mission);ice=rasters.measurement('ice',mission)
+    hazards=rasters.measurement('hazards',mission);ice=rasters.ice_evidence(mission,limits.radius_m)
     lo=rasters.measurement('temperature_min',mission);hi=rasters.measurement('temperature_max',mission)
     thermal={'available':False,'minimum':lo,'maximum':hi}
     if lo['available'] and hi['available'] and lo['value']<=hi['value'] and lo['source'].get('observation_period')==hi['source'].get('observation_period'):
@@ -151,13 +160,13 @@ def evaluate(request:ResearchRequest):
 def terrain(latitude:float=Query(ge=-90,le=90),longitude:float=Query(ge=-180,le=180),radius_m:int=Query(default=100,ge=25,le=500)):
     """Bounded local raster window; no Horizons requests or scientific downloads."""
     location=Location(latitude=latitude,longitude=longitude)
-    local=rasters.local_terrain(location,radius_m)
+    local=rasters.local_terrain(location,radius_m,allow_regional=True)
     elevation={'available':True,'value':local['elevation_m'],'source':local['source']} if local.get('available') else rasters.measurement('horizon_dem',location)
     return {'location':location.model_dump(),'radius_m':radius_m,'terrain':local,'regional_elevation':elevation,
             'coordinate_note':'Diagnostic offsets follow projected raster axes, centred on the nearest pixel; grid up is not necessarily geographic north.',
             'limitations':['Elevation is metres above the 1737400 m lunar reference sphere in MOON_ME/DE421.',
                 'Slope, relief and detrended roughness use the native-resolution neighbourhood; the displayed grid is subsampled.',
-                'Regional elevation alone cannot establish footprint slope or landing safety. No horizon or hazard assessment is implied.']}
+                'Regional slope and roughness screen the wider neighbourhood. Footprint-scale and subpixel hazards require finer data.']}
 
 @router.get('/datasets')
 def datasets():

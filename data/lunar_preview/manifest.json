@@ -261,6 +261,26 @@
           "sha256": "a6188b0cd987834b4e1bb3e31e18df1553a6e2151fc0d220c26ce3c3e613607d"
         }
       ]
+    },
+    "ice": {
+      "name": "NASA LOLA adjusted south-pole permanent shadow mask",
+      "path": "south_pole_psr_20m.tif",
+      "sha256": "47c80a13f6b1f5bf98771033325a3d0c9ec0085ca6e47d8b73fe3cd281c291ff",
+      "source_url": "https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ.TIF",
+      "documentation": "https://pgda.gsfc.nasa.gov/products/90",
+      "product_id": "LPSR_80S_20MPP_ADJ",
+      "units": "fraction",
+      "frame": "MOON_ME_DE421",
+      "resolution_m": 20,
+      "projected_bounds_m": [
+        -70000.0,
+        -40000.0,
+        30000.0,
+        45000.0
+      ],
+      "interpretation": "psr_fraction",
+      "sampling": "neighbourhood_fraction",
+      "quality": "Native binary permanent-shadow mask. No ice concentration or detection is inferred."
     }
   },
   "missing": {}

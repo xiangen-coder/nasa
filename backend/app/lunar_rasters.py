@@ -16,16 +16,25 @@ SOURCES={'lola':'https://pgda.gsfc.nasa.gov/products/78',
 for _kind in ['height_uncertainty','slope_uncertainty','sample_count']:
     SOURCES[_kind]='https://pgda.gsfc.nasa.gov/products/78'
 SOURCES['horizon_dem']='https://pgda.gsfc.nasa.gov/products/90'
+RASTER_ERRORS = (OSError, ValueError, KeyError, rasterio.errors.RasterioError)
 
 def registry():
+    preview=ROOT/'data/lunar_preview/manifest.json'
     default=ROOT/'data/lunar/manifest.json'
-    if not default.exists(): default=ROOT/'data/lunar_preview/manifest.json'
-    path=Path(os.getenv('LUNAR_DATA_MANIFEST',str(default)))
+    override=os.getenv('LUNAR_DATA_MANIFEST')
+    path=Path(override) if override else default if default.exists() else preview
     try:
         manifest=json.loads(path.read_text())
-        return path.parent,manifest.get('products',{}),manifest.get('missing',{})
     except (OSError,ValueError):
         return path.parent,{},{}
+    products=manifest.get('products',{})
+    if not override and path==default and 'ice' not in products:
+        try:
+            bundled=json.loads(preview.read_text())['products']['ice']
+            products['ice']={**bundled,'path':(Path('..')/'lunar_preview'/bundled['path']).as_posix()}
+        except (OSError,ValueError,KeyError):
+            pass
+    return path.parent,products,manifest.get('missing',{})
 
 def status():
     root,products,missing=registry()
@@ -72,9 +81,51 @@ def measurement(kind,location):
     except (OSError,ValueError,KeyError,rasterio.errors.RasterioError) as exc:
         return {'available':False,'value':None,'reason':str(exc),'source_url':SOURCES[kind]}
 
-def local_terrain(location,radius_m=100):
+def ice_evidence(location, radius_m):
+    """Use a complete native PSR window for the fraction of mapped shadow."""
+    _, products, _ = registry()
+    if products.get('ice', {}).get('sampling') != 'neighbourhood_fraction':
+        return measurement('ice', location)
     try:
-        ds,meta=opened('lola')
+        ds, meta = opened('ice')
+        with ds:
+            if (meta.get('interpretation') != 'psr_fraction' or not ds.crs.is_projected
+                    or ds.transform.b or ds.transform.d or min(ds.res) < 1):
+                raise ValueError('A projected PSR fraction product is required.')
+            x, y = Transformer.from_crs(GEO, ds.crs, always_xy=True).transform(
+                location.longitude, location.latitude)
+            row, col = ds.index(x, y)
+            extent = int(np.ceil(radius_m / min(ds.res))) + 1
+            if not (0 <= row < ds.height and 0 <= col < ds.width):
+                raise ValueError('Outside mapped PSR coverage.')
+            window = Window(col-extent, row-extent, 2*extent+1, 2*extent+1)
+            values = ds.read(1, window=window, boundless=True, masked=True)
+            centre_x, centre_y = ds.xy(row, col)
+            offsets = np.arange(-extent, extent+1)
+            circle = ((centre_x + offsets[None, :] * ds.res[0] - x)**2 +
+                      (centre_y - offsets[:, None] * ds.res[1] - y)**2 <= radius_m**2)
+            samples = values[circle]
+            if not samples.size or np.ma.getmaskarray(samples).any() or not np.isin(samples, [0, 1]).all():
+                raise ValueError('The neighbourhood has incomplete PSR coverage.')
+            return {'available': True, 'value': float(samples.mean()), 'source': meta,
+                    'radius_m': radius_m, 'samples': int(samples.size), 'kind': 'mapped permanent shadow fraction'}
+    except RASTER_ERRORS as exc:
+        return {'available': False, 'value': None, 'reason': str(exc), 'source_url': SOURCES['horizon_dem']}
+
+
+def local_terrain(location, radius_m=100, *, allow_regional=False):
+    footprint = _terrain_window('lola', location, radius_m)
+    if footprint['available'] or not allow_regional:
+        return footprint
+    regional = _terrain_window('horizon_dem', location, radius_m)
+    if regional['available']:
+        return {**regional, 'coverage_type': 'regional', 'footprint_reason': footprint['reason']}
+    return {**footprint, 'reason': f"{footprint['reason']} Regional window: {regional['reason']}"}
+
+
+def _terrain_window(kind, location, radius_m):
+    try:
+        ds,meta=opened(kind)
         with ds:
             if not ds.crs.is_projected or ds.transform.b or ds.transform.d:
                 raise ValueError('Local slope calculation needs an unrotated projected metre raster.')

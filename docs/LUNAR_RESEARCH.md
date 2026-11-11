@@ -52,7 +52,7 @@ The public bundle retains a native-resolution 120 km square subset around the po
 
 ### Water ice / PSR potential
 
-Ice factor remains **unavailable** in the default bundle. PSR imagery is only visual context; it is not read as a numeric ice map. Register a valid NASA/PDS resource-evidence or PSR-fraction raster to activate this factor. `interpretation` must be `mapped_ice_evidence` or `psr_fraction`, with documented normalization and source. PSR coverage is an explicitly provisional resource proxy, not a probability of ice or an estimate of mass, accessibility or purity. [LEND archive](https://pds-geosciences.wustl.edu/missions/lro/lend.htm) and [LOLA archive](https://pds-geosciences.wustl.edu/missions/lro/lola.htm) are discovery sources, not themselves measurements.
+The bundled [NASA LOLA permanent-shadow mask](https://pgda.gsfc.nasa.gov/products/90) uses native 20 m pixels from `LPSR_80S_20MPP_ADJ` on the same regional subset as the horizon DEM. The water-ice proxy reports the fraction of sampled pixel centres in permanent shadow within the configured neighbourhood radius (100 m by default). A measured 0% means the mask classifies all sampled cells as outside permanent shadow. Incomplete coverage remains unavailable. The map describes a cold-trap proxy, while ice presence, abundance and accessibility remain unverified. Recreate the packaged subset with `python scripts/prepare_south_pole_psr.py --source <NASA GeoTIFF>`.
 
 ### Official candidate regions
 
@@ -108,6 +108,6 @@ Modified: `backend/app/main.py` (router registration), `frontend/app/page.tsx` (
 
 Apollo LM uncertainty layers and backup-point screening are documented in [APOLLO_RELIABILITY.md](APOLLO_RELIABILITY.md).
 
-The separate [wide terrain integration](WIDE_TERRAIN.md) now supplies a native 20 m regional horizon DEM. Its coverage and finite-horizon limitations are distinct from the 4 km local 5 m terrain crop.
+The [wide terrain integration](WIDE_TERRAIN.md) supplies a native 20 m regional DEM. Landing research prefers the 5 m crop and uses a complete regional DEM window for provisional slope, relief and detrended roughness when the 5 m crop is unavailable. The configured DEM pixel limit still applies. The Apollo footprint and uncertainty assessment requires the fine-scale inputs. Regional pixel spacing leaves smaller slopes and hazards unresolved.
 
 The dedicated Terrain analysis page now reads the verified research raster registry through GET /api/research/terrain. The legacy SPICE API retains its separate LOLA_MANIFEST configuration. See [the integration audit](NASA_INTEGRATION_AUDIT.md) for the current dataset coverage, page controls, setup and validation.

@@ -33,14 +33,15 @@ export default function TerrainAssessment({location,onSelect}:{location:Site;onS
       {current?.error&&<div role="alert"><p>{current.error}</p><button className="button subtle" onClick={()=>setRetry(v=>v+1)}>Retry terrain request</button></div>}
       {data&&<>
         <div className="terrain-summary">
-          <div><span>{t?.available?"Footprint elevation":"Regional elevation only"}</span><strong>{number(t?.available?t.elevation_m:data.regional_elevation.value," m")}</strong></div>
+          <div><span>{t?.available&&t.coverage_type!=="regional"?"Footprint elevation":"Regional elevation"}</span><strong>{number(t?.available?t.elevation_m:data.regional_elevation.value," m")}</strong></div>
           <div><span>95th percentile slope</span><strong>{number(t?.slope_p95_deg,"°")}</strong></div>
           <div><span>Maximum slope</span><strong>{number(t?.slope_max_deg,"°")}</strong></div>
           <div><span>Detrended RMS roughness</span><strong>{number(t?.roughness_m," m")}</strong></div>
           <div><span>Neighbourhood relief</span><strong>{number(t?.relief_m," m")}</strong></div>
-          <div><span>Footprint pixel spacing</span><strong>{number(t?.resolution_m," m")}</strong></div>
+          <div><span>DEM pixel spacing</span><strong>{number(t?.resolution_m," m")}</strong></div>
         </div>
-        {!t?.available&&<div className="info"><strong>Footprint terrain unavailable.</strong> {t?.reason} Regional elevation, when available, is displayed separately and does not substitute for footprint measurements. Select the Connecting Ridge research reference in the assessment for a point within the bundled 5 m crop.</div>}
+        {!t?.available&&<div className="info"><strong>Local terrain unavailable.</strong> {t?.reason}</div>}
+        {t?.coverage_type==="regional"&&<p className="info">Regional screening uses native {t.resolution_m} m pixels. Finer footprint slopes and small hazards remain unresolved.</p>}
         {points.length>0&&<figure className="regional-terrain-figure"><svg viewBox={`${-radius-cell} ${-radius-cell} ${2*(radius+cell)} ${2*(radius+cell)}`} role="img" aria-label={`${layer} diagnostic within ${radius} metre radius; projected raster axes`}>
           {points.map((p,i)=><rect key={i} x={p.east_m-cell/2} y={-p.north_m-cell/2} width={cell} height={cell} fill={`hsl(${210-180*(values[i]-lo)/(hi-lo||1)} 55% 48%)`}><title>{`Raster X ${p.east_m} m, Y ${p.north_m} m: ${number(values[i],layer==="slope"?"°":" m")}`}</title></rect>)}
           <circle cx="0" cy="0" r={Math.max(2,radius/40)} fill="white" stroke="#142b35" strokeWidth={Math.max(1,radius/80)}/>

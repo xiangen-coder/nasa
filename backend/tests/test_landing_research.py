@@ -79,6 +79,26 @@ def test_missing_temperature_rejects_nodata(raster_registry):
     raster_registry(np.full((61,61),-9999),kind='temperature_min',units='K')
     assert not lunar_rasters.measurement('temperature_min',Location(latitude=-90,longitude=0))['available']
 
+
+def test_regional_terrain_is_an_opt_in_screening_fallback(raster_registry):
+    raster_registry(np.zeros((61, 61)), kind='horizon_dem')
+    location = Location(latitude=-90, longitude=0)
+    assert not lunar_rasters.local_terrain(location)['available']
+    result = lunar_rasters.local_terrain(location, allow_regional=True)
+    assert result['coverage_type'] == 'regional'
+    assert score(t=result)['factors']['T']['quality'] == 'regional DEM screening'
+
+
+def test_shadow_fraction_keeps_zero_and_rejects_incomplete_windows(raster_registry):
+    path = raster_registry(np.zeros((61, 61)), kind='ice', units='fraction')
+    manifest_path = path.with_name('manifest.json')
+    manifest = json.loads(manifest_path.read_text())
+    manifest['products']['ice'].update(sampling='neighbourhood_fraction', interpretation='psr_fraction')
+    manifest_path.write_text(json.dumps(manifest))
+    result = lunar_rasters.ice_evidence(Location(latitude=-90, longitude=0), 100)
+    assert result['available'] and result['value'] == 0 and result['samples'] > 1
+    assert not lunar_rasters.ice_evidence(Location(latitude=-90, longitude=0), 500)['available']
+
 def test_live_horizons_fixture_and_wrong_site():
     payload=json.loads((Path(__file__).parent/'fixtures/horizons-surface-earth.json').read_text())
     m=Mission(latitude=-89.54,longitude=0,start='2026-11-05T00:00:00Z',end='2026-11-06T00:00:00Z',interval_minutes=360)
@@ -90,7 +110,7 @@ def test_live_horizons_fixture_and_wrong_site():
 
 def test_horizons_failure_retains_other_data(monkeypatch):
     from app import landing_research as module
-    monkeypatch.setattr(module.rasters,'local_terrain',lambda *a:{'available':False})
+    monkeypatch.setattr(module.rasters,'local_terrain',lambda *a,**kw:{'available':False})
     monkeypatch.setattr(module.rasters,'measurement',lambda *a:{'available':False})
     def fail(*args):raise HorizonsUnavailable('Offline')
     monkeypatch.setattr(module,'surface_observations',fail)
@@ -120,7 +140,7 @@ def test_terrain_endpoint_native_window_no_horizons(raster_registry,monkeypatch)
 
 def test_terrain_endpoint_missing_footprint_keeps_elevation_separate(monkeypatch):
     from app.main import app
-    monkeypatch.setattr(lunar_rasters,'local_terrain',lambda *args:{'available':False,'reason':'Outside footprint coverage','grid':[]})
+    monkeypatch.setattr(lunar_rasters,'local_terrain',lambda *args,**kw:{'available':False,'reason':'Outside footprint coverage','grid':[]})
     monkeypatch.setattr(lunar_rasters,'measurement',lambda kind,loc:{'available':True,'value':1240.,'source':{'name':'TEST REGIONAL DEM'}})
     data=TestClient(app).get('/api/research/terrain?latitude=-89&longitude=0').json()
     assert not data['terrain']['available'];assert 'slope_p95_deg' not in data['terrain']

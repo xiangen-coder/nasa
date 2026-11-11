@@ -50,6 +50,7 @@ export type Research = {
   factors: Record<string, Factor>;
   terrain: {
     available: boolean;
+    coverage_type?: "regional";
     reason?: string;
     elevation_m?: number;
     slope_p95_deg?: number;
@@ -96,6 +97,7 @@ export type Research = {
     maximum_k?: number;
     source?: Source;
   };
+  ice?: { available: boolean; value?: number | null; radius_m?: number; source?: Source };
 };
 export type ResearchComparison = {
   results: Research[];

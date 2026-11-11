@@ -177,10 +177,11 @@ export default function PreliminaryComparison({
                       {r?.terrain.slope_p95_deg != null
                         ? ` · ${r.terrain.slope_p95_deg.toFixed(1)}° p95 slope`
                         : ""}
+                      {r?.terrain.coverage_type === "regional" ? ` · ${r.terrain.resolution_m} m regional screening` : ""}
                     </dd>
                     {r && r.factors.T.score == null && <dd>{r.factors.T.explanation}</dd>}
                     {r?.factors.T.score == null && r?.horizon.available && (
-                      <dd>The regional terrain map supports skyline and visibility estimates here. Footprint scoring needs its own coverage.</dd>
+                      <dd>The available terrain supports skyline estimates. Check the neighbourhood size and DEM resolution limit for slope scoring.</dd>
                     )}
                   </div>
                   <div>
@@ -189,8 +190,8 @@ export default function PreliminaryComparison({
                   </div>
                   <div>
                     <dt>WATER ICE POTENTIAL</dt>
-                    <dd>{score(r, "I")}</dd>
-                    {r && r.factors.I.score == null && <dd>{r.factors.I.explanation}</dd>}
+                    <dd>{r?.ice?.radius_m && r.factors.I.score != null ? `${r.factors.I.score.toFixed(1)}% mapped permanent shadow` : score(r, "I")}</dd>
+                    {r && <dd>{r.factors.I.explanation}</dd>}
                   </div>
                   {r && (
                     <div>

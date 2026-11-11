@@ -19,7 +19,7 @@ def test_wide_horizon_covers_site_without_local_dem(tmp_path,monkeypatch):
 
 def test_research_uses_broad_observer_height_without_local_score(monkeypatch):
  from app import landing_research as module
- monkeypatch.setattr(r,'local_terrain',lambda *a:{'available':False})
+ monkeypatch.setattr(r,'local_terrain',lambda *a,**kw:{'available':False})
  monkeypatch.setattr(r,'measurement',lambda kind,*a:{'available':True,'value':123.,'source':{}} if kind=='horizon_dem' else {'available':False})
  monkeypatch.setattr(r,'horizon',lambda *a:{'available':True,'profile':None})
  heights=[]
