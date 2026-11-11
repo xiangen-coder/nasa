@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { ArrowUpRight, MapPin, SlidersHorizontal } from "lucide-react";
-import type { Site } from "../app/types";
+import type { MissionCatalogEntry, Site } from "../app/types";
 import { referenceSites } from "../lib/reference-sites";
 
 export default function LandingSearch({
   selected,
+  missionSites,
   onSelected,
   start,
   end,
@@ -27,6 +28,7 @@ export default function LandingSearch({
   onMap,
 }: {
   selected: Site;
+  missionSites: MissionCatalogEntry[];
   onSelected: (site: Site) => void;
   start: string;
   end: string;
@@ -48,9 +50,14 @@ export default function LandingSearch({
 }) {
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
-  const reference = referenceSites.findIndex((site) =>
+  const missionPoints = missionSites.flatMap((site) =>
+    site.latitude == null || site.longitude == null ? [] : [{ ...site, latitude: site.latitude, longitude: site.longitude }],
+  );
+  const points = [...referenceSites, ...missionPoints];
+  const reference = points.findIndex((site) =>
     site.name === selected.name && site.latitude === selected.latitude && site.longitude === selected.longitude);
   const custom = reference < 0;
+  const missionSite = points[reference];
   // Prevent edits to the server-rendered form from being lost before React binds it.
   useEffect(() => {
     setReady(true);
@@ -152,9 +159,17 @@ export default function LandingSearch({
               const value = event.target.value;
               onSelected(value === "custom"
                 ? { name: "Custom location", latitude: selected.latitude, longitude: selected.longitude }
-                : referenceSites[Number(value)]);
+                : points[Number(value)]);
             }}>
               {referenceSites.map((site, index) => <option key={site.name} value={index}>{site.name}</option>)}
+              {missionPoints.length > 0 && <optgroup label="Published mission locations">
+                {missionPoints.map((site, index) => <option key={site.id} value={referenceSites.length + index}>{site.name} · {site.site_name}</option>)}
+              </optgroup>}
+              {missionSites.some((site) => site.latitude == null) && <optgroup label="Mission records without a selectable coordinate">
+                {missionSites.filter((site) => site.latitude == null).map((site) => (
+                  <option key={site.id} value={site.id} disabled>{site.name} · {site.site_name}</option>
+                ))}
+              </optgroup>}
               <option value="custom">Custom location</option>
             </select>
           </label>
@@ -226,6 +241,13 @@ export default function LandingSearch({
             )}
           </button>
         </div>
+        {missionSite && "classification" in missionSite && (
+          <p>
+            {missionSite.status}{missionSite.event_date ? ` · ${missionSite.event_date}` : ""}. {missionSite.coordinate_note}{" "}
+            {missionSite.relay && `${missionSite.relay} `}
+            <a href={missionSite.source_url} target="_blank" rel="noreferrer">Mission source</a>
+          </p>
+        )}
         <div className="search-form-footer">
           <details className="search-advanced">
             <summary>

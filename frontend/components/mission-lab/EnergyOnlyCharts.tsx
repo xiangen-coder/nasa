@@ -61,36 +61,49 @@ export default function EnergyOnlyCharts({
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+      <p>
+        The horizontal axis shows hours since touchdown. Gold shows estimated
+        solar output and purple shows equipment demand, both in watts. When
+        output falls below demand, the battery supplies the shortfall if storage
+        is configured and charge remains.
+      </p>
       {energy.samples.some((s) => s.battery_kwh !== null) && (
         <>
           <h3>Battery charge (%)</h3>
           {energy.samples.some((s) => s.soc_pct !== null) ? (
-            <div className="scenario-plot">
-              <ResponsiveContainer width="100%" height={200}>
-                <ComposedChart data={data} accessibilityLayer>
-                  <XAxis
-                    dataKey="hours"
-                    type="number"
-                    domain={[0, "dataMax"]}
-                    unit=" h"
-                  />
-                  <YAxis domain={[0, 100]} unit="%" width={70} />
-                  <Tooltip
-                    labelFormatter={(n) =>
-                      `${new Date(start + Number(n) * 3600000).toISOString()}`
-                    }
-                    contentStyle={{ background: "#172336", color: "white" }}
-                  />
-                  <Line
-                    dataKey="soc_pct"
-                    name="State of charge (%)"
-                    stroke="#23a190"
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
+            <>
+              <div className="scenario-plot">
+                <ResponsiveContainer width="100%" height={200}>
+                  <ComposedChart data={data} accessibilityLayer>
+                    <XAxis
+                      dataKey="hours"
+                      type="number"
+                      domain={[0, "dataMax"]}
+                      unit=" h"
+                    />
+                    <YAxis domain={[0, 100]} unit="%" width={70} />
+                    <Tooltip
+                      labelFormatter={(n) =>
+                        `${new Date(start + Number(n) * 3600000).toISOString()}`
+                      }
+                      contentStyle={{ background: "#172336", color: "white" }}
+                    />
+                    <Line
+                      dataKey="soc_pct"
+                      name="State of charge (%)"
+                      stroke="#23a190"
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+              <p>
+                The teal line shows the share of usable battery capacity
+                remaining. A falling line means the battery is discharging. A
+                reading of 0% means the model has exhausted the usable charge.
+              </p>
+            </>
           ) : (
             <p>
               No storage capacity configured; deficits are immediately recorded
@@ -100,8 +113,9 @@ export default function EnergyOnlyCharts({
         </>
       )}
       <p>
-        Power uses left-endpoint samples; battery state is calculated at each
-        timestamp. No charge-rate limit or temperature model is assumed.
+        The model holds power constant between samples and calculates battery
+        charge at each timestamp. Estimates depend on the selected equipment and
+        model assumptions.
       </p>
       <details className="learning-disclosure">
         <summary>Accessible energy data</summary>

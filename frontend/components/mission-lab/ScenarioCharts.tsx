@@ -189,9 +189,11 @@ export default function ScenarioCharts({
         </ResponsiveContainer>
       </div>
       <p>
-        Solid lines show body-center elevation. Dashed lines show each body's
-        applicable horizon; Earth also includes {a.mission.clearance_deg}°
-        clearance.{" "}
+        Read across the mission in elapsed hours or UTC. Each solid line shows
+        how high the Sun or Earth is above the reference horizon, in degrees.
+        At each sample, the body is visible when its solid line is above its
+        matching dashed threshold. Earth’s threshold includes {a.mission.clearance_deg}°
+        of clearance.{" "}
         {a.terrain.available
           ? "The terrain horizon varies with azimuth."
           : "Reference-sphere horizon only; local terrain shadows are unmodelled."}{" "}
@@ -243,9 +245,10 @@ export default function ScenarioCharts({
         </ResponsiveContainer>
       </div>
       <p>
-        A transition marker means the sampled flag changed. Its true crossing
-        time is uncertain by up to one {a.mission.interval_minutes}-minute step.
-        Earth visibility is geometry, not a guaranteed radio link.
+        The upper step means the body is visible and the lower step means it is hidden.
+        Vertical markers show the first sample after a change. The crossing can occur
+        up to one {a.mission.interval_minutes}-minute step earlier.
+        A visible Earth gives a direct line of sight. Radio contact also depends on the link and ground station.
       </p>
       {energy && (
         <>

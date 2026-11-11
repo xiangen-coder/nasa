@@ -9,7 +9,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import Response, JSONResponse
 from .models import Mission, Location, Comparison, ExportRequest
-from .sites import SITES
+from .sites import MISSION_SITES, SITES
 from .science import initialize, ephemeris, visible, metrics, ROOT
 from .terrain import terrain
 from .external import news, weather, PADS
@@ -52,12 +52,12 @@ def health():
     return {'status': 'ok', 'ephemeris': 'NASA/JPL DE421 + NAIF IAU_MOON', 'terrain_configured': bool(os.getenv('LOLA_MANIFEST')), 'version': ALGORITHM_VERSION}
 
 @app.get('/api/sites')
-def sites():
-    return SITES
+def sites(include_missions: bool = False):
+    return [*SITES, *MISSION_SITES] if include_missions else SITES
 
 @app.get('/api/sites/{site_id}')
 def site(site_id: str):
-    match = next((s for s in SITES if s['id'] == site_id), None)
+    match = next((s for s in [*SITES, *MISSION_SITES] if s['id'] == site_id), None)
     if not match:
         raise HTTPException(404, 'Site not found')
     return match

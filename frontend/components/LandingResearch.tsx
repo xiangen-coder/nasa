@@ -210,6 +210,7 @@ export default function LandingResearch({
   onBusyChange,
   onResultChange,
   onComparisonChange,
+  onSavedChange,
 }: {
   mission: Mission;
   sites: Site[];
@@ -220,6 +221,7 @@ export default function LandingResearch({
   onBusyChange?: (busy: boolean) => void;
   onResultChange?: (result: Research | null) => void;
   onComparisonChange?: (comparison: ResearchComparison) => void;
+  onSavedChange?: (sites: Site[]) => void;
 }) {
   const [candidates, setCandidates] = useState<Site[]>([]),
     [failures, setFailures] = useState<Record<string, string>>({}),
@@ -229,6 +231,7 @@ export default function LandingResearch({
   const [limits, setLimits] = useState(DEFAULTS),
     [results, setResults] = useState<Research[]>([]),
     [detail, setDetail] = useState(0);
+  useEffect(() => { onSavedChange?.(saved); }, [saved, onSavedChange]);
   const [busy, setBusy] = useState(false),
     [progress, setProgress] = useState(""),
     [error, setError] = useState("");
@@ -811,16 +814,20 @@ export default function LandingResearch({
                     +Y
                   </text>
                 </svg>
+                <p className="muted">
+                  The white dot marks the selected point. In slope view, warmer colors indicate steeper
+                  ground. In elevation view, warmer colors indicate higher ground within this window.
+                  Each square represents a plotted sample of the elevation model.
+                </p>
               </details>
             )}
             {result.geometry.available && (
               <>
                 <h3>Horizons surface geometry</h3>
                 <p className="muted">
-                  Solid lines: Sun/Earth elevation. Dashed lines, when
-                  available: sampled terrain horizon thresholds. A body can be
-                  above 0° but hidden by higher terrain. Missing horizon data is
-                  not plotted as a flat horizon.
+                  Time runs left to right. Solid lines show the Sun and Earth’s elevation in degrees.
+                  Dashed lines show the terrain threshold where coverage is available.
+                  A body is visible at a sample when its solid line is above its matching threshold.
                 </p>
                 <div className="research-chart">
                   <ResponsiveContainer width="100%" height="100%">

@@ -5,6 +5,22 @@ export type Site = {
   longitude: number;
   description?: string;
 };
+export type MissionCatalogEntry = {
+  id: string;
+  name: string;
+  site_name: string;
+  country: string;
+  operator: string;
+  latitude: number | null;
+  longitude: number | null;
+  classification: string;
+  status: string;
+  event_date: string | null;
+  coordinate_frame: string | null;
+  coordinate_note: string;
+  source_url: string;
+  relay: string | null;
+};
 export type Mission = Site & {
   start: string;
   end: string;

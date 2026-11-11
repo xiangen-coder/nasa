@@ -58,7 +58,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 
-import type { Site, Mission, Analysis, Comparison } from "./types";
+import type { Site, Mission, MissionCatalogEntry, Analysis, Comparison } from "./types";
 const views = [
   "Map explorer",
   "Horizon simulator",
@@ -535,6 +535,7 @@ export default function Page() {
   const [observatoryMode, setObservatoryMode] = useState<"system" | "surface">("system");
   useEffect(() => { if (view === 5 && observatoryMode === "system") setAstronomyVisited(true); }, [view, observatoryMode]);
   const [sites, setSites] = useState<Site[]>([]);
+  const [missionSites, setMissionSites] = useState<MissionCatalogEntry[]>([]);
   const [selected, setSelected] = useState<Site>({
     name: "Shackleton vicinity",
     latitude: -89.54,
@@ -563,10 +564,17 @@ export default function Page() {
   const comparisonGeneration = useRef(0);
   const pendingExample = useRef<Analysis | null>(null);
   useEffect(() => {
-    request<Site[]>("sites")
-      .then((s) => {
-        setSites(s);
-        setChecked(s.map((x) => x.id!));
+    request<(Site | MissionCatalogEntry)[]>("sites?include_missions=true")
+      .then((catalog) => {
+        const references: Site[] = [];
+        const missions: MissionCatalogEntry[] = [];
+        for (const site of catalog) {
+          if ("classification" in site) missions.push(site);
+          else references.push(site);
+        }
+        setSites(references);
+        setMissionSites(missions);
+        setChecked(references.map((site) => site.id!));
       })
       .catch(async (e) => {
         setError(e.message);
@@ -807,7 +815,7 @@ export default function Page() {
           {view!==7&&view!==11&&view!==13&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div>{showResultTools&&<button type="button" className="button primary new-search" onClick={openSearchForm}>New search</button>}</div></>}
           {view===7&&<section className="search-layout revised-search" aria-label="Search for a lunar landing site">
             <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration"><div className="hero-copy"><span className="eyebrow">A NEW PERSPECTIVE ON THE MOON</span><h1>Find your place<br/>on the <em>Moon.</em></h1><p>Every mission starts with a possibility. Explore lunar locations through real sunlight, communication and terrain data.</p><div className="hero-hairline"/><span className="hero-footnote">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}>Explore the Moon <ArrowRight size={15}/></button></div><CinematicHero animate={preferences.animate}/></section>
-            <LandingSearch selected={selected} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{assessComparison(searchRecord.alternatives);setView(11);}} onMap={()=>setView(0)}/>
+            <LandingSearch selected={selected} missionSites={missionSites} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{assessComparison(searchRecord.alternatives);setView(11);}} onMap={()=>setView(0)}/>
             <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(13)}>Account & saved searches</button><button className="button subtle" onClick={()=>setView(12)}>Mission lab</button></div>
           </section>}
           {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)} onCompare={()=>document.getElementById("choose-comparison-sites")?.scrollIntoView({block:"start"})} onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}

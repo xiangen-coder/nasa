@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -36,6 +36,7 @@ export default function ResearchElevationChart({
   selectedTime?: string;
 }) {
   const [isolated, setIsolated] = useState<string | null>(null);
+  const explanationId = useId();
   const rows = result.geometry.available ? (result.geometry.series ?? []) : [];
   if (!rows.length)
     return <p>Elevation graph unavailable. {result.geometry.reason}</p>;
@@ -48,6 +49,7 @@ export default function ResearchElevationChart({
         className="outlook-chart"
         role="img"
         aria-label="Sun and Earth elevations and terrain horizons over the selected mission window in UTC"
+        aria-describedby={explanationId}
       >
         <ResponsiveContainer
           width="100%"
@@ -119,7 +121,13 @@ export default function ResearchElevationChart({
         ))}
         {active && <button type="button" className="button subtle elevation-show-all" onClick={() => setIsolated(null)}>Show all curves</button>}
       </div>
-      {!result.horizon.available && <p className="muted">Terrain horizon unavailable · reference geometry</p>}
+      <p id={explanationId} className="muted">
+        Read left to right through the mission in UTC. Gold is the Sun and blue is Earth.
+        The solid lines show how high each body is in the sky, in degrees.{" "}
+        {result.horizon.available
+          ? "The dashed lines show the local visibility thresholds. A body is visible at a sample when its solid line is above its matching dashed line. Earth’s threshold includes the configured clearance."
+          : `Local terrain coverage is unavailable. Visibility uses the reference horizon (0° for the Sun and ${result.mission.clearance_deg}° for Earth). Nearby hills or crater rims could change these results.`}
+      </p>
     </div>
   );
 }

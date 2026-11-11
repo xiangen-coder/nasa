@@ -126,7 +126,12 @@ export default function ResearchOverview({
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  <p>Gold: Sun azimuth. Blue: Earth azimuth. The 20 km skyline excludes terrain beyond the sampled rays.</p>
+                  <p>
+                    The horizontal axis is compass direction, measured clockwise from north.
+                    The curve shows the highest terrain angle in each direction within 20 km.
+                    The gold and blue markers show where the Sun and Earth are along that skyline
+                    at the selected time. Compare each body’s elevation above with the skyline at its marker.
+                  </p>
                 </details>
               )}
               {result && <><ResearchSolarEstimate result={result} /><ResearchWindows result={result} /></>}

@@ -14,6 +14,21 @@ def test_sites_and_missing_site(client):
     assert client.get('/api/sites/shackleton').status_code==200
     assert client.get('/api/sites/missing').status_code==404
 
+
+def test_expanded_mission_catalog_keeps_unknown_coordinates_unset(client):
+    response = client.get('/api/sites?include_missions=true')
+    assert response.status_code == 200
+    entries = response.json()
+    catalog = {entry['id']: entry for entry in entries}
+    assert len(catalog) == len(entries)
+    assert {'shackleton', 'de-gerlache', 'connecting-ridge'} <= catalog.keys()
+    assert catalog['apollo-11']['coordinate_frame'] == 'MOON_ME_DE421'
+    assert catalog['change-4']['relay'].startswith('Queqiao')
+    for identifier in ('surveyor-4', 'peregrine-1', 'artemis-iv'):
+        assert catalog[identifier]['latitude'] is None
+        assert catalog[identifier]['longitude'] is None
+    assert client.get('/api/sites/apollo-11').json() == catalog['apollo-11']
+
 def test_analysis_cache_and_export(client,mission,monkeypatch):
     monkeypatch.delenv('LOLA_MANIFEST',raising=False)
     payload=mission.model_dump(mode='json')
