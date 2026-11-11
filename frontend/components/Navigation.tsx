@@ -41,7 +41,7 @@ export const viewPaths = [
 ];
 export const toolItems = [
   { view: 0, label: "Map explorer", icon: Compass, detail: "Coordinates & geographic references" },
-  { view: 15, label: "Mission report", icon: FileText, detail: "Scenario evidence & exports" },
+  { view: 15, label: "Mission report", icon: FileText, detail: "Current Result evidence & exports" },
   { view: 5, label: "3D observatory", icon: Orbit, detail: "NASA positions & computed local sky" },
   { view: 16, label: "Mission planner", icon: Rocket, detail: "Vehicle worksheet & launch weather" },
   { view: 4, label: "Lunar mission archive", icon: Archive, detail: "Historical missions & documented 3D paths" },

@@ -1,0 +1,133 @@
+.research-timeline {
+  margin-block: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.research-timeline label,
+.research-preferred {
+  display: grid;
+  gap: 5px;
+}
+.research-timeline input[type="range"] {
+  width: 100%;
+}
+.research-timeline p {
+  margin-block: 6px;
+}
+.research-windows details {
+  border-top: 1px solid var(--line);
+  padding-block: 8px;
+}
+.research-windows summary {
+  cursor: pointer;
+}
+.research-report {
+  margin-block: 20px;
+  padding: clamp(14px, 3vw, 28px);
+  scroll-margin-top: 160px;
+}
+.research-report-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-block: 14px;
+}
+.research-report-settings dt {
+  font-weight: 700;
+}
+.research-visibility-bars {
+  display: grid;
+  gap: 12px;
+  max-width: 38rem;
+  margin: 16px 0;
+}
+.research-visibility-bar {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 6.5rem;
+  align-items: center;
+  gap: 8px;
+}
+.research-visibility-bar meter {
+  width: 100%;
+}
+.research-visibility-bar meter::-webkit-meter-optimum-value {
+  background: #eacb89;
+}
+.research-visibility-bar:last-child meter::-webkit-meter-optimum-value {
+  background: #9ecff2;
+}
+.research-skyline {
+  margin-block: 12px;
+}
+.research-report th,
+.research-report td {
+  white-space: normal;
+  min-width: 110px;
+  text-align: left;
+  vertical-align: top;
+}
+.research-report h3,
+.research-report p,
+.research-report ul {
+  margin-block: 10px;
+}
+.research-report-site {
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+}
+.research-preferred {
+  max-width: 32rem;
+  margin-block: 12px;
+}
+.map-evidence,
+.map-imagery {
+  padding: 12px;
+}
+.map-imagery img {
+  width: min(100%, 512px);
+  height: auto;
+}
+
+@media print {
+  @page research-report {
+    margin: 13mm;
+  }
+
+  body:has(#research-report) .lunar-app > :not(.main-shell),
+  body:has(#research-report) .lunar-app main > :not(#research-report),
+  #research-report .research-export-controls,
+  #research-report .research-preferred {
+    display: none !important;
+  }
+  body:has(#research-report) .lunar-app,
+  body:has(#research-report) .lunar-app .main-shell,
+  body:has(#research-report) .lunar-app main,
+  #research-report {
+    background: #fff !important;
+    color: #111 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    zoom: 1 !important;
+  }
+  #research-report { page: research-report; }
+  #research-report .table-scroll { overflow: visible; }
+  #research-report tr { break-inside: avoid; }
+  #research-report h2,
+  #research-report h3,
+  #research-report summary { break-after: avoid; }
+  #research-report .research-windows details {
+    margin-block: 4px;
+    padding-block: 2px;
+  }
+  #research-report .research-windows summary { padding-block: 4px; }
+  #research-report .research-windows ul,
+  #research-report .research-windows p { margin-block: 3px; }
+  #research-report th,
+  #research-report td {
+    min-width: 0;
+    color: #111 !important;
+    border-color: #aaa;
+  }
+  #research-report a { color: #174a73; }
+}

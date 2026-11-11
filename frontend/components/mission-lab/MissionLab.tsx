@@ -37,7 +37,7 @@ type Props = Pick<
 > & {
   mission: Mission;
   mode: ExperienceMode;
-  linkedTool?: 8 | 14;
+  linkedTool?: 14;
   onModeChange: (mode: ExperienceMode) => void;
   onRestore: (m: Mission) => void;
 };

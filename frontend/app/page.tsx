@@ -9,6 +9,7 @@ import LandingSearch from "../components/LandingSearch";
 import Navigation, {viewPaths} from "../components/Navigation";
 import PreferencesControls, {type Preferences} from "../components/Preferences";
 import ResearchOverview from "../components/ResearchOverview";
+import ResearchComparisonReport from "../components/ResearchComparisonReport";
 import PreliminaryComparison from "../components/PreliminaryComparison";
 import ComparisonPicker, { siteKey } from "../components/ComparisonPicker";
 import type { SearchRecord } from "../lib/search-record";
@@ -487,7 +488,7 @@ export default function Page() {
   const [comparisonNotice, setComparisonNotice] = useState("");
   const [education, setEducation] = useState(false);
   const [labVisited, setLabVisited] = useState(false);
-  const labOpen = [12, 14, 15, 16].includes(view);
+  const labOpen = [12, 14, 16].includes(view);
   useEffect(() => {
     if (labOpen) setLabVisited(true);
     if (view === 14) setEducation(true);
@@ -768,8 +769,19 @@ export default function Page() {
           {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)} onCompare={()=>document.getElementById("choose-comparison-sites")?.scrollIntoView({block:"start"})} onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
           {view===11&&<ComparisonPicker mission={mission()} sites={sites} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
           {view===13&&<Account record={searchRecord} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}
-          {labVisited&&<div hidden={!labOpen}><MissionLab mode={education?"education":"professional"} linkedTool={view===15?8:view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
-          {view===8&&<><ResearchOverview result={researchResult} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy}/><div className="account-actions"><button className="button subtle" onClick={()=>setView(13)}>Save search</button><button className="button subtle" onClick={()=>setView(11)}>Compare sites</button></div></>}
+          {labVisited&&<div hidden={!labOpen}><MissionLab mode={education?"education":"professional"} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
+          {view===15&&(
+            <>
+              <div className="account-actions">
+                <button className="button subtle" onClick={()=>setView(8)}>Back to Result</button>
+                {!researchResult&&<button className="button primary" onClick={()=>setView(7)}>Configure an assessment</button>}
+              </div>
+              {researchResult
+                ? <ResearchComparisonReport mission={researchResult.mission} sites={[researchResult.mission]} results={[researchResult]} singleSite />
+                : <p className="info" role="status">{researchBusy ? "Waiting for the current assessment…" : "Run an assessment or open More Info on a comparison card to prepare its mission report."}</p>}
+            </>
+          )}
+          {view===8&&<><ResearchOverview result={researchResult} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy}/><div className="account-actions"><button className="button subtle" onClick={()=>setView(13)}>Save search</button><button className="button subtle" onClick={()=>setView(11)}>Compare sites</button>{researchResult&&<button className="button primary" onClick={()=>setView(15)}>Open mission report</button>}</div></>}
           <div hidden={![0,1,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>

@@ -36,9 +36,12 @@ type Factor = {
   explanation: string;
   source?: Source;
 };
-type Span = { start: string; end: string; hours: number };
+export type ResearchSpan = { start: string; end: string; hours: number };
+type Span = ResearchSpan;
 export type Research = {
   mission: Mission;
+  limits?: Record<string, number>;
+  formula?: string;
   score: number | null;
   available_weight: number;
   missing: string[];
@@ -68,7 +71,13 @@ export type Research = {
     }[];
   };
   observer_height?: { available: boolean; value?: number; source?: Source };
-  horizon: { available: boolean; reason?: string; method?: string };
+  horizon: {
+    available: boolean;
+    reason?: string;
+    method?: string;
+    source?: Source;
+    profile?: { azimuth: number; elevation: number }[] | null;
+  };
   geometry: {
     available: boolean;
     reason?: string;
@@ -87,8 +96,20 @@ export type Research = {
       earth_azimuth: number;
       earth_distance_km: number;
       earth_light_time_seconds: number;
+      sun_visible: boolean;
+      earth_visible: boolean;
+      simultaneous: boolean;
     }[];
-    metrics?: { darkness_windows: Span[]; blackout_windows: Span[] };
+    metrics?: {
+      sun_visible_pct: number;
+      earth_visible_pct: number;
+      simultaneous_pct: number;
+      longest_darkness_hours: number;
+      longest_blackout_hours: number;
+      operational_windows: Span[];
+      darkness_windows: Span[];
+      blackout_windows: Span[];
+    };
     sources?: Record<string, { ephemeris: string; orientation: string }>;
   };
   temperature: {
