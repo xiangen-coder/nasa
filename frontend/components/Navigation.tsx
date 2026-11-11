@@ -82,10 +82,10 @@ export default function Navigation({
       {resultTools}
       <a
         className="lunar-brand"
-        href="#search"
+        href={education ? "#education" : "#search"}
         onClick={(e) => {
           e.preventDefault();
-          navigate(7);
+          navigate(education ? 14 : 7);
         }}
         aria-label="Lunar Navigator home"
       >
@@ -94,9 +94,9 @@ export default function Navigation({
           LUNAR<span className="brand-caption">A NEW PERSPECTIVE</span>
         </span>
       </a>
-      <nav className="nav-pill glass" aria-label="Main navigation">
+      {!education && <nav className="nav-pill glass" aria-label="Main navigation">
         {[
-          { label: "Configure", view: education ? 14 : 7 },
+          { label: "Configure", view: 7 },
           { label: "Compare", view: 11 },
           { label: "Result", view: 8 },
         ].map((item) => (
@@ -193,7 +193,7 @@ export default function Navigation({
         >
           About Us
         </a>
-      </nav>
+      </nav>}
       <div className="topbar-actions">
         <div className="header-mode-switch" role="group" aria-label="Experience mode">
           <button type="button" aria-pressed={!education} onClick={() => navigate(7)}>

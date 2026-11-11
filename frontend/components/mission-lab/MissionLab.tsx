@@ -102,10 +102,9 @@ export default function MissionLab({
       <div className="panel mission-lab-intro">
         <p>
           Explore how location, dates and equipment change visibility and power.
-          The lab uses the SPICE visibility model. The main Result view uses the
-          separate NASA research assessment.
+          {mode === "professional" && " The lab uses the SPICE visibility model. The main Result view uses the separate NASA research assessment."}
         </p>
-        <div className="account-actions" aria-label="Mission lab tools">
+        <div className="account-actions" role="group" aria-label={mode === "education" ? "Classroom tools" : "Mission lab tools"}>
           {[
             [7, "Configure"],
             [12, "Compare scenarios"],

@@ -508,14 +508,12 @@ export default function Page() {
   const [researchComparison,setResearchComparison]=useState<ResearchComparison|null>(null);
   const [chosenAlternatives, setChosenAlternatives] = useState<Site[]>([]);
   const [comparisonNotice, setComparisonNotice] = useState("");
-  const [education, setEducation] = useState(false);
+  const education = view === 14;
   const [labVisited, setLabVisited] = useState(false);
   const labOpen = [12, 14, 16].includes(view);
   useEffect(() => {
     if (labOpen) setLabVisited(true);
-    if (view === 14) setEducation(true);
-    if (view === 7 || view === 12) setEducation(false);
-  }, [view, labOpen]);
+  }, [labOpen]);
   const researchActions=useRef<ResearchActions|null>(null);
   const setView=(next:number)=>{if(!viewPaths[next]||next===6)return;setViewState(next);if(location.hash!==`#${viewPaths[next]}`)location.hash=viewPaths[next];window.scrollTo({top:0,behavior:"instant"});};
   useEffect(()=>{const sync=()=>{const n=viewPaths.indexOf(location.hash.slice(1));if(n>=0&&n!==6)setViewState(n);};sync();window.addEventListener("hashchange",sync);try{const p=JSON.parse(localStorage.getItem("lunar-preferences-v1")||"null");if(p&&typeof p.animate==="boolean"&&typeof p.scale==="number")setPreferences({animate:p.animate,scale:Math.max(.95,Math.min(1.08,p.scale)),detailed:p.detailed!==false});}catch{}return()=>window.removeEventListener("hashchange",sync);},[]);
@@ -766,7 +764,7 @@ export default function Page() {
       ? "Terrain-screened geometry"
       : "Reference-sphere geometry";
   return (
-    <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} data-classroom-theme={labOpen && education ? "" : undefined} data-result-tools={showResultTools ? "" : undefined} style={{"--ui-scale":preferences.scale} as CSSProperties}>
+    <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} data-classroom-theme={education ? "" : undefined} data-result-tools={showResultTools ? "" : undefined} style={{"--ui-scale":preferences.scale} as CSSProperties}>
       <div className="stars" aria-hidden="true"/>
       <Navigation view={view} education={education} onNavigate={setView} health={health} preferences={preferences} onPreferences={updatePreferences}
         resultTools={showResultTools ? (
@@ -786,16 +784,16 @@ export default function Page() {
           </nav>
         ) : undefined}
       />
-      <NewsSidebar/>
+      {!education&&<NewsSidebar/>}
       <div className="main-shell">
         <div className="workspace-with-news"><main id="main-content">
-          {(view === 7 || view === 14) && (
+          {view === 7 && (
             <section className="home-mode-cards" aria-label="Choose your experience">
               <button type="button" aria-pressed={view === 7} onClick={() => setView(7)}>
                 <strong>Professional Mode</strong>
                 <span>Advanced Lunar Mission Investigation</span>
               </button>
-              <button type="button" aria-pressed={view === 14} onClick={() => setView(14)}>
+              <button type="button" aria-pressed={false} onClick={() => setView(14)}>
                 <strong>Education Mode</strong>
                 <span>Explore and Learn About Lunar Landing Sites</span>
               </button>
