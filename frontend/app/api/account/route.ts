@@ -7,7 +7,19 @@ export async function GET() {
     const {
       data: { user },
     } = await client.auth.getUser();
-    return json({ user: user ? { id: user.id, email: user.email } : null });
+    const username = user?.user_metadata?.username;
+    return json({
+      user: user
+        ? {
+            id: user.id,
+            email: user.email,
+            username:
+              (typeof username === "string" ? username.trim().slice(0, 32) : "") ||
+              user.email?.split("@")[0]?.slice(0, 32) ||
+              "Explorer",
+          }
+        : null,
+    });
   } catch {
     return json({ error: "Account service is temporarily unavailable." }, 503);
   }
@@ -59,12 +71,18 @@ export async function POST(request: Request) {
       return json({ error: "Unknown account action." }, 400);
     if (password.length < 8 || password.length > 128)
       return json({ error: "Use a password of 8–128 characters." }, 400);
+    const username = typeof body.username === "string" ? body.username.trim() : "";
+    if (body.action === "signup" && (username.length < 2 || username.length > 32))
+      return json({ error: "Use a username of 2–32 characters." }, 400);
     const result =
       body.action === "signup"
         ? await client.auth.signUp({
             email,
             password,
-            options: { emailRedirectTo: `${site}/auth/callback` },
+            options: {
+              emailRedirectTo: `${site}/auth/callback`,
+              data: { username },
+            },
           })
         : await client.auth.signInWithPassword({ email, password });
     if (result.error) return json({ error: result.error.message }, 400);

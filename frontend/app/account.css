@@ -1,3 +1,270 @@
+.lunar-topbar .header-login {
+  min-width: 0;
+  min-height: 42px;
+  padding-inline: 16px;
+  white-space: nowrap;
+}
+
+.header-login span {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lunar-auth {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 460px);
+  align-items: center;
+  gap: clamp(30px, 7vw, 104px);
+  width: min(100% - 40px, 1160px);
+  margin-inline: auto;
+  padding-block: clamp(36px, 7vw, 92px);
+  color: #f3f5fc;
+}
+
+.lunar-auth-intro h1,
+.lunar-auth-card h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.lunar-auth-intro h1 {
+  margin: 18px 0 12px;
+  font-size: clamp(2.8rem, 6.4vw, 5.7rem);
+  line-height: 0.98;
+}
+
+.lunar-auth-intro em {
+  color: #bacbe8;
+}
+
+.lunar-auth-intro p {
+  color: #b9c5da;
+}
+
+.lunar-auth-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+
+.lunar-auth-mark::before,
+.lunar-auth-mark::after {
+  content: "";
+  position: absolute;
+  inset: 32% 4%;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  opacity: 0.65;
+  rotate: -34deg;
+}
+
+.lunar-auth-mark::after {
+  inset: 37% 12%;
+  rotate: 32deg;
+}
+
+.lunar-auth-mark svg {
+  width: 55%;
+  height: 55%;
+  fill: currentColor;
+}
+
+.lunar-auth-intro .lunar-auth-mark {
+  width: clamp(90px, 14vw, 165px);
+}
+
+.lunar-auth-card {
+  min-width: 0;
+  padding: clamp(22px, 4vw, 36px);
+  border: 1px solid #f3f4f6;
+  border-radius: 25px;
+  background: #e2e4e7;
+  color: #131a28;
+  box-shadow: 0 24px 64px #02061166;
+}
+
+.lunar-auth-card header {
+  text-align: center;
+}
+
+.lunar-auth-wordmark {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+
+.lunar-auth-card h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.9rem);
+  line-height: 1.05;
+  text-align: center;
+}
+
+.lunar-auth-card header p {
+  margin: 8px 0 19px;
+  color: #414b58;
+  font-size: 0.875rem;
+}
+
+.lunar-auth-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 4px;
+  border-radius: 99px;
+  background: #151923;
+}
+
+.lunar-auth-switch button {
+  min-height: 38px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: #f2f4fa;
+  font: inherit;
+  cursor: pointer;
+}
+
+.lunar-auth-switch button[aria-pressed="true"] {
+  background: #e7ede7;
+  color: #161e28;
+  font-weight: 700;
+}
+
+.lunar-auth-form {
+  display: grid;
+  gap: 12px;
+}
+
+.lunar-auth-form label {
+  display: grid;
+  gap: 5px;
+  color: #222c3a;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.lunar-auth-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 13px;
+  border: 1px solid #aeb8c4;
+  border-radius: 12px;
+  background: #fff;
+  color: #131a28;
+  font: inherit;
+  font-size: 1rem;
+}
+
+.lunar-auth-submit,
+.lunar-auth-link {
+  min-height: 44px;
+  border: 0;
+  color: #161e28;
+  font: inherit;
+  cursor: pointer;
+}
+
+.lunar-auth-submit {
+  border-radius: 99px;
+  background: #f6cc68;
+  font-weight: 700;
+}
+
+.lunar-auth-submit:not(:disabled):hover {
+  background: #ffda7e;
+}
+
+.lunar-auth-link {
+  justify-self: center;
+  background: transparent;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.lunar-auth-card :is(button, input):focus-visible {
+  outline: 2px solid #23619d;
+  outline-offset: 2px;
+}
+
+.lunar-auth-card button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.lunar-auth-card .error,
+.lunar-auth-card .info {
+  margin: 0 0 12px;
+  color: #152238;
+}
+
+.lunar-auth-card .error {
+  color: #921c29;
+}
+
+@media (max-width: 760px) {
+  .lunar-auth {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(100% - 32px, 480px);
+    gap: 24px;
+    padding-block: 24px 48px;
+  }
+
+  .lunar-auth-intro {
+    text-align: center;
+  }
+
+  .lunar-auth-intro .lunar-auth-mark {
+    width: 60px;
+  }
+
+  .lunar-auth-intro h1 {
+    margin-top: 8px;
+  }
+
+  .lunar-auth-intro p {
+    margin-bottom: 0;
+  }
+
+  .lunar-topbar .header-login {
+    min-height: 38px;
+    padding-inline: 9px;
+  }
+
+  .header-login span {
+    max-width: 5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .lunar-app .lunar-topbar:has(.header-login) {
+    padding-inline: 10px;
+  }
+
+  .lunar-topbar:has(.header-login) .topbar-actions {
+    gap: 6px;
+  }
+
+  .lunar-topbar:has(.header-login) .settings-trigger {
+    width: 36px;
+    height: 36px;
+  }
+
+  .lunar-topbar:has(.header-login) .nav-pill > a,
+  .lunar-topbar:has(.header-login) .nav-pill > .more-menu-wrap > button {
+    padding-inline: clamp(5px, 2vw, 9px);
+  }
+}
+
 .account-panel,
 .comparison-picker,
 .mission-lab-intro,

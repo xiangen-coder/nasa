@@ -6,7 +6,9 @@ test("real API → simulator → comparison → report and export", async ({
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
-  await expect(page.locator(".system-state")).toContainText("SPICE online");
+  await expect(
+    page.locator(".lunar-topbar").getByRole("button", { name: "Login", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Find your next horizon." }),
   ).toBeVisible();

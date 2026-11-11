@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Archive,
   ArrowUpRight,
@@ -47,19 +47,17 @@ export const toolItems = [
 export default function Navigation({
   view,
   education,
+  accountName,
   onNavigate,
-  health,
   preferences,
   onPreferences,
-  resultTools,
 }: {
   view: number;
   education: boolean;
+  accountName?: string | null;
   onNavigate: (view: number) => void;
-  health: string;
   preferences: Preferences;
   onPreferences: (value: Preferences) => void;
-  resultTools?: ReactNode;
 }) {
   const [more, setMore] = useState(false);
   const dropdown = useRef<HTMLDivElement>(null);
@@ -79,7 +77,6 @@ export default function Navigation({
   };
   return (
     <header className="lunar-topbar">
-      {resultTools}
       <a
         className="lunar-brand"
         href={education ? "#education" : "#search"}
@@ -203,12 +200,16 @@ export default function Navigation({
             Education
           </button>
         </div>
-        <div className="system-state">
-          <span
-            className={health === "SPICE online" ? "live-dot" : "offline-dot"}
-          />
-          {health}
-        </div>
+        {!education && (
+          <button
+            type="button"
+            className="header-login button subtle"
+            aria-current={view === 13 ? "page" : undefined}
+            onClick={() => navigate(13)}
+          >
+            <span>{accountName ? `Hi, ${accountName}` : "Login"}</span>
+          </button>
+        )}
         <button
           ref={settingsButton}
           className="settings-trigger glass"
