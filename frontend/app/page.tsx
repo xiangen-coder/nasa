@@ -11,6 +11,7 @@ import ResultTools from "../components/ResultTools";
 import PreferencesControls, {type Preferences} from "../components/Preferences";
 import ResearchOverview from "../components/ResearchOverview";
 import ResearchComparisonReport from "../components/ResearchComparisonReport";
+import { defaultSolar } from "../components/mission-lab/scenario-science";
 import PreliminaryComparison from "../components/PreliminaryComparison";
 import ComparisonPicker, { comparisonAreaMessage, inComparisonArea, siteKey } from "../components/ComparisonPicker";
 import type { SearchRecord } from "../lib/search-record";
@@ -480,7 +481,7 @@ function Timeline({ analysis }: { analysis: Analysis }) {
 }
 
 function jumpToResultSection(id: string) {
-  const section = document.getElementById(id);
+  const section = document.querySelector<HTMLElement>(`.research-results #${id}`);
   section?.focus({ preventScroll: true });
   section?.scrollIntoView({ block: "start" });
 }
@@ -503,6 +504,7 @@ export default function Page() {
   const [researchPriority,setResearchPriority] = useState<ResearchPriority>("overall");
   const [researchBusy,setResearchBusy] = useState(false);
   const [researchResult,setResearchResult] = useState<Research|null>(null);
+  const [researchEquipment, setResearchEquipment] = useState(defaultSolar);
   const showResultTools = view === 8 || view === 15;
   const [researchComparison,setResearchComparison]=useState<ResearchComparison|null>(null);
   const [chosenAlternatives, setChosenAlternatives] = useState<Site[]>([]);
@@ -812,7 +814,7 @@ export default function Page() {
               </button>
             </section>
           )}
-          {view!==7&&view!==11&&view!==13&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div>{showResultTools&&<button type="button" className="button primary new-search" onClick={openSearchForm}>New search</button>}</div></>}
+          {view!==7&&view!==8&&view!==11&&view!==13&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div>{showResultTools&&<button type="button" className="button primary new-search" onClick={openSearchForm}>New search</button>}</div></>}
           {view===7&&<section className="search-layout revised-search" aria-label="Search for a lunar landing site">
             <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration"><div className="hero-copy"><span className="eyebrow">A NEW PERSPECTIVE ON THE MOON</span><h1>Find your place<br/>on the <em>Moon.</em></h1><p>Every mission starts with a possibility. Explore lunar locations through real sunlight, communication and terrain data.</p><div className="hero-hairline"/><span className="hero-footnote">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}>Explore the Moon <ArrowRight size={15}/></button></div><CinematicHero animate={preferences.animate}/></section>
             <LandingSearch selected={selected} missionSites={missionSites} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{assessComparison(searchRecord.alternatives);setView(11);}} onMap={()=>setView(0)}/>
@@ -826,11 +828,11 @@ export default function Page() {
             <>
               {!researchResult&&<div className="account-actions"><button className="button primary" onClick={()=>setView(7)}>Configure an assessment</button></div>}
               {researchResult
-                ? <ResearchComparisonReport mission={researchResult.mission} sites={[researchResult.mission]} results={[researchResult]} singleSite />
+                ? <ResearchComparisonReport mission={researchResult.mission} sites={[researchResult.mission]} results={[researchResult]} singleSite equipment={researchEquipment} />
                 : <p className="info" role="status">{researchBusy ? "Waiting for the current assessment…" : "Run an assessment or open More Info on a comparison card to prepare its mission report."}</p>}
             </>
           )}
-          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} comparisonOrigin={selected} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy}/>}
+          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={selected} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment}/>}
           <div hidden={![0,1,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>

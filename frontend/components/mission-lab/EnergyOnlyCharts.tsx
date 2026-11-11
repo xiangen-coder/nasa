@@ -14,7 +14,7 @@ export default function EnergyOnlyCharts({
   analysis,
   energy,
 }: {
-  analysis: Analysis;
+  analysis: Pick<Analysis, "mission">;
   energy: Energy;
 }) {
   const start = Date.parse(analysis.mission.start),

@@ -28,6 +28,42 @@ export const formatVisibilityTime = (value: string | number) =>
     minute: "2-digit",
   });
 
+export function ResearchVisibilityStatus({
+  rows,
+  interval,
+}: {
+  rows: NonNullable<Research["geometry"]["series"]>;
+  interval: number;
+}) {
+  const explanationId = useId();
+  const start = Date.parse(rows[0].time);
+  const samples = rows.map((row) => ({
+    hour: (Date.parse(row.time) - start) / 3600000,
+    sun: Number(row.sun_visible),
+    earth: Number(row.earth_visible),
+  }));
+  return (
+    <div>
+      <h3>Visibility status</h3>
+      <div className="outlook-chart research-status-chart" role="img" aria-label="Sun and Earth visibility status over elapsed mission hours" aria-describedby={explanationId}>
+        <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 150 }}>
+          <LineChart data={samples} margin={{ top: 12, right: 16, bottom: 0, left: 0 }}>
+            <CartesianGrid stroke="#dce9ff16" vertical={false} />
+            <XAxis dataKey="hour" type="number" domain={["dataMin", "dataMax"]} unit=" h" minTickGap={35} />
+            <YAxis domain={[0, 1]} ticks={[0, 1]} width={62} tickFormatter={(value) => value ? "Visible" : "Hidden"} />
+            <Tooltip labelFormatter={(value) => `${Number(value).toFixed(1)} h elapsed`} formatter={(value: number) => value ? "Visible" : "Hidden"} />
+            <Line type="stepAfter" dataKey="sun" name="Sun" stroke="#eacb89" strokeWidth={2} dot={false} isAnimationActive={false} />
+            <Line type="stepAfter" dataKey="earth" name="Earth" stroke="#9ecff2" strokeWidth={2} strokeDasharray="5 3" dot={false} isAnimationActive={false} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+      <p id={explanationId} className="muted">
+        Gold shows sunlight and dashed blue shows Earth visibility. The upper step means visible and the lower step means hidden. A change can occur between samples, up to {interval} minutes before the plotted step.
+      </p>
+    </div>
+  );
+}
+
 export default function ResearchElevationChart({
   result,
   selectedTime,

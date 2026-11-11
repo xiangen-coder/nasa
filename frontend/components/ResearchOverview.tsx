@@ -1,5 +1,5 @@
 "use client";
-import { ArrowUpRight, Clock3, Layers, Radio, Sun } from "lucide-react";
+import { ArrowUpRight, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Line,
@@ -12,10 +12,19 @@ import {
 } from "recharts";
 import type { Research } from "./LandingResearch";
 import { ResearchWindows } from "./ResearchComparisonReport";
-import ResearchElevationChart, { formatVisibilityTime as utc } from "./ResearchElevationChart";
-import ResearchSolarEstimate from "./ResearchSolarEstimate";
+import ResearchElevationChart, {
+  ResearchVisibilityStatus,
+  formatVisibilityTime as utc,
+} from "./ResearchElevationChart";
+import EnergyOnlyCharts from "./mission-lab/EnergyOnlyCharts";
+import EquipmentControls from "./mission-lab/EquipmentControls";
+import { solarEnergy, type SolarSettings } from "./mission-lab/scenario-science";
 import type { Site } from "../app/types";
-import { inComparisonArea, siteKey, terrainReference } from "./ComparisonPicker";
+import {
+  inComparisonArea,
+  siteKey,
+  terrainReference,
+} from "./ComparisonPicker";
 
 const evidence = () =>
   document.getElementById("landing-assessment")?.scrollIntoView({
@@ -28,12 +37,18 @@ export default function ResearchOverview({
   comparisonOrigin,
   onNavigate,
   onAddComparison,
+  onNewSearch,
+  equipment,
+  onEquipmentChange,
   busy = false,
 }: {
   result: Research | null;
   comparisonOrigin: Site;
   onNavigate: (view: number) => void;
   onAddComparison: (site: Site) => void;
+  onNewSearch: () => void;
+  equipment: SolarSettings;
+  onEquipmentChange: (equipment: SolarSettings) => void;
   busy?: boolean;
 }) {
   const rows = result?.geometry.available ? (result.geometry.series ?? []) : [];
@@ -49,262 +64,564 @@ export default function ResearchOverview({
     }, 350);
     return () => window.clearInterval(timer);
   }, [playing, canPlay, rows.length, step]);
-  const blocked = !!result?.constraints_failed.length;
+  const metrics = result?.geometry.metrics;
+  const energy =
+    result && rows.length > 1
+      ? solarEnergy({ mission: result.mission, series: rows }, equipment)
+      : null;
+  const value = (number: number | null | undefined, unit: string) =>
+    number == null ? "Unavailable" : `${number.toFixed(1)}${unit}`;
+  const sections = [
+    "Summary",
+    "Visibility",
+    "Energy",
+    "Terrain",
+    "Environment",
+    "Comparison",
+    "Methods",
+  ];
+  const terrain = result?.terrain;
+  const temperature = result?.temperature;
   return (
     <section
-      className="canva-assessment"
+      className="research-results"
       aria-label="Landing assessment overview"
       aria-busy={busy}
     >
-      <div className="outlook-site">
-        <span className="eyebrow">01 / LANDING ASSESSMENT</span>
-        <p>
-          {result ? (
-            <>
-              <strong>{result.mission.name}</strong> ·{" "}
-              {result.mission.latitude.toFixed(4)}° N /{" "}
-              {result.mission.longitude.toFixed(4)}° E
-            </>
-          ) : busy ? (
-            "Retrieving NASA observations and screening available terrain…"
-          ) : (
-            "Choose a location and mission window to see the evidence."
-          )}
-        </p>
-        {result && (
-          <button className="button subtle" onClick={() => onAddComparison(result.mission)}>
-            Show this point in comparison
-          </button>
-        )}
-      </div>
-      <div className="outlook-dashboard">
-        <article id="result-visibility" tabIndex={-1} className="outlook-visual glass">
-          <span className="eyebrow">SUNLIGHT & EARTH VISIBILITY</span>
-          <h2>Your mission window.</h2>
-          <p>
-            Actual sampled elevations and the local skyline, where available.
-          </p>
-          {rows.length > 0 ? (
-            <>
-              {result && <ResearchElevationChart result={result} selectedTime={sample?.time} />}
-              {sample && (
-                <div className="research-timeline">
-                  <div className="account-actions">
-                    <button type="button" className="button subtle" disabled={rows.length < 2} onClick={() => {
-                      if (!canPlay) setCursor(0);
-                      setPlaying(!(playing && canPlay));
-                    }}>{playing && canPlay ? "Pause timeline" : "Play timeline"}</button>
-                    <button type="button" className="button subtle" onClick={() => { setPlaying(false); setCursor(0); }}>Reset timeline</button>
-                    <label>Playback step <select value={step} onChange={(e) => setStep(Number(e.target.value))}>
-                      <option value={1}>1 sample</option><option value={3}>3 samples</option><option value={6}>6 samples</option>
-                    </select></label>
-                  </div>
-                  <label>Mission time · {utc(sample.time)} UTC
-                    <input type="range" min={0} max={rows.length - 1} value={Math.min(cursor, rows.length - 1)}
-                      aria-label="Mission time" aria-valuetext={`${utc(sample.time)} UTC`}
-                      onChange={(event) => { setPlaying(false); setCursor(Number(event.target.value)); }} />
-                  </label>
-                  <p>Sun {sample.sun_azimuth.toFixed(2)}° az / {sample.sun_elevation.toFixed(2)}° el · {sample.sun_visible ? "visible" : "below threshold"}</p>
-                  <p>Earth {sample.earth_azimuth.toFixed(2)}° az / {sample.earth_elevation.toFixed(2)}° el · {sample.earth_visible ? "visible" : "below threshold"}</p>
-                  {sample.sun_horizon_deg != null && sample.earth_horizon_deg != null && (
-                    <p>Terrain threshold at this sample: Sun {sample.sun_horizon_deg.toFixed(2)}° · Earth {sample.earth_horizon_deg.toFixed(2)}° including clearance</p>
-                  )}
-                </div>
-              )}
-              {!!result?.horizon.profile?.length && sample && (
-                <details className="research-skyline">
-                  <summary>Terrain skyline by azimuth</summary>
-                  <div className="outlook-chart" role="img" aria-label="Terrain skyline elevation by azimuth with the current Sun and Earth directions">
-                    <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 250 }}>
-                      <LineChart data={[...result.horizon.profile, { azimuth: 360, elevation: result.horizon.profile[0].elevation }]}>
-                        <XAxis dataKey="azimuth" type="number" domain={[0, 360]} ticks={[0, 90, 180, 270, 360]} unit="°" />
-                        <YAxis unit="°" />
-                        <Tooltip labelFormatter={(value) => `Azimuth ${value}°`} formatter={(value: number) => `${value.toFixed(2)}°`} />
-                        <Line dataKey="elevation" name="Skyline elevation" stroke="#b5c7df" dot={false} isAnimationActive={false} />
-                        <ReferenceLine x={sample.sun_azimuth} stroke="#eacb89" />
-                        <ReferenceLine x={sample.earth_azimuth} stroke="#9ecff2" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <p>
-                    The horizontal axis is compass direction, measured clockwise from north.
-                    The curve shows the highest terrain angle in each direction within 20 km.
-                    The gold and blue markers show where the Sun and Earth are along that skyline
-                    at the selected time. Compare each body’s elevation above with the skyline at its marker.
-                  </p>
-                </details>
-              )}
-              {result && <><ResearchSolarEstimate result={result} /><ResearchWindows result={result} /></>}
-            </>
-          ) : (
-            <div className="outlook-chart-empty" role="status">
-              <Sun size={30} strokeWidth={1} />
-              <h3>
-                {busy ? "Reading the sky…" : "A window into your mission."}
-              </h3>
-              <p>
-                {result?.geometry.reason ||
-                  "The chart appears after an assessment. No sample positions or default percentages are substituted."}
-              </p>
-            </div>
-          )}
-          <button className="text-button" onClick={() => onNavigate(5)}>
-            Open 3D observatory <ArrowUpRight size={14} />
-          </button>
-        </article>
-        <div className="outlook-data-stack">
-          <article className="outlook-data glass">
-            <span className="eyebrow">
-              <Layers size={14} />
-              SLOPE & TERRAIN EVIDENCE
-            </span>
-            <strong>
-              {result?.terrain.available && result.terrain.slope_p95_deg != null
-                ? `${result.terrain.slope_p95_deg.toFixed(1)}° p95 slope`
-                : "Local terrain unavailable"}
-            </strong>
-            <p>
-              {result && result.factors.T.score == null
-                ? result.factors.T.explanation
-                : result?.terrain.available
-                ? `${result.terrain.resolution_m} m native pixels. ${result.terrain.coverage_type === "regional" ? "Regional screening; finer footprint slopes and hazards are unresolved." : "Boulder and crater hazards remain incomplete."}`
-                : result?.terrain.reason || "Awaiting site assessment."}
-            </p>
-            {result?.factors.T.score == null && result?.horizon.available && (
-              <p>The available terrain supports skyline estimates. Check the neighbourhood size and DEM resolution limit for slope scoring.</p>
-            )}
-            {result && result.factors.T.score == null &&
-              inComparisonArea(comparisonOrigin, terrainReference) &&
-              siteKey(result.mission) !== siteKey(terrainReference) && (
-                <button className="text-button" onClick={() => onAddComparison(terrainReference)}>
-                  Add Connecting Ridge to comparison <ArrowUpRight size={14} />
-                </button>
-              )}
-          </article>
+      <header className="research-results-heading">
+        <div>
+          <span className="eyebrow">LANDING ASSESSMENT</span>
+          <h1>{result?.mission.name || "Mission results"}</h1>
           {result && (
-            <article className="outlook-data glass">
-              <span className="eyebrow">{result.ice?.radius_m ? "WATER ICE POTENTIAL · PERMANENT SHADOW PROXY" : "WATER ICE POTENTIAL"}</span>
-              <strong>{result.factors.I.score == null ? "Unavailable" : result.ice?.radius_m ? `${result.factors.I.score.toFixed(1)}% mapped shadow` : `${result.factors.I.score.toFixed(1)} / 100`}</strong>
-              <p>{result.factors.I.explanation}</p>
-              {result.factors.I.source?.source_url && <a href={result.factors.I.source.source_url}>Dataset source</a>}
-            </article>
+            <p>
+              {Math.abs(result.mission.latitude).toFixed(4)}°{" "}
+              {result.mission.latitude < 0 ? "S" : "N"} ·{" "}
+              {Math.abs(result.mission.longitude).toFixed(4)}°{" "}
+              {result.mission.longitude < 0 ? "W" : "E"}
+            </p>
           )}
-          {[
-            { key: "S", label: "SOLAR ILLUMINATION WINDOW", Icon: Sun },
-            { key: "C", label: "EARTH COMMUNICATION WINDOW", Icon: Radio },
-          ].map(({ key, label, Icon }) => {
-            const f = result?.factors[key];
-            return (
-              <article className="outlook-data glass" key={key}>
-                <span className="eyebrow">
-                  <Icon size={14} />
+        </div>
+        <button
+          type="button"
+          className="button primary new-search"
+          onClick={onNewSearch}
+        >
+          New search
+        </button>
+      </header>
+      {result ? (
+        <>
+          <nav className="result-section-nav" aria-label="Results sections">
+            {sections.map((label) => {
+              const id = `result-${label.toLowerCase()}`;
+              return (
+                <a
+                  key={id}
+                  className="button subtle"
+                  href={`#${id}`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    const target = event.currentTarget
+                      .closest(".research-results")
+                      ?.querySelector<HTMLElement>(`#${id}`);
+                    target?.focus({ preventScroll: true });
+                    target?.scrollIntoView({ block: "start" });
+                  }}
+                >
                   {label}
-                </span>
-                <div className="outlook-metric">
-                  <strong>
-                    {f?.score == null
-                      ? "Unavailable"
-                      : `${f.score.toFixed(1)}%`}
-                  </strong>
-                  <span>
-                    {key === "S" ? "sunlight availability" : "Earth visibility"}
-                  </span>
-                </div>
-                {f?.score != null && (
-                  <div className="availability-bar">
-                    <span style={{ width: `${f.score}%` }} />
+                </a>
+              );
+            })}
+          </nav>
+          <section id="result-summary" tabIndex={-1} className="result-section">
+            <h2>Mission summary</h2>
+            <p>
+              {utc(result.mission.start)} → {utc(result.mission.end)} UTC ·{" "}
+              {result.mission.interval_minutes}-minute samples ·{" "}
+              {result.geometry.mode === "terrain_screened"
+                ? "Terrain screened"
+                : result.geometry.available
+                  ? "Reference geometry"
+                  : "Geometry unavailable"}
+            </p>
+            <div className="result-metric-grid">
+              {[
+                [
+                  "Sunlight availability",
+                  value(result.factors.S?.score, "%"),
+                  "Share of the mission window with the Sun above the applicable horizon.",
+                ],
+                [
+                  "Earth visibility",
+                  value(result.factors.C?.score, "%"),
+                  "Share with direct Earth geometry above the configured clearance.",
+                ],
+                [
+                  "Simultaneous visibility",
+                  value(metrics?.simultaneous_pct, "%"),
+                  "Share with both sunlight and Earth visibility.",
+                ],
+                [
+                  "Longest darkness",
+                  value(metrics?.longest_darkness_hours, " h"),
+                  "Longest continuous interval without direct sunlight.",
+                ],
+                [
+                  "Longest Earth outage",
+                  value(metrics?.longest_blackout_hours, " h"),
+                  "Longest continuous interval below the Earth visibility threshold.",
+                ],
+                [
+                  "Estimated solar energy",
+                  value(energy?.total_kwh, " kWh"),
+                  "Panel output over the mission window using the assumptions in Energy.",
+                ],
+              ].map(([label, reading, explanation]) => (
+                <article key={label}>
+                  <h3>{label}</h3>
+                  <strong>{reading}</strong>
+                  <p>{explanation}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+          <section
+            id="result-visibility"
+            tabIndex={-1}
+            className="result-section"
+          >
+            <h2>Sun, Earth &amp; mission time</h2>
+            <div className="research-result-columns">
+              <div>
+                {rows.length > 0 ? (
+                  <>
+                    {result && (
+                      <ResearchElevationChart
+                        result={result}
+                        selectedTime={sample?.time}
+                      />
+                    )}
+                    {sample && (
+                      <div className="research-timeline">
+                        <div className="account-actions">
+                          <button
+                            type="button"
+                            className="button subtle"
+                            disabled={rows.length < 2}
+                            onClick={() => {
+                              if (!canPlay) setCursor(0);
+                              setPlaying(!(playing && canPlay));
+                            }}
+                          >
+                            {playing && canPlay
+                              ? "Pause timeline"
+                              : "Play timeline"}
+                          </button>
+                          <button
+                            type="button"
+                            className="button subtle"
+                            onClick={() => {
+                              setPlaying(false);
+                              setCursor(0);
+                            }}
+                          >
+                            Reset timeline
+                          </button>
+                          <label>
+                            Playback step{" "}
+                            <select
+                              value={step}
+                              onChange={(e) => setStep(Number(e.target.value))}
+                            >
+                              <option value={1}>1 sample</option>
+                              <option value={3}>3 samples</option>
+                              <option value={6}>6 samples</option>
+                            </select>
+                          </label>
+                        </div>
+                        <label>
+                          Mission time · {utc(sample.time)} UTC
+                          <input
+                            type="range"
+                            min={0}
+                            max={rows.length - 1}
+                            value={Math.min(cursor, rows.length - 1)}
+                            aria-label="Mission time"
+                            aria-valuetext={`${utc(sample.time)} UTC`}
+                            onChange={(event) => {
+                              setPlaying(false);
+                              setCursor(Number(event.target.value));
+                            }}
+                          />
+                        </label>
+                        <p>
+                          Sun {sample.sun_azimuth.toFixed(2)}° az /{" "}
+                          {sample.sun_elevation.toFixed(2)}° el ·{" "}
+                          {sample.sun_visible ? "visible" : "below threshold"}
+                        </p>
+                        <p>
+                          Earth {sample.earth_azimuth.toFixed(2)}° az /{" "}
+                          {sample.earth_elevation.toFixed(2)}° el ·{" "}
+                          {sample.earth_visible ? "visible" : "below threshold"}
+                        </p>
+                        {sample.sun_horizon_deg != null &&
+                          sample.earth_horizon_deg != null && (
+                            <p>
+                              Terrain threshold at this sample: Sun{" "}
+                              {sample.sun_horizon_deg.toFixed(2)}° · Earth{" "}
+                              {sample.earth_horizon_deg.toFixed(2)}° including
+                              clearance
+                            </p>
+                          )}
+                      </div>
+                    )}
+                    {!!result?.horizon.profile?.length && sample && (
+                      <details className="research-skyline">
+                        <summary>Terrain skyline by azimuth</summary>
+                        <div
+                          className="outlook-chart"
+                          role="img"
+                          aria-label="Terrain skyline elevation by azimuth with the current Sun and Earth directions"
+                        >
+                          <ResponsiveContainer
+                            width="100%"
+                            height="100%"
+                            initialDimension={{ width: 640, height: 250 }}
+                          >
+                            <LineChart
+                              data={[
+                                ...result.horizon.profile,
+                                {
+                                  azimuth: 360,
+                                  elevation:
+                                    result.horizon.profile[0].elevation,
+                                },
+                              ]}
+                            >
+                              <XAxis
+                                dataKey="azimuth"
+                                type="number"
+                                domain={[0, 360]}
+                                ticks={[0, 90, 180, 270, 360]}
+                                unit="°"
+                              />
+                              <YAxis unit="°" />
+                              <Tooltip
+                                labelFormatter={(value) => `Azimuth ${value}°`}
+                                formatter={(value: number) =>
+                                  `${value.toFixed(2)}°`
+                                }
+                              />
+                              <Line
+                                dataKey="elevation"
+                                name="Skyline elevation"
+                                stroke="#b5c7df"
+                                dot={false}
+                                isAnimationActive={false}
+                              />
+                              <ReferenceLine
+                                x={sample.sun_azimuth}
+                                stroke="#eacb89"
+                              />
+                              <ReferenceLine
+                                x={sample.earth_azimuth}
+                                stroke="#9ecff2"
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <p>
+                          The horizontal axis is compass direction, measured
+                          clockwise from north. The curve shows the highest
+                          terrain angle in each direction within 20 km. The gold
+                          and blue markers show where the Sun and Earth are
+                          along that skyline at the selected time. Compare each
+                          body’s elevation above with the skyline at its marker.
+                        </p>
+                      </details>
+                    )}
+                    {result && (
+                      <ResearchVisibilityStatus
+                        rows={rows}
+                        interval={result.mission.interval_minutes}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <div className="outlook-chart-empty" role="status">
+                    <Sun size={30} strokeWidth={1} />
+                    <h3>
+                      {busy
+                        ? "Reading the sky…"
+                        : "A window into your mission."}
+                    </h3>
+                    <p>
+                      {result?.geometry.reason ||
+                        "The chart appears after an assessment. No sample positions or default percentages are substituted."}
+                    </p>
                   </div>
                 )}
+                <button className="text-button" onClick={() => onNavigate(5)}>
+                  Open 3D observatory <ArrowUpRight size={14} />
+                </button>
+              </div>
+              <aside aria-label="Interpreting visibility">
+                <h3>Visibility windows</h3>
                 <p>
-                  {key === "S"
-                    ? "Sampled visibility; not a power forecast."
-                    : "Geometric visibility; not a complete link budget."}
+                  The times below group consecutive samples with the same
+                  visibility. Transitions can occur between samples.
                 </p>
-              </article>
-            );
-          })}
-          <article className="outlook-data glass">
-            <span className="eyebrow">
-              <Clock3 size={14} />
-              SELECTED MISSION TIMELINE
-            </span>
-            <strong>
-              {result
-                ? `${utc(result.mission.start)} → ${utc(result.mission.end)} UTC`
-                : "Your dates, your mission window."}
-            </strong>
-            <p>
-              {result
-                ? `${result.mission.interval_minutes}-minute samples · ${result.geometry.mode?.replaceAll("_", " ") || "Geometry unavailable"}`
-                : "Set start and end dates on Search."}
-            </p>
-          </article>
-        </div>
-      </div>
-      <div className="outlook-summary">
-        <article className="outlook-score glass">
-          <span className="eyebrow">FIVE-FACTOR RESEARCH SCORE</span>
-          <div className="outlook-score-line">
-            <strong>
-              {result?.score == null ? "—" : result.score.toFixed(1)}
-            </strong>
-            <span>/ 100</span>
-            <span className="tag">
-              {result
-                ? result.provisional
-                  ? "PROVISIONAL"
-                  : "RESEARCH ASSESSMENT"
-                : busy
-                  ? "CALCULATING"
-                  : "AWAITING ASSESSMENT"}
-            </span>
-          </div>
-          <p>
-            {result
-              ? `Available evidence: ${(result.available_weight * 100).toFixed(0)}% of nominal weight. Missing factors: ${result.missing.join(", ") || "none"}.`
-              : "Scores appear only when supported by assessment data."}{" "}
-            This is not a probability of landing success.
-          </p>
-          <button
-            className="text-button"
-            onClick={result ? evidence : () => onNavigate(7)}
+                <ResearchWindows result={result} />
+                <p>
+                  Earth visibility describes a direct line of sight. Radio
+                  contact also depends on the antenna, receiver and ground
+                  station.
+                </p>
+              </aside>
+            </div>
+          </section>
+          <section id="result-energy" tabIndex={-1} className="result-section">
+            <h2>Estimated solar energy</h2>
+            <div className="research-result-columns">
+              <div>
+                <EquipmentControls value={equipment} onChange={onEquipmentChange} />
+                {energy ? (
+                  <EnergyOnlyCharts analysis={result} energy={energy} />
+                ) : (
+                  <p>
+                    Sunlight samples are unavailable for an energy estimate.
+                  </p>
+                )}
+              </div>
+              <aside role="region" aria-label="Estimated solar generation">
+                <h3>Energy for this window</h3>
+                <strong>{value(energy?.total_kwh, " kWh")}</strong>
+                <p>
+                  Estimated electrical energy at the panels. Changing the
+                  equipment settings recalculates this estimate.
+                </p>
+                {energy && (
+                  <p>
+                    Average output {value((energy.daily_kwh * 1000) / 24, " W")}{" "}
+                    · Peak sampled output{" "}
+                    {value(
+                      Math.max(
+                        ...energy.samples.map((sample) => sample.power_w),
+                      ),
+                      " W",
+                    )}
+                  </p>
+                )}
+                {equipment.demand_enabled && (
+                  <>
+                    <strong>{value(energy?.unmet_kwh, " kWh")}</strong>
+                    <p>Equipment demand the model could not serve.</p>
+                  </>
+                )}
+                <p>
+                  {result.geometry.mode === "terrain_screened"
+                    ? "Output uses terrain-screened sunlight."
+                    : "The estimate uses reference geometry. Local terrain shadows could reduce output."}
+                </p>
+              </aside>
+            </div>
+          </section>
+          <section id="result-terrain" tabIndex={-1} className="result-section">
+            <h2>Terrain</h2>
+            <div className="research-result-columns">
+              <dl className="research-report-settings">
+                <div>
+                  <dt>Elevation</dt>
+                  <dd>{value(terrain?.elevation_m, " m")}</dd>
+                </div>
+                <div>
+                  <dt>95th-percentile slope</dt>
+                  <dd>{value(terrain?.slope_p95_deg, "°")}</dd>
+                </div>
+                <div>
+                  <dt>Maximum slope</dt>
+                  <dd>{value(terrain?.slope_max_deg, "°")}</dd>
+                </div>
+                <div>
+                  <dt>Roughness</dt>
+                  <dd>{value(terrain?.roughness_m, " m")}</dd>
+                </div>
+                <div>
+                  <dt>Relief</dt>
+                  <dd>{value(terrain?.relief_m, " m")}</dd>
+                </div>
+                <div>
+                  <dt>Elevation map pixel spacing</dt>
+                  <dd>{value(terrain?.resolution_m, " m")}</dd>
+                </div>
+              </dl>
+              <aside aria-label="Interpreting terrain measurements">
+                <h3>What the measurements show</h3>
+                <p>
+                  Most sampled slopes are at or below the 95th-percentile slope.
+                  Maximum slope highlights the steepest sampled ground.
+                  Roughness describes height variation after removing the local
+                  slope, and relief is the highest-to-lowest elevation
+                  difference.
+                </p>
+                <p>
+                  {terrain?.available
+                    ? "Boulders and crater hazards finer than the elevation data remain unresolved."
+                    : result.factors.T?.explanation || terrain?.reason}
+                </p>
+                {terrain?.source?.source_url && (
+                  <a href={terrain.source.source_url}>Elevation dataset</a>
+                )}
+                {result.factors.T?.score == null &&
+                  inComparisonArea(comparisonOrigin, terrainReference) &&
+                  siteKey(result.mission) !== siteKey(terrainReference) && (
+                    <button
+                      className="text-button"
+                      onClick={() => onAddComparison(terrainReference)}
+                    >
+                      Add Connecting Ridge to comparison
+                    </button>
+                  )}
+              </aside>
+            </div>
+          </section>
+          <section
+            id="result-environment"
+            tabIndex={-1}
+            className="result-section"
           >
-            {result ? "Inspect factor contributions" : "Choose a location"}
-            <ArrowUpRight size={14} />
-          </button>
-        </article>
-        <article className="outlook-recommendation glass">
-          <span className="eyebrow">ASSESSMENT GUIDANCE</span>
+            <h2>Environment</h2>
+            <div className="research-result-columns">
+              <dl className="research-report-settings">
+                <div>
+                  <dt>Historical minimum surface temperature</dt>
+                  <dd>{value(temperature?.minimum_k, " K")}</dd>
+                </div>
+                <div>
+                  <dt>Historical maximum surface temperature</dt>
+                  <dd>{value(temperature?.maximum_k, " K")}</dd>
+                </div>
+                <div>
+                  <dt>Mapped permanent shadow</dt>
+                  <dd>
+                    {value(
+                      result.ice?.radius_m && result.ice.value != null
+                        ? result.ice.value * 100
+                        : null,
+                      "%",
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              <aside aria-label="Interpreting environmental measurements">
+                <h3>What the measurements show</h3>
+                <p>
+                  Diviner temperatures describe the observed lunar surface.
+                  Predicting temperatures during this mission or inside the
+                  lander requires a thermal model.
+                </p>
+                <p>{result.factors.I?.explanation}</p>
+                {result.factors.I?.source?.source_url && (
+                  <a href={result.factors.I.source.source_url}>
+                    Permanent-shadow or ice dataset
+                  </a>
+                )}
+              </aside>
+            </div>
+          </section>
+          <section
+            id="result-comparison"
+            tabIndex={-1}
+            className="result-section"
+          >
+            <h2>Comparison</h2>
+            <div className="research-result-columns">
+              <div>
+                <p>
+                  Research suitability score{" "}
+                  <strong>{value(result.score, " / 100")}</strong>
+                  {result.provisional && " · Provisional"}
+                </p>
+                <p>
+                  {result.constraints_failed.length
+                    ? result.constraints_failed.join(" ")
+                    : "Landing safety is not established."}
+                </p>
+                <div className="account-actions">
+                  <button
+                    className="button subtle"
+                    onClick={() => onAddComparison(result.mission)}
+                  >
+                    Show this point in comparison
+                  </button>
+                  <button
+                    className="button primary"
+                    onClick={() => onNavigate(15)}
+                  >
+                    Open mission report
+                  </button>
+                </div>
+              </div>
+              <aside aria-label="Interpreting the research score">
+                <h3>Evidence used in the score</h3>
+                <p>
+                  {(result.available_weight * 100).toFixed(0)}% of nominal
+                  scoring weight has data.{" "}
+                  {result.missing.length
+                    ? `Unavailable: ${result.missing.map((key) => result.factors[key]?.name || key).join(", ")}.`
+                    : "All five factors have evidence."}{" "}
+                  Compare sites with similar data coverage.
+                </p>
+              </aside>
+            </div>
+          </section>
+          <section id="result-methods" tabIndex={-1} className="result-section">
+            <h2>Methods, sources &amp; limitations</h2>
+            <div className="research-result-columns">
+              <div>
+                <p>
+                  JPL Horizons provides the sampled Sun and Earth positions.
+                  LOLA elevation maps support terrain screening where coverage
+                  is complete. Diviner provides historical surface temperatures.
+                </p>
+                {Object.entries(result.geometry.sources ?? {}).map(
+                  ([body, source]) => (
+                    <p key={body}>
+                      {body === "sun" ? "Sun" : "Earth"} · {source.ephemeris} ·{" "}
+                      {source.orientation}
+                    </p>
+                  ),
+                )}
+                <button className="text-button" onClick={evidence}>
+                  Inspect factor contributions and datasets{" "}
+                  <ArrowUpRight size={14} />
+                </button>
+              </div>
+              <aside aria-label="Assessment limitations">
+                <h3>Limitations</h3>
+                <ul>
+                  {result.limitations.map((limitation) => (
+                    <li key={limitation}>{limitation}</li>
+                  ))}
+                </ul>
+              </aside>
+            </div>
+          </section>
+        </>
+      ) : (
+        <div className="result-section" role="status">
           <h2>
-            {!result
-              ? busy
-                ? "Assessment in progress"
-                : "Awaiting your search"
-              : blocked
-                ? "Review the landing limits."
-                : "Continue the investigation."}
+            {busy
+              ? "Assessment in progress"
+              : "Choose a landing point and mission window"}
           </h2>
           <p>
-            {result
-              ? blocked
-                ? result.constraints_failed.join(" ")
-                : "Landing safety is not established. Review missing evidence, Apollo LM assumptions and uncertainty before comparing candidates."
-              : "Enter dates and lunar coordinates on Search. The assessment will show measured factors, coverage and constraints."}
+            {busy
+              ? "Reading ephemerides and available terrain data."
+              : "Run a search to see your mission summary, graphs and terrain evidence here."}
           </p>
-          <button
-            className="text-button"
-            onClick={result ? evidence : () => onNavigate(7)}
-          >
-            {result
-              ? "Evidence, sources & spacecraft checks"
-              : "Start exploring"}
-            <ArrowUpRight size={14} />
-          </button>
-        </article>
-      </div>
-      <div className="outlook-footer">
-        <span>NASA JPL HORIZONS · LOLA · HISTORICAL DIVINER</span>
-      </div>
+        </div>
+      )}
     </section>
   );
 }

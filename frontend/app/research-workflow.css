@@ -127,6 +127,152 @@
   white-space: nowrap;
 }
 
+.research-results {
+  max-width: 1320px;
+  margin-inline: auto;
+  --results-header-height: 96px;
+}
+.research-results-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 20px;
+}
+.research-results-heading h1 {
+  font: 500 clamp(2rem, 4vw, 3.7rem)/1.1 "Fraunces", Georgia, serif;
+}
+.research-results-heading p {
+  margin-top: 7px;
+  color: #c2d0e6;
+}
+.research-results-heading .new-search {
+  flex: none;
+  white-space: nowrap;
+}
+.research-results .result-section-nav {
+  position: sticky;
+  top: var(--results-header-height);
+  z-index: 40;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-block: 16px;
+  padding: 8px;
+  background: #182236f2;
+  border: 1px solid #8294ac55;
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  scrollbar-width: thin;
+}
+.research-results .result-section-nav .button {
+  flex: none;
+  width: auto;
+  white-space: nowrap;
+}
+.research-results .result-section {
+  min-width: 0;
+  margin-block: 18px;
+  padding: 24px;
+  border: 1px solid #8193ad33;
+  border-radius: 18px;
+  background: #8a9bc609;
+  scroll-margin-top: 82px;
+}
+.research-results .result-section h2 {
+  margin-bottom: 12px;
+  font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+}
+.research-results .result-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.research-results .result-metric-grid article {
+  padding: 15px;
+  border: 1px solid #8193ad33;
+  border-radius: 13px;
+  background: #b3c7e00a;
+}
+.research-results .result-metric-grid strong {
+  display: block;
+  margin-top: 7px;
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+}
+.research-results .result-metric-grid p,
+.research-result-columns aside p {
+  color: #c3d2e8;
+}
+.research-result-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2.5fr) minmax(230px, 1fr);
+  align-items: start;
+  gap: clamp(14px, 3vw, 30px);
+}
+.research-result-columns aside {
+  padding: 16px;
+  border: 1px solid #b5c9e536;
+  border-radius: 13px;
+  background: #a6c4ec0b;
+  overflow-wrap: anywhere;
+}
+.research-result-columns aside :is(p, ul) {
+  margin-block: 9px;
+}
+.research-result-columns aside ul {
+  padding-inline-start: 18px;
+  list-style: disc;
+}
+.research-result-columns aside strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 1.45rem;
+}
+.research-status-chart.outlook-chart {
+  height: 155px;
+}
+.research-results .scenario-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 12px;
+  margin-block: 12px;
+}
+.research-results .scenario-fields label {
+  display: grid;
+  gap: 4px;
+}
+
+@media (max-width: 1100px) {
+  .research-results {
+    --results-header-height: 132px;
+  }
+  .lunar-app .research-results :is(#result-visibility, #result-terrain) {
+    scroll-margin-top: 100px;
+  }
+}
+@media (max-width: 760px) {
+  .research-result-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .research-results .result-section {
+    padding: 18px 12px;
+  }
+  .research-results-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .research-results .result-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media print {
+  .research-results .result-section-nav {
+    display: none;
+  }
+}
+
 @media (max-width: 600px) {
   .page-heading:has(.new-search) {
     flex-wrap: wrap;
@@ -195,14 +341,14 @@
   text-align: start;
 }
 
-#result-visibility,
-#result-terrain {
+:not(.research-results) > #result-visibility,
+:not(.research-results) > #result-terrain {
   scroll-margin-top: 100px;
 }
 
 @media (max-width: 850px) {
-  #result-visibility,
-  #result-terrain {
+  :not(.research-results) > #result-visibility,
+  :not(.research-results) > #result-terrain {
     scroll-margin-top: 145px;
   }
 }
