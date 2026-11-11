@@ -4,7 +4,7 @@ import type { Mission, Site } from "../app/types";
 
 export const siteKey = (s: Site) =>
   `${s.latitude.toFixed(6)},${(Math.abs(s.latitude) === 90 ? 0 : s.longitude === 180 ? -180 : s.longitude).toFixed(6)}`;
-const ridge: Site = {
+export const terrainReference: Site = {
   name: "Connecting Ridge DEM centre",
   latitude: -89.463162834,
   longitude: -137.489552922,
@@ -22,6 +22,7 @@ export default function ComparisonPicker({
   sites,
   chosen,
   onChange,
+  onAdd,
   onCompare,
   busy,
 }: {
@@ -29,6 +30,7 @@ export default function ComparisonPicker({
   sites: Site[];
   chosen: Site[];
   onChange: (sites: Site[]) => void;
+  onAdd: (site: Site) => void;
   onCompare: () => void;
   busy: boolean;
 }) {
@@ -44,7 +46,7 @@ export default function ComparisonPicker({
   const [lon, setLon] = useState("");
   const [error, setError] = useState("");
   const key = siteKey(mission);
-  const options = [ridge, ...sites].filter(
+  const options = [terrainReference, ...sites].filter(
     (s, i, all) =>
       siteKey(s) !== key &&
       all.findIndex((p) => siteKey(p) === siteKey(s)) === i,
@@ -57,7 +59,7 @@ export default function ComparisonPicker({
     if ([mission, ...selected].some((s) => siteKey(s) === siteKey(site)))
       return setError("That point is already selected.");
     setError("");
-    onChange([...selected, site]);
+    onAdd(site);
   }
   function custom(e: FormEvent) {
     e.preventDefault();
@@ -103,7 +105,7 @@ export default function ComparisonPicker({
       <summary>Choose comparison sites</summary>
       <p>
         Compare up to two points with {mission.name}, using the same dates and
-        research limits.
+        research limits. Added points appear in the cards above.
       </p>
       <div className="account-actions">
         <label>

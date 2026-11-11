@@ -181,6 +181,7 @@ export default function LandingResearch({
   mission,
   sites,
   onSelect,
+  onAddComparison,
   actionRef,
   priority = "T",
   onBusyChange,
@@ -190,6 +191,7 @@ export default function LandingResearch({
   mission: Mission;
   sites: Site[];
   onSelect: (site: Site) => void;
+  onAddComparison: (site: Site) => void;
   actionRef?: Ref<ResearchActions>;
   priority?: ResearchPriority;
   onBusyChange?: (busy: boolean) => void;
@@ -318,7 +320,7 @@ export default function LandingResearch({
         try {
           r = await api<Research>(
             "evaluate",
-            { mission: { ...mission, ...s }, limits },
+            { mission: { ...mission, name: s.name, latitude: s.latitude, longitude: s.longitude }, limits },
             controller.signal,
           );
         } catch (e) {
@@ -955,6 +957,7 @@ export default function LandingResearch({
           mission={result?.mission ?? mission}
           limits={limits}
           onSelect={onSelect}
+          onAddComparison={onAddComparison}
         />
         <details className="explanation">
           <summary>Dataset availability and activation</summary>

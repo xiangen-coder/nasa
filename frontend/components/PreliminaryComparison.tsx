@@ -2,14 +2,17 @@
 import { ArrowUpRight } from "lucide-react";
 import type { Mission, Site } from "../app/types";
 import type { Research, ResearchComparison } from "./LandingResearch";
+import { siteKey } from "./ComparisonPicker";
 const key = (s: Site) => `${s.latitude},${s.longitude}`;
 const score = (r: Research | undefined, k: string) =>
-  r?.factors[k]?.score == null
+  !r ? "—" : r.factors[k]?.score == null
     ? "Unavailable"
     : `${r.factors[k].score!.toFixed(1)}${k === "S" || k === "C" ? "%" : " / 100"}`;
 export default function PreliminaryComparison({
   mission,
   state,
+  alternatives,
+  notice,
   onCompare,
   onEvaluate,
   onInspect,
@@ -18,18 +21,22 @@ export default function PreliminaryComparison({
 }: {
   mission: Mission;
   state: ResearchComparison | null;
+  alternatives: Site[];
+  notice: string;
   onCompare: () => void;
   onEvaluate: () => void;
   onInspect: (r: Research) => void;
   onSearch: () => void;
   onCancel: () => void;
 }) {
-  const planned = state?.candidates.length ? state.candidates : [mission];
+  const planned = [mission, ...alternatives];
   const selected = state?.results.find((r) => key(r.mission) === key(mission));
   return (
     <section
       className="preliminary-comparison"
       aria-label="Preliminary site comparison"
+      id="comparison-cards"
+      tabIndex={-1}
     >
       <div className="preliminary-intro">
         <div>
@@ -69,10 +76,11 @@ export default function PreliminaryComparison({
           {state.error}
         </p>
       )}
+      {notice && <p className="info" role="status">{notice}</p>}
       <div className="pre-result-grid">
         {planned.map((site, i) => {
           const r = state?.results.find(
-              (value) => key(value.mission) === key(site),
+              (value) => siteKey(value.mission) === siteKey(site),
             ),
             failure = state?.failures[key(site)],
             isSelected = key(site) === key(mission);
@@ -102,7 +110,8 @@ export default function PreliminaryComparison({
                 </span>
                 <strong>{site.name}</strong>
                 <span>
-                  {site.latitude.toFixed(4)}° N, {site.longitude.toFixed(4)}° E
+                  {Math.abs(site.latitude).toFixed(4)}° {site.latitude < 0 ? "S" : "N"},{" "}
+                  {Math.abs(site.longitude).toFixed(4)}° {site.longitude < 0 ? "W" : "E"}
                 </span>
               </div>
               <div className="pre-score">
@@ -164,12 +173,16 @@ export default function PreliminaryComparison({
                         ? ` · ${r.terrain.slope_p95_deg.toFixed(1)}° p95 slope`
                         : ""}
                     </dd>
+                    {r && r.factors.T.score == null && <dd>{r.factors.T.explanation}</dd>}
                   </div>
                   <div>
-                    <dt>TEMPERATURE / ICE POTENTIAL</dt>
-                    <dd>
-                      {score(r, "H")} / {score(r, "I")}
-                    </dd>
+                    <dt>TEMPERATURE SUITABILITY</dt>
+                    <dd>{score(r, "H")}</dd>
+                  </div>
+                  <div>
+                    <dt>WATER ICE POTENTIAL</dt>
+                    <dd>{score(r, "I")}</dd>
+                    {r && r.factors.I.score == null && <dd>{r.factors.I.explanation}</dd>}
                   </div>
                   {r && (
                     <div>

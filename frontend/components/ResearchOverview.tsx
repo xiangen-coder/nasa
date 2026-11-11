@@ -10,6 +10,8 @@ import {
   YAxis,
 } from "recharts";
 import type { Research } from "./LandingResearch";
+import type { Site } from "../app/types";
+import { siteKey, terrainReference } from "./ComparisonPicker";
 
 const utc = (value: string) =>
   new Date(value).toLocaleString("en-GB", {
@@ -29,10 +31,12 @@ const evidence = () =>
 export default function ResearchOverview({
   result,
   onNavigate,
+  onAddComparison,
   busy = false,
 }: {
   result: Research | null;
   onNavigate: (view: number) => void;
+  onAddComparison: (site: Site) => void;
   busy?: boolean;
 }) {
   const rows = result?.geometry.available ? (result.geometry.series ?? []) : [];
@@ -58,6 +62,11 @@ export default function ResearchOverview({
             "Choose a location and mission window to see the evidence."
           )}
         </p>
+        {result && (
+          <button className="button subtle" onClick={() => onAddComparison(result.mission)}>
+            Show this point in comparison
+          </button>
+        )}
       </div>
       <div className="outlook-dashboard">
         <article className="outlook-visual glass">
@@ -187,11 +196,26 @@ export default function ResearchOverview({
                 : "Footprint terrain unavailable"}
             </strong>
             <p>
-              {result?.terrain.available
+              {result && result.factors.T.score == null
+                ? result.factors.T.explanation
+                : result?.terrain.available
                 ? `${result.terrain.resolution_m} m native pixels. Boulder/crater hazards remain incomplete.`
                 : result?.terrain.reason || "Awaiting site assessment."}
             </p>
+            {result && result.factors.T.score == null &&
+              siteKey(result.mission) !== siteKey(terrainReference) && (
+                <button className="text-button" onClick={() => onAddComparison(terrainReference)}>
+                  Add Connecting Ridge to comparison <ArrowUpRight size={14} />
+                </button>
+              )}
           </article>
+          {result && (
+            <article className="outlook-data glass">
+              <span className="eyebrow">WATER ICE POTENTIAL</span>
+              <strong>{result.factors.I.score == null ? "Unavailable" : `${result.factors.I.score.toFixed(1)} / 100`}</strong>
+              <p>{result.factors.I.explanation}</p>
+            </article>
+          )}
           {[
             { key: "S", label: "SOLAR ILLUMINATION WINDOW", Icon: Sun },
             { key: "C", label: "EARTH COMMUNICATION WINDOW", Icon: Radio },

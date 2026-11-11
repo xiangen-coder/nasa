@@ -60,8 +60,16 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
             penalty=limits.hazard_penalty*hazards['value'] if hazards.get('available') else 0
             factors['T'].update(score=clamp(.6*slope+.25*rough+.15*relief-penalty),quality='topographic screening; hazards incomplete' if not hazards.get('available') else 'topography plus mapped hazards',
                 explanation='60% slope component + 25% detrended roughness + 15% relief, minus configured hazard penalty × mapped hazard fraction. Missing hazards are not assumed absent; T and overall score remain provisional.',source=t['source'])
-        else: warnings.append('DEM resolution exceeds the configured terrain scoring limit. T unavailable.')
-    else: warnings.append('Terrain safety cannot be evaluated without valid neighbourhood coverage.')
+        else:
+            reason = f"The terrain raster has {t['resolution_m']:g} m pixels. The configured limit is {limits.max_resolution_m:g} m."
+            factors['T']['explanation'] = reason
+            warnings.append(reason)
+    else:
+        factors['T']['explanation'] = (
+            'Terrain scoring requires a complete local elevation window for slope, roughness and relief. '
+            + t.get('reason', 'A valid terrain window is unavailable.')
+        )
+        warnings.append('Terrain safety cannot be evaluated without valid neighbourhood coverage.')
     if hazards.get('available') and hazards['value']>limits.max_hazard_fraction:
         failures.append('Mapped hazard fraction exceeds the configured limit.')
     if not hazards.get('available'): warnings.append('Boulder/crater hazards have not been comprehensively mapped for this point.')
@@ -79,6 +87,14 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
     if ice.get('available'):
         factors['I'].update(score=clamp(100*ice['value']),quality=ice['source']['interpretation'],source=ice['source'],
             explanation='100 × registered mapped ice-evidence or PSR fraction. PSR is a resource-potential proxy, not confirmed ice abundance, accessibility or safety.')
+    else:
+        reason = ice.get('reason')
+        factors['I']['explanation'] = (
+            'The site has no validated ice or permanently shadowed region layer configured for scoring.'
+            if reason == 'ice product is not configured.' else
+            'A validated ice or permanently shadowed region measurement is needed at this point.'
+            + (f' {reason}' if reason else '')
+        )
     available=sum(v['weight'] for v in factors.values() if v['score'] is not None)
     missing=[k for k,v in factors.items() if v['score'] is None]
     provisional=bool(missing or not hazards.get('available') or geometry.get('mode')!='terrain_screened' or thermal.get('available') or ice.get('source',{}).get('interpretation')=='psr_fraction')

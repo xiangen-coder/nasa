@@ -484,6 +484,7 @@ export default function Page() {
   const [researchResult,setResearchResult] = useState<Research|null>(null);
   const [researchComparison,setResearchComparison]=useState<ResearchComparison|null>(null);
   const [chosenAlternatives, setChosenAlternatives] = useState<Site[]>([]);
+  const [comparisonNotice, setComparisonNotice] = useState("");
   const [education, setEducation] = useState(false);
   const [labVisited, setLabVisited] = useState(false);
   const labOpen = [12, 14, 15, 16].includes(view);
@@ -590,6 +591,25 @@ export default function Page() {
   const searchRecord: SearchRecord = {
     version: 1, mission: mission(), priority: researchPriority,
     alternatives: chosenAlternatives.filter(s => siteKey(s) !== siteKey(selected)),
+  };
+  const addComparisonSite = ({ name, latitude, longitude }: Site) => {
+    const point = { name, latitude, longitude };
+    const key = siteKey(point);
+    const alternatives = searchRecord.alternatives;
+    if ([selected, ...alternatives].some(site => siteKey(site) === key)) {
+      setComparisonNotice(`${point.name} is already in the comparison cards.`);
+    } else if (alternatives.length >= 2) {
+      setComparisonNotice("Remove a comparison point below before adding another.");
+    } else {
+      setChosenAlternatives([...alternatives, point]);
+      setComparisonNotice(`${point.name} added. Run the comparison to assess it for this mission window.`);
+    }
+    setView(11);
+    requestAnimationFrame(() => {
+      const cards = document.getElementById("comparison-cards");
+      cards?.focus({ preventScroll: true });
+      cards?.scrollIntoView({ block: "start" });
+    });
   };
   const run = async () => {
     const gen = generation.current;
@@ -737,11 +757,11 @@ export default function Page() {
             <LandingSearch selected={selected} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{void researchActions.current?.evaluate();setView(11);}} onMap={()=>setView(0)}/>
             <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(13)}>Account & saved searches</button><button className="button subtle" onClick={()=>setView(12)}>Mission lab</button></div>
           </section>}
-          {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} onEvaluate={()=>{void researchActions.current?.evaluate();}} onCompare={()=>document.getElementById("choose-comparison-sites")?.scrollIntoView({block:"start"})} onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
-          {view===11&&<ComparisonPicker mission={mission()} sites={sites} chosen={chosenAlternatives} onChange={setChosenAlternatives} onCompare={()=>{void researchActions.current?.compare(searchRecord.alternatives);}} busy={researchBusy}/>}
+          {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} notice={comparisonNotice} onEvaluate={()=>{void researchActions.current?.evaluate();}} onCompare={()=>document.getElementById("choose-comparison-sites")?.scrollIntoView({block:"start"})} onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
+          {view===11&&<ComparisonPicker mission={mission()} sites={sites} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} onCompare={()=>{setComparisonNotice("");void researchActions.current?.compare(searchRecord.alternatives);}} busy={researchBusy}/>}
           {view===13&&<Account record={searchRecord} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}
           {labVisited&&<div hidden={!labOpen}><MissionLab mode={education?"education":"professional"} linkedTool={view===15?8:view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
-          {view===8&&<><ResearchOverview result={researchResult} onNavigate={setView} busy={researchBusy}/><div className="account-actions"><button className="button subtle" onClick={()=>setView(13)}>Save search</button><button className="button subtle" onClick={()=>setView(11)}>Compare sites</button></div></>}
+          {view===8&&<><ResearchOverview result={researchResult} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy}/><div className="account-actions"><button className="button subtle" onClick={()=>setView(13)}>Save search</button><button className="button subtle" onClick={()=>setView(11)}>Compare sites</button></div></>}
           <div hidden={![0,1,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>
@@ -1493,7 +1513,7 @@ export default function Page() {
                 {observatoryMode === "surface" && !analysis && <div className="panel">{empty}</div>}
               </>
             )}
-            <div hidden={![0,3,8].includes(view)}><LandingResearch onComparisonChange={setResearchComparison} onResultChange={setResearchResult} actionRef={researchActions} priority={researchPriority} onBusyChange={setResearchBusy} mission={mission()} sites={sites} onSelect={site => { setSelected(site); setView(7); }} /></div>
+            <div hidden={![0,3,8].includes(view)}><LandingResearch onComparisonChange={setResearchComparison} onResultChange={setResearchResult} actionRef={researchActions} priority={researchPriority} onBusyChange={setResearchBusy} mission={mission()} sites={sites} onAddComparison={addComparisonSite} onSelect={site => { setSelected(site); setView(7); }} /></div>
             <div hidden={view !== 5 || observatoryMode !== "system"}>{astronomyVisited && <AstronomySimulation active={view === 5 && observatoryMode === "system"} />}</div>
             {view===3&&comparison&&<AlternativeCards comparison={comparison} onInspect={r=>{setSelected({name:r.mission.name,latitude:r.mission.latitude,longitude:r.mission.longitude});setView(0);}}/>}
             {view===9&&<section className="about-grid"><article className="about-intro glass"><span className="eyebrow">EXPLORATION, INFORMED BY EVIDENCE</span><h2>A place to ask<br/>better questions.</h2><p>LUNAR is a NASA Space Apps 2026 research demonstrator for investigating lunar landing locations, mission windows and backup possibilities.</p><p>The cinematic spacecraft is an illustration. Its motion and scales are artistic. The observatory retrieves actual Sun–Earth–Moon vectors separately.</p><button className="button primary" onClick={()=>setView(7)}>Start exploring <ArrowRight size={15}/></button></article><article className="about-method glass"><h3>Real data. Transparent limits.</h3><p>NASA Horizons and the existing SPICE workflow provide astronomical geometry. Regional LOLA, LROC and historical Diviner products support available terrain and temperature evidence. Missing factors remain unavailable.</p><h3>A score is not a promise.</h3><p>The five-factor NASA research score and reference-sphere visibility comparison are distinct models. Neither establishes landing safety, a fuel-feasible diversion or a probability of success.</p><h3>Terrain and spacecraft evidence</h3><p>The regional 20 m DEM screens finite horizons. The 5 m footprint product has limited coverage. Apollo LM uncertainty and backup searches retain their published limitations.</p><div className="reference-links"><a href="https://github.com/xiangen-coder/nasa/blob/public-preview/docs/WIDE_TERRAIN.md" target="_blank" rel="noreferrer">Terrain methods & coverage</a><a href="https://ssd-api.jpl.nasa.gov/doc/horizons.html" target="_blank" rel="noreferrer">JPL Horizons</a></div><button className="text-button" onClick={()=>setView(8)}>Review assessment & provenance <ArrowRight size={14}/></button></article></section>}
