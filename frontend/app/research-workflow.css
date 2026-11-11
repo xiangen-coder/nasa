@@ -64,7 +64,13 @@
 .revised-search .search-group-title,
 .landing-search .search-map-link,
 .landing-search .search-advanced,
-.landing-search .field-unit {
+.landing-search .advanced-fields label,
+.landing-search .advanced-fields p,
+.landing-search .field-unit,
+.comparison-picker .info,
+.comparison-picker .muted,
+.pre-result-card dt,
+.pre-point .eyebrow {
   font-size: 14px;
 }
 @media (min-width: 701px) {
