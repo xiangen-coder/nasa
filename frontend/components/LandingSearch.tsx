@@ -60,6 +60,7 @@ export default function LandingSearch({
       id="landing-search-form"
       className="landing-search glass"
       aria-label="Lunar landing search"
+      tabIndex={-1}
       onSubmit={(e) => {
         e.preventDefault();
         const a = Date.parse(`${start}T${startTime}:00Z`),

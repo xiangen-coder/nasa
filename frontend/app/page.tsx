@@ -516,6 +516,18 @@ export default function Page() {
   }, [labOpen]);
   const researchActions=useRef<ResearchActions|null>(null);
   const setView=(next:number)=>{if(!viewPaths[next]||next===6)return;setViewState(next);if(location.hash!==`#${viewPaths[next]}`)location.hash=viewPaths[next];window.scrollTo({top:0,behavior:"instant"});};
+  const pendingSearchFocus = useRef(false);
+  function openSearchForm() {
+    pendingSearchFocus.current = true;
+    setView(7);
+  }
+  useEffect(() => {
+    if (view !== 7 || !pendingSearchFocus.current) return;
+    pendingSearchFocus.current = false;
+    const form = document.getElementById("landing-search-form");
+    form?.focus({ preventScroll: true });
+    form?.scrollIntoView({ block: "start", behavior: "instant" });
+  }, [view]);
   useEffect(()=>{const sync=()=>{const n=viewPaths.indexOf(location.hash.slice(1));if(n>=0&&n!==6)setViewState(n);};sync();window.addEventListener("hashchange",sync);try{const p=JSON.parse(localStorage.getItem("lunar-preferences-v1")||"null");if(p&&typeof p.animate==="boolean"&&typeof p.scale==="number")setPreferences({animate:p.animate,scale:Math.max(.95,Math.min(1.08,p.scale)),detailed:p.detailed!==false});}catch{}return()=>window.removeEventListener("hashchange",sync);},[]);
   const updatePreferences=(p:Preferences)=>{setPreferences(p);try{localStorage.setItem("lunar-preferences-v1",JSON.stringify(p));}catch{}};
   const full=preferences.detailed??true;
@@ -790,7 +802,7 @@ export default function Page() {
               </button>
             </section>
           )}
-          {view!==7&&view!==11&&view!==13&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div></div></>}
+          {view!==7&&view!==11&&view!==13&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div>{showResultTools&&<button type="button" className="button primary new-search" onClick={openSearchForm}>New search</button>}</div></>}
           {view===7&&<section className="search-layout revised-search" aria-label="Search for a lunar landing site">
             <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration"><div className="hero-copy"><span className="eyebrow">A NEW PERSPECTIVE ON THE MOON</span><h1>Find your place<br/>on the <em>Moon.</em></h1><p>Every mission starts with a possibility. Explore lunar locations through real sunlight, communication and terrain data.</p><div className="hero-hairline"/><span className="hero-footnote">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}>Explore the Moon <ArrowRight size={15}/></button></div><CinematicHero animate={preferences.animate}/></section>
             <LandingSearch selected={selected} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{assessComparison(searchRecord.alternatives);setView(11);}} onMap={()=>setView(0)}/>
@@ -923,10 +935,7 @@ export default function Page() {
                         </h2>
                         <p>Click to select · drag to pan · zoom to explore</p>
                       </div>
-                      <button className="button primary" onClick={() => {
-                        setView(7);
-                        requestAnimationFrame(() => document.getElementById("landing-search-form")?.scrollIntoView({ block: "start" }));
-                      }}>Use point in Configure</button>
+                      <button className="button primary" onClick={openSearchForm}>Use point in Configure</button>
                       <span className="small-label">80°–90° S</span>
                     </div>
                     <PolarMap

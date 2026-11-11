@@ -118,6 +118,21 @@
   height: auto;
 }
 
+#landing-search-form {
+  scroll-margin-top: 30px;
+}
+
+.page-heading .new-search {
+  flex: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .page-heading:has(.new-search) {
+    flex-wrap: wrap;
+  }
+}
+
 .lunar-app .result-tools-trigger {
   position: fixed;
   z-index: 30;
