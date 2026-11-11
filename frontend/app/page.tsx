@@ -477,6 +477,12 @@ function Timeline({ analysis }: { analysis: Analysis }) {
   );
 }
 
+function jumpToResultSection(id: string) {
+  const section = document.getElementById(id);
+  section?.focus({ preventScroll: true });
+  section?.scrollIntoView({ block: "start" });
+}
+
 export default function Page() {
   const [view, setViewState] = useState(7);
   const [preferences,setPreferences] = useState<Preferences>({animate:true,scale:1,detailed:true});
@@ -770,18 +776,29 @@ export default function Page() {
           {view===11&&<ComparisonPicker mission={mission()} sites={sites} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
           {view===13&&<Account record={searchRecord} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}
           {labVisited&&<div hidden={!labOpen}><MissionLab mode={education?"education":"professional"} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
+          {(view===8||view===15)&&(
+            <nav className="account-actions" aria-label="Result tools">
+              {view===15&&<button className="button subtle" onClick={()=>setView(8)}>Back to Result</button>}
+              {view===8&&researchResult&&(
+                <>
+                  <button className="button subtle" onClick={()=>jumpToResultSection("result-visibility")}>Sun &amp; Earth</button>
+                  <button className="button subtle" onClick={()=>jumpToResultSection("result-terrain")}>Terrain evidence</button>
+                  <button className="button primary" onClick={()=>setView(15)}>Open mission report</button>
+                </>
+              )}
+              <button className="button subtle" onClick={()=>setView(11)}>Compare sites</button>
+              {researchResult&&<button className="button subtle" onClick={()=>setView(13)}>Save search</button>}
+            </nav>
+          )}
           {view===15&&(
             <>
-              <div className="account-actions">
-                <button className="button subtle" onClick={()=>setView(8)}>Back to Result</button>
-                {!researchResult&&<button className="button primary" onClick={()=>setView(7)}>Configure an assessment</button>}
-              </div>
+              {!researchResult&&<div className="account-actions"><button className="button primary" onClick={()=>setView(7)}>Configure an assessment</button></div>}
               {researchResult
                 ? <ResearchComparisonReport mission={researchResult.mission} sites={[researchResult.mission]} results={[researchResult]} singleSite />
                 : <p className="info" role="status">{researchBusy ? "Waiting for the current assessment…" : "Run an assessment or open More Info on a comparison card to prepare its mission report."}</p>}
             </>
           )}
-          {view===8&&<><ResearchOverview result={researchResult} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy}/><div className="account-actions"><button className="button subtle" onClick={()=>setView(13)}>Save search</button><button className="button subtle" onClick={()=>setView(11)}>Compare sites</button>{researchResult&&<button className="button primary" onClick={()=>setView(15)}>Open mission report</button>}</div></>}
+          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy}/>}
           <div hidden={![0,1,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>

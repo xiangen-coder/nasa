@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play, RotateCcw } from "lucide-react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -12,16 +11,14 @@ export default function CinematicHero({animate=true}:{animate?:boolean}) {
   const [paused, setPaused] = useState(true);
   const [ready, setReady] = useState(false);
   const [sceneVersion,setSceneVersion] = useState(0);
-  const [sceneStatus,setSceneStatus] = useState<"loading"|"ready"|"lost"|"unavailable">("loading");
-  const pauseIntent = useRef<boolean|null>(null);
 
   useEffect(() => {
     const element = host.current;
     if (!element) return;
-    setReady(false); setSceneStatus("loading");
+    setReady(false);
     let renderer: THREE.WebGLRenderer;
     try { renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "low-power" }); }
-    catch { setSceneStatus("unavailable"); return; }
+    catch { return; }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -31,8 +28,7 @@ export default function CinematicHero({animate=true}:{animate?:boolean}) {
     element.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(42, 1, .1, 100);
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let disposed = false, userPaused = pauseIntent.current ?? (media.matches || !animate), inView = true, graphicsAvailable = true;
+    let disposed = false, userPaused = true, inView = true, graphicsAvailable = true;
     let frame = 0, previous = 0, elapsed = 0, segmentStart = 0;
     const textures = new Set<THREE.Texture>();
     const disposeObject = (root: THREE.Object3D) => {
@@ -171,7 +167,7 @@ export default function CinematicHero({animate=true}:{animate?:boolean}) {
       camera.position.set(drift*.25,.18+Math.cos(elapsed*.14)*.13,portrait?12.4:8.7+Math.cos(elapsed*.16)*.28);
       camera.lookAt(portrait?.25:0,0,0);
       try {renderer.render(scene,camera); element!.dataset.motionSeconds=elapsed.toFixed(2);}
-      catch {graphicsAvailable=false;userPaused=true;stop();setReady(false);setSceneStatus("unavailable");setPaused(true);}
+      catch {graphicsAvailable=false;stop();setReady(false);}
     }
     function stop() { cancelAnimationFrame(frame); frame = 0; previous = 0; segmentStart = 0; }
     function tick(now: number) {
@@ -193,30 +189,33 @@ export default function CinematicHero({animate=true}:{animate?:boolean}) {
     const resizeObserver = new ResizeObserver(resize); resizeObserver.observe(element);
     const intersection = new IntersectionObserver(entries => { inView = entries[0].isIntersecting; schedule(); }, { threshold: 0 }); intersection.observe(element);
     const visibility = () => schedule(); document.addEventListener("visibilitychange", visibility);
-    const preference = () => { if (media.matches) {pauseIntent.current=true;setPaused(true);} }; media.addEventListener("change", preference);
-    const contextLost = (event: Event) => { event.preventDefault(); graphicsAvailable=false; userPaused = true; stop(); setReady(false); setSceneStatus("lost"); setPaused(true); };
+    const contextLost = (event: Event) => { event.preventDefault(); graphicsAvailable=false; stop(); setReady(false); };
     renderer.domElement.addEventListener("webglcontextlost", contextLost);
     const contextRestored=()=>{if(!disposed)setSceneVersion(v=>v+1);};
     renderer.domElement.addEventListener("webglcontextrestored",contextRestored);
-    resize(); render(); if(graphicsAvailable){setReady(true);setSceneStatus("ready");} setPaused(userPaused); schedule();
+    resize(); render(); if(graphicsAvailable)setReady(true);
     return () => {
       disposed = true; stop(); controller.current = null;
-      resizeObserver.disconnect(); intersection.disconnect(); document.removeEventListener("visibilitychange", visibility); media.removeEventListener("change", preference);
+      resizeObserver.disconnect(); intersection.disconnect(); document.removeEventListener("visibilitychange", visibility);
       renderer.domElement.removeEventListener("webglcontextlost", contextLost);
       renderer.domElement.removeEventListener("webglcontextrestored",contextRestored);
       disposeObject(scene); textures.forEach(t => t.dispose()); renderer.dispose(); renderer.domElement.remove();
     };
   }, [sceneVersion]);
 
-  useEffect(()=>{pauseIntent.current=!animate||matchMedia("(prefers-reduced-motion: reduce)").matches;setPaused(pauseIntent.current);},[animate]);
-  useEffect(() => { controller.current?.pause(paused); }, [paused]);
-  return <>
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setPaused(!animate || media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [animate]);
+  useEffect(() => { controller.current?.pause(paused); }, [paused, sceneVersion]);
+  return (
     <div className="cinematic-visual" role="img" aria-label="Illustration of a generic solar-powered spacecraft passing Earth, with an atmospheric glow and decorative trails. Not a mission simulation." data-motion={!ready ? "static" : paused ? "paused" : "playing"}>
       <div className="cinematic-poster" aria-hidden="true" />
       <div className="cinematic-canvas" ref={host} style={{ opacity: ready ? 1 : 0 }}/>
       <div className="cinematic-shade" aria-hidden="true" />
     </div>
-    <div className="cinematic-caption"><span>SPACECRAFT CONCEPT</span><span>Illustration only · not a mission simulation</span><span role="status">{sceneStatus==="loading"?"Preparing animation…":sceneStatus==="lost"?"Graphics interrupted — retry the illustration":sceneStatus==="unavailable"?"Static illustration — 3D graphics unavailable":paused?"Motion paused · press Play to animate":"Motion playing"}</span></div>
-    <div className="cinematic-controls">{ready&&<button className="cinematic-pause" aria-label={paused?"Play illustrative animation":"Pause illustrative animation"} onClick={()=>{pauseIntent.current=!paused;setPaused(!paused);}}>{paused?<Play size={18}/>:<Pause size={18}/>}</button>}<button className="cinematic-pause" aria-label="Restart illustrative animation" title="Restart illustration" disabled={sceneStatus==="loading"} onClick={()=>{pauseIntent.current=false;setPaused(false);setSceneVersion(v=>v+1);}}><RotateCcw size={18}/></button></div>
-  </>;
+  );
 }

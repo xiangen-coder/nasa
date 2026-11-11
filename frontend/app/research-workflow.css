@@ -89,6 +89,11 @@
   height: auto;
 }
 
+#result-visibility,
+#result-terrain {
+  scroll-margin-top: 100px;
+}
+
 @media print {
   @page research-report {
     margin: 13mm;
@@ -112,6 +117,16 @@
   }
   #research-report { page: research-report; }
   #research-report .table-scroll { overflow: visible; }
+  #research-report .research-elevation-chart {
+    --elevation-grid: #ddd;
+    --elevation-axis: #333;
+    --elevation-sun: #856000;
+    --elevation-earth: #14638b;
+    break-inside: avoid;
+  }
+  #research-report .outlook-legend { color: #111; }
+  #research-report .outlook-legend i { background: var(--elevation-sun); print-color-adjust: exact; }
+  #research-report .outlook-legend span:nth-child(2) i { background: var(--elevation-earth); }
   #research-report tr { break-inside: avoid; }
   #research-report h2,
   #research-report h3,

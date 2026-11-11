@@ -1,27 +1,21 @@
 "use client";
 import { ArrowUpRight, Clock3, Layers, Radio, Sun } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
-  CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import type { Research } from "./LandingResearch";
+import { ResearchWindows } from "./ResearchComparisonReport";
+import ResearchElevationChart, { formatVisibilityTime as utc } from "./ResearchElevationChart";
 import type { Site } from "../app/types";
 import { siteKey, terrainReference } from "./ComparisonPicker";
 
-const utc = (value: string) =>
-  new Date(value).toLocaleString("en-GB", {
-    timeZone: "UTC",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 const evidence = () =>
   document.getElementById("landing-assessment")?.scrollIntoView({
     behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -40,6 +34,18 @@ export default function ResearchOverview({
   busy?: boolean;
 }) {
   const rows = result?.geometry.available ? (result.geometry.series ?? []) : [];
+  const [cursor, setCursor] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [step, setStep] = useState(1);
+  const sample = rows[Math.min(cursor, Math.max(rows.length - 1, 0))];
+  const canPlay = rows.length > 1 && cursor < rows.length - 1;
+  useEffect(() => {
+    if (!playing || !canPlay) return;
+    const timer = window.setInterval(() => {
+      setCursor((index) => Math.min(index + step, rows.length - 1));
+    }, 350);
+    return () => window.clearInterval(timer);
+  }, [playing, canPlay, rows.length, step]);
   const blocked = !!result?.constraints_failed.length;
   return (
     <section
@@ -69,7 +75,7 @@ export default function ResearchOverview({
         )}
       </div>
       <div className="outlook-dashboard">
-        <article className="outlook-visual glass">
+        <article id="result-visibility" tabIndex={-1} className="outlook-visual glass">
           <span className="eyebrow">SUNLIGHT & EARTH VISIBILITY</span>
           <h2>Your mission window.</h2>
           <p>
@@ -77,96 +83,50 @@ export default function ResearchOverview({
           </p>
           {rows.length > 0 ? (
             <>
-              <div
-                className="outlook-chart"
-                role="img"
-                aria-label="Sun and Earth elevations and terrain horizons over the selected mission window in UTC"
-              >
-                <ResponsiveContainer
-                  width="100%"
-                  height="100%"
-                  initialDimension={{ width: 640, height: 250 }}
-                >
-                  <LineChart
-                    data={rows}
-                    margin={{ top: 14, right: 14, bottom: 0, left: -12 }}
-                  >
-                    <CartesianGrid stroke="#dce9ff16" vertical={false} />
-                    <XAxis
-                      dataKey="time"
-                      tickFormatter={(v) =>
-                        new Date(v).toLocaleString("en-GB", {
-                          timeZone: "UTC",
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      }
-                      minTickGap={50}
-                      tick={{ fill: "#a8bfdc", fontSize: 10 }}
-                    />
-                    <YAxis unit="°" tick={{ fill: "#a8bfdc", fontSize: 10 }} />
-                    <Tooltip
-                      labelFormatter={(v) => `${utc(String(v))} UTC`}
-                      formatter={(v: number) => `${v.toFixed(2)}°`}
-                      contentStyle={{
-                        background: "#101e35",
-                        border: "1px solid #c5d9f644",
-                        borderRadius: 12,
-                        color: "#edf2f8",
-                      }}
-                    />
-                    <Line
-                      type="linear"
-                      dataKey="sun_elevation"
-                      name="Sun elevation"
-                      stroke="#eacb89"
-                      dot={false}
-                      strokeWidth={2}
-                      isAnimationActive={false}
-                    />
-                    <Line
-                      type="linear"
-                      dataKey="earth_elevation"
-                      name="Earth elevation"
-                      stroke="#9ecff2"
-                      dot={false}
-                      strokeWidth={2}
-                      isAnimationActive={false}
-                    />
-                    <Line
-                      type="linear"
-                      dataKey="sun_horizon_deg"
-                      name="Sun skyline"
-                      stroke="#eacb89"
-                      strokeDasharray="4 5"
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                    <Line
-                      type="linear"
-                      dataKey="earth_horizon_deg"
-                      name="Earth skyline incl. clearance"
-                      stroke="#9ecff2"
-                      strokeDasharray="4 5"
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="outlook-legend">
-                <span>
-                  <i />
-                  Sun
-                </span>
-                <span>
-                  <i />
-                  Earth
-                </span>
-                <span>Dashed: terrain skyline</span>
-              </div>
+              {result && <ResearchElevationChart result={result} selectedTime={sample?.time} />}
+              {sample && (
+                <div className="research-timeline">
+                  <div className="account-actions">
+                    <button type="button" className="button subtle" disabled={rows.length < 2} onClick={() => {
+                      if (!canPlay) setCursor(0);
+                      setPlaying(!(playing && canPlay));
+                    }}>{playing && canPlay ? "Pause timeline" : "Play timeline"}</button>
+                    <button type="button" className="button subtle" onClick={() => { setPlaying(false); setCursor(0); }}>Reset timeline</button>
+                    <label>Playback step <select value={step} onChange={(e) => setStep(Number(e.target.value))}>
+                      <option value={1}>1 sample</option><option value={3}>3 samples</option><option value={6}>6 samples</option>
+                    </select></label>
+                  </div>
+                  <label>Mission time · {utc(sample.time)} UTC
+                    <input type="range" min={0} max={rows.length - 1} value={Math.min(cursor, rows.length - 1)}
+                      aria-label="Mission time" aria-valuetext={`${utc(sample.time)} UTC`}
+                      onChange={(event) => { setPlaying(false); setCursor(Number(event.target.value)); }} />
+                  </label>
+                  <p>Sun {sample.sun_azimuth.toFixed(2)}° az / {sample.sun_elevation.toFixed(2)}° el · {sample.sun_visible ? "visible" : "below threshold"}</p>
+                  <p>Earth {sample.earth_azimuth.toFixed(2)}° az / {sample.earth_elevation.toFixed(2)}° el · {sample.earth_visible ? "visible" : "below threshold"}</p>
+                  {sample.sun_horizon_deg != null && sample.earth_horizon_deg != null && (
+                    <p>Terrain threshold at this sample: Sun {sample.sun_horizon_deg.toFixed(2)}° · Earth {sample.earth_horizon_deg.toFixed(2)}° including clearance</p>
+                  )}
+                </div>
+              )}
+              {!!result?.horizon.profile?.length && sample && (
+                <details className="research-skyline">
+                  <summary>Terrain skyline by azimuth</summary>
+                  <div className="outlook-chart" role="img" aria-label="Terrain skyline elevation by azimuth with the current Sun and Earth directions">
+                    <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 640, height: 250 }}>
+                      <LineChart data={[...result.horizon.profile, { azimuth: 360, elevation: result.horizon.profile[0].elevation }]}>
+                        <XAxis dataKey="azimuth" type="number" domain={[0, 360]} ticks={[0, 90, 180, 270, 360]} unit="°" />
+                        <YAxis unit="°" />
+                        <Tooltip labelFormatter={(value) => `Azimuth ${value}°`} formatter={(value: number) => `${value.toFixed(2)}°`} />
+                        <Line dataKey="elevation" name="Skyline elevation" stroke="#b5c7df" dot={false} isAnimationActive={false} />
+                        <ReferenceLine x={sample.sun_azimuth} stroke="#eacb89" />
+                        <ReferenceLine x={sample.earth_azimuth} stroke="#9ecff2" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p>Gold: Sun azimuth. Blue: Earth azimuth. The 20 km skyline excludes terrain beyond the sampled rays.</p>
+                </details>
+              )}
+              {result && <ResearchWindows result={result} />}
             </>
           ) : (
             <div className="outlook-chart-empty" role="status">
@@ -334,9 +294,6 @@ export default function ResearchOverview({
         </article>
       </div>
       <div className="outlook-footer">
-        <button className="text-button" onClick={() => onNavigate(11)}>
-          Explore alternative coordinates <ArrowUpRight size={16} />
-        </button>
         <span>NASA JPL HORIZONS · LOLA · HISTORICAL DIVINER</span>
       </div>
     </section>

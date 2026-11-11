@@ -2,18 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  Activity,
   Archive,
   ArrowUpRight,
   ChevronDown,
   Compass,
-  FileText,
-  Layers,
   Moon,
   Orbit,
   Rocket,
   Settings,
-  SlidersHorizontal,
   X,
   UserRound,
   FlaskConical,
@@ -41,36 +37,11 @@ export const viewPaths = [
 ];
 export const toolItems = [
   { view: 0, label: "Map explorer", icon: Compass, detail: "Coordinates & geographic references" },
-  { view: 15, label: "Mission report", icon: FileText, detail: "Current Result evidence & exports" },
   { view: 5, label: "3D observatory", icon: Orbit, detail: "NASA positions & computed local sky" },
   { view: 16, label: "Mission planner", icon: Rocket, detail: "Vehicle worksheet & launch weather" },
   { view: 4, label: "Lunar mission archive", icon: Archive, detail: "Historical missions & documented 3D paths" },
   { view: 12, label: "Mission lab", icon: FlaskConical, detail: "Scenarios, equipment & classroom activities" },
   { view: 13, label: "Account & saved searches", icon: UserRound, detail: "Sign in to save and reopen your searches" },
-  {
-    view: 11,
-    label: "Pre-result comparison",
-    icon: Layers,
-    detail: "Choose up to two alternatives",
-  },
-  {
-    view: 1,
-    label: "Horizon simulator",
-    icon: Activity,
-    detail: "Sun, Earth & time playback",
-  },
-  {
-    view: 2,
-    label: "Terrain analysis",
-    icon: Layers,
-    detail: "Elevation, slope & obstructions",
-  },
-  {
-    view: 3,
-    label: "Site comparison",
-    icon: SlidersHorizontal,
-    detail: "Alternatives & weighted ranking",
-  },
 ];
 
 export default function Navigation({
@@ -130,7 +101,7 @@ export default function Navigation({
             key={item.view}
             href={`#${viewPaths[item.view]}`}
             aria-current={
-              view === item.view
+              view === item.view || (item.view === 8 && view === 15)
                 ? "page"
                 : undefined
             }
@@ -176,7 +147,7 @@ export default function Navigation({
         >
           <button
             ref={moreButton}
-            className={toolItems.some((item) => item.view === view) && view !== 11 ? "active" : ""}
+            className={toolItems.some((item) => item.view === view) ? "active" : ""}
             aria-haspopup="menu"
             aria-expanded={more}
             aria-controls="more-tools"

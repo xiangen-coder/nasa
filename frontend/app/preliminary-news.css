@@ -12,12 +12,12 @@
 .preliminary-intro p {
   max-width: 620px;
   color: #b4c7e1;
-  font-size: 13px;
+  font-size: 1rem;
   line-height: 1.8;
   margin: 12px 0;
 }
 .preliminary-intro small {
-  font-size: 10px;
+  font-size: 0.875rem;
   color: #8fa7c9;
   line-height: 1.8;
 }
@@ -26,6 +26,9 @@
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+}
+.preliminary-controls .button {
+  font-size: 0.875rem;
 }
 .pre-result-grid {
   display: grid;
@@ -44,7 +47,7 @@
 }
 .pre-result-card h2 {
   font:
-    400 29px/1.3 Fraunces,
+    400 2rem/1.25 Fraunces,
     Georgia,
     serif;
   letter-spacing: -0.025em;
@@ -59,16 +62,20 @@
   gap: 6px;
 }
 .pre-point .eyebrow {
-  font-size: 9px;
+  font-size: 0.75rem;
   letter-spacing: 0.08em;
   margin: 0;
 }
 .pre-point strong,
 .pre-point > span:last-child {
-  font-size: 12px;
+  font-size: 0.9375rem;
   font-weight: 400;
   color: #d7e3f5;
   overflow-wrap: anywhere;
+}
+.pre-point strong {
+  font-size: 1.0625rem;
+  font-weight: 600;
 }
 .pre-score {
   display: flex;
@@ -85,7 +92,7 @@
   text-shadow: 0 0 30px #cbe1ff25;
 }
 .pre-score > span {
-  font-size: 12px;
+  font-size: 0.875rem;
   color: #a9c0df;
 }
 .pre-result-card dl {
@@ -96,7 +103,7 @@
   padding: 14px 0;
 }
 .pre-result-card dt {
-  font-size: 9px;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.07em;
   color: #b2c5e1;
@@ -105,17 +112,17 @@
 .pre-result-card dd {
   margin: 0;
   color: #d4dfef;
-  font-size: 12px;
+  font-size: 0.9375rem;
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
 .pre-result-card dd + dd {
   color: #aebfda;
   margin-top: 6px;
-  font-size: 11px;
+  font-size: 0.875rem;
 }
 .pre-comparison-note {
-  font-size: 11px;
+  font-size: 0.875rem;
   color: #b1c5e0;
   line-height: 1.8;
   margin-bottom: 100px;
@@ -129,13 +136,13 @@
 }
 .pre-result-actions .button {
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 0.875rem;
   padding: 10px 14px;
 }
 .preliminary-disclosure {
   max-width: 1000px;
   color: #9fb4d0;
-  font-size: 11px;
+  font-size: 0.875rem;
   line-height: 1.9;
   margin: 24px 0 30px;
 }
@@ -250,12 +257,6 @@
   .pre-result-card {
     padding: 23px;
   }
-  .preliminary-intro p {
-    font-size: 12px;
-  }
-  .preliminary-controls .button {
-    font-size: 12px;
-  }
   .news-launcher {
     right: 18px;
     bottom: 100px;
@@ -286,7 +287,7 @@
   margin-top: 0;
 }
 .pre-extra summary {
-  font-size: 10px;
+  font-size: 0.875rem;
   color: #b2c5e1;
   cursor: pointer;
   min-height: 36px;

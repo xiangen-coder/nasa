@@ -11,10 +11,6 @@
 .cinematic-canvas canvas { display:block; pointer-events:none; }
 .cinematic-poster { background:#030a19 url('/illustration/spacecraft-poster.svg') center/cover no-repeat; }
 .cinematic-shade { background:linear-gradient(90deg,#030a19f2 0%,#030a19c9 31%,#030a1966 55%,#030a190d 78%),linear-gradient(0deg,#071225 0%,transparent 30%,#06101d22 100%); pointer-events:none; }
-.cinematic-caption { position:absolute; bottom:30px; left:clamp(24px,4.5vw,76px); z-index:3; display:flex; flex-direction:column; gap:4px; padding-right:65px; color:#c8d5e9; font-size:11px; letter-spacing:.4px; pointer-events:none; }
-.cinematic-caption span:first-child { font-size:9px; letter-spacing:2.6px; color:#93aacb; }
-.cinematic-pause { position:absolute; z-index:4; right:calc(clamp(24px,4.5vw,76px) + 64px); bottom:30px; width:46px; height:46px; display:grid; place-items:center; color:#edf4ff; border:1px solid #d6e6ff8c; border-radius:50%; background:#07122580; backdrop-filter:blur(12px); }
-.cinematic-pause:hover { background:#abc8ff25; }
 .cinematic-cta { pointer-events:auto; margin-top:27px; border-radius:36px; display:inline-flex; align-items:center; gap:14px; padding:13px 24px; min-height:48px; font-size:15px; background:#edf3fa; color:#0a172e; border:1px solid #bed8ff; box-shadow:0 5px 34px #adcaff2b; }
 .cinematic-cta:hover { background:white; box-shadow:0 5px 40px #adcaff50; }
 .cinematic-hero + .search-console { margin-top:26px; }
@@ -32,9 +28,7 @@
  .cinematic-hero .hero-copy p { font-size:14px; max-width:315px; width:92%; }
  .cinematic-hero .hero-copy .hero-mantra { font-size:10px; margin-top:22px; }
  .cinematic-cta { font-size:14px; padding:12px 20px; }
- .cinematic-caption { bottom:27px; left:20px; font-size:10px; max-width:calc(100% - 140px); padding-right:0; }
- .cinematic-pause { right:84px; bottom:25px; }
  .cinematic-shade { background:linear-gradient(180deg,#030a19bf,#030a1977 40%,#030a191a 72%,#071225),linear-gradient(90deg,#030a1977,transparent); }
 }
 @media(prefers-reduced-motion:reduce) { .cinematic-canvas { transition:none; } }
-@media print { .cinematic-visual,.cinematic-pause,.cinematic-caption { display:none; } }
+@media print { .cinematic-visual { display:none; } }

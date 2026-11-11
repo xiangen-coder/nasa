@@ -696,6 +696,7 @@ export default function LandingResearch({
                 <p key={l}>{l}</p>
               ))}
             </details>
+            <h3 id="result-terrain" tabIndex={-1}>Terrain evidence</h3>
             <div className="astro-metrics">
               <div className="panel">
                 <span>Neighbourhood slope · p95 / max</span>
