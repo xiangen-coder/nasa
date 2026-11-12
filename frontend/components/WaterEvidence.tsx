@@ -36,7 +36,7 @@ function readingText(layer: Layer, reading: Reading) {
 }
 
 export default function WaterEvidence({ location }: { location: Site }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [radius, setRadius] = useState("");
   const [layer, setLayer] = useState<Layer>("shadow");
   const [response, setResponse] = useState<{ query: string; layers?: Record<Layer, Reading>; error?: boolean }>();
@@ -65,7 +65,7 @@ export default function WaterEvidence({ location }: { location: Site }) {
   const layers = current?.layers;
   const map = layers?.[layer];
   return (
-    <details className="panel water-evidence" onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <details className="panel water-evidence" open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>Water/Ice Evidence</summary>
       <p>{location.name} · Permanent shadow and cold temperatures can help preserve ice. Surface ice at this point remains unconfirmed.</p>
       <label>Area to summarize{" "}

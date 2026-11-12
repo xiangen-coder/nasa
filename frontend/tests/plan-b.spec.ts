@@ -56,6 +56,30 @@ function expectMissionSettings(missions: Mission[]) {
   }
 }
 
+test("shows Water/Ice Evidence for the assessed site in Results", async ({ page }) => {
+  await page.route("**/api/research/water-evidence?*", async (route) => {
+    const url = new URL(route.request().url());
+    expect(url.searchParams.get("latitude")).toBe("-89.54");
+    expect(url.searchParams.get("longitude")).toBe("0");
+    const unavailable = { status: "unavailable", value: null, source_url: "https://pgda.gsfc.nasa.gov/products/69" };
+    await route.fulfill({ json: { layers: {
+      shadow: { ...unavailable, status: "available", value: 0, units: "fraction" },
+      illumination: { ...unavailable, status: "available", value: 0.2752, units: "fraction" },
+      temperature_min: unavailable,
+      temperature_max: unavailable,
+      surface_ice: unavailable,
+      hydrogen: unavailable,
+    } } });
+  });
+  await openCompare(page);
+  await page.getByRole("article", { name: /Pre-result 1:/ }).getByRole("button", { name: "More Info" }).click();
+  const environment = page.locator("#result-environment");
+  await expect(environment.getByText("Water/Ice Evidence", { exact: true })).toBeVisible();
+  await expect(environment.getByText("27.5%", { exact: true })).toBeVisible();
+  await environment.getByLabel("Local evidence map").selectOption("illumination");
+  await expect(environment.getByRole("img", { name: /Long-term solar illumination around/ })).toHaveAttribute("src", /map\/illumination/);
+});
+
 test("calendar windows clamp month ends, handle leap dates and allow longer searches", () => {
   expect(calendarEnd(Date.parse("2026-01-31T13:00:00Z"), "month")).toBe("2026-02-28");
   expect(calendarEnd(Date.parse("2028-02-29T13:00:00Z"), "year")).toBe("2029-02-28");
