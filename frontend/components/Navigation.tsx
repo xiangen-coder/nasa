@@ -42,6 +42,13 @@ export const toolItems = [
   { view: 13, label: "Account & saved searches", icon: UserRound, detail: "Sign in to save and reopen your searches" },
 ];
 
+const educationLinks = [
+  { label: "Explore", heading: "school-moon-title" },
+  { label: "Experiments", heading: "school-lab-title" },
+  { label: "Landing Challenge", heading: "school-challenge-title" },
+  { label: "Quiz", heading: "school-quiz-title" },
+] as const;
+
 export default function Navigation({
   view,
   education,
@@ -58,6 +65,7 @@ export default function Navigation({
   onPreferences: (value: Preferences) => void;
 }) {
   const [more, setMore] = useState(false);
+  const [educationSection, setEducationSection] = useState<string>(educationLinks[0].heading);
   const dropdown = useRef<HTMLDivElement>(null);
   const moreButton = useRef<HTMLButtonElement>(null);
   const settings = useRef<HTMLDialogElement>(null);
@@ -71,6 +79,7 @@ export default function Navigation({
   }, []);
   const navigate = (next: number) => {
     setMore(false);
+    setEducationSection(educationLinks[0].heading);
     onNavigate(next);
   };
   return (
@@ -89,7 +98,36 @@ export default function Navigation({
           LUNAR<span className="brand-caption">A NEW PERSPECTIVE</span>
         </span>
       </a>
-      {!education && <nav className="nav-pill glass" aria-label="Main navigation">
+      {education ? (
+        <nav className="nav-pill glass" aria-label="Education navigation">
+          {educationLinks.map(({ label, heading }) => (
+            <a
+              key={heading}
+              href="#education"
+              aria-current={educationSection === heading ? "location" : undefined}
+              onClick={(event) => {
+                const target = document.querySelector("lunar-education")?.shadowRoot
+                  ?.querySelector<HTMLElement>(`[id$="-${heading}"]`);
+                if (!target) return;
+
+                event.preventDefault();
+                setEducationSection(heading);
+                const headerHeight = event.currentTarget.closest("header")?.offsetHeight ?? 0;
+                target.tabIndex = -1;
+                target.focus({ preventScroll: true });
+                window.scrollTo({
+                  top: target.getBoundingClientRect().top + window.scrollY - headerHeight - 16,
+                  behavior: preferences.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches
+                    ? "smooth"
+                    : "instant",
+                });
+              }}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+      ) : <nav className="nav-pill glass" aria-label="Main navigation">
         {[
           { label: "Configure", view: 7 },
           { label: "Compare", view: 11 },
@@ -198,16 +236,14 @@ export default function Navigation({
             Education
           </button>
         </div>
-        {!education && (
-          <button
-            type="button"
-            className="header-login button subtle"
-            aria-current={view === 13 ? "page" : undefined}
-            onClick={() => navigate(13)}
-          >
-            <span>{accountName ? `Hi, ${accountName}` : "Login"}</span>
-          </button>
-        )}
+        <button
+          type="button"
+          className="header-login button subtle"
+          aria-current={view === 13 ? "page" : undefined}
+          onClick={() => navigate(13)}
+        >
+          <span>{accountName ? `Hi, ${accountName}` : "Login"}</span>
+        </button>
         <button
           ref={settingsButton}
           className="settings-trigger glass"

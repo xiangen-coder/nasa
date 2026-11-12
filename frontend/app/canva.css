@@ -183,6 +183,7 @@ button:disabled {
   background: #ffffff0b;
 }
 .nav-pill > a[aria-current="page"],
+.nav-pill > a[aria-current="location"],
 .nav-pill > .more-menu-wrap > button.active {
   background: rgba(221, 236, 255, 0.19);
   color: #fff;

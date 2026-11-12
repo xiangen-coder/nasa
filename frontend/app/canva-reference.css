@@ -36,38 +36,8 @@
   background: #465675;
   color: #fff;
 }
-.header-mode-switch button:hover,
-.home-mode-cards button:hover {
+.header-mode-switch button:hover {
   box-shadow: inset 0 0 0 1px #c6daf585;
-}
-.home-mode-cards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  max-width: 1204px;
-  margin: 0 auto 26px;
-}
-.home-mode-cards button {
-  display: grid;
-  align-content: center;
-  gap: 8px;
-  min-height: 101px;
-  padding: 18px 21px;
-  border: 1px solid #b8cbea33;
-  border-radius: 18px;
-  background: #1c273ce8;
-  color: #dbe6f5;
-  text-align: left;
-}
-.home-mode-cards button[aria-pressed="true"] {
-  border-color: #c8dcff9c;
-  background: #303e57;
-}
-.home-mode-cards strong {
-  font-size: clamp(17px, 2vw, 22px);
-}
-.home-mode-cards span {
-  font-size: clamp(12px, 1.4vw, 16px);
 }
 .lunar-app .more-menu {
   max-height: min(322px, calc(100dvh - 155px));
@@ -182,14 +152,6 @@
   }
   .lunar-app .header-login span {
     max-width: 3.5rem;
-  }
-  .home-mode-cards {
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-  .home-mode-cards button {
-    min-height: 104px;
-    padding: 12px;
   }
   .header-mode-switch button {
     min-height: 32px;

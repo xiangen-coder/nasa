@@ -141,6 +141,16 @@ test("Education shows the supplied Moon Landing 101 experience on mobile", async
   await expect(classroom.getByRole("heading", { name: "Landing Commander Challenge" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Result tools", exact: true })).toHaveCount(0);
+  const educationNav = page.getByRole("navigation", { name: "Education navigation" });
+  await expect(educationNav.getByRole("link")).toHaveText(["Explore", "Experiments", "Landing Challenge", "Quiz"]);
+  await educationNav.getByRole("link", { name: "Quiz" }).click();
+  const quiz = classroom.getByRole("heading", { name: "Moon Mission Quiz" });
+  await expect(quiz).toBeFocused();
+  await expect(quiz).toBeInViewport();
+  await page.locator(".lunar-topbar").getByRole("button", { name: "Login", exact: true }).click();
+  await expect(page).toHaveURL(/#account$/);
+  await page.getByRole("group", { name: "Experience mode" }).getByRole("button", { name: "Education" }).click();
+  await expect(educationNav).toBeVisible();
   await page.getByRole("group", { name: "Experience mode" }).getByRole("button", { name: "Professional" }).click();
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeVisible();
   await expect(classroom).toBeHidden();

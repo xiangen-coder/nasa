@@ -169,17 +169,6 @@
   background: #e3f1ee;
 }
 
-[data-classroom-theme] .home-mode-cards button {
-  border-color: var(--classroom-border);
-  background: #ffffffd9;
-  color: var(--classroom-ink);
-}
-
-[data-classroom-theme] .home-mode-cards button[aria-pressed="true"] {
-  border-color: var(--classroom-accent);
-  background: #dcefe9;
-}
-
 [data-classroom-theme] .live-dot {
   background: var(--classroom-accent);
 }
