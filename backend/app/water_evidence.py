@@ -2,7 +2,6 @@
 
 import json
 from functools import lru_cache
-from pathlib import Path
 
 import numpy as np
 import rasterio
@@ -12,6 +11,7 @@ from rasterio.io import MemoryFile
 from rasterio.windows import Window
 
 from . import lunar_rasters as rasters
+from .large_raster import product_path
 from .terrain import GEO, RADIUS, verify
 
 router = APIRouter(prefix="/api/research", tags=["Water and ice evidence"])
@@ -40,7 +40,7 @@ def open_layer(layer, latitude):
     hemisphere = "north" if latitude >= 0 else "south"
     product = polar_catalog().get(f"{layer}_{hemisphere}")
     if product:
-        path = DATA / Path(product["path"]).name
+        path = product_path(DATA, product)
         verify(str(path), path.stat().st_mtime_ns, product["sha256"])
         return rasterio.open(path), product
     if layer in TEMPERATURE_LAYERS and hemisphere == "south":

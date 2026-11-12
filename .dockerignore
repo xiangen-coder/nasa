@@ -20,5 +20,4 @@ data/lunar
 **/.next-reliability
 data/lunar_preview/horizon_dem.tif
 data/lunar_preview/water_*.tif
-data/lunar_preview/water_evidence.json
 **/.next-canva

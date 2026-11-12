@@ -1,0 +1,302 @@
+{
+  "shadow_south": {
+    "path": "water_shadow_south.tif",
+    "layer": "shadow",
+    "product_id": "LPSR_85S_060M_201608",
+    "name": "NASA LOLA permanent shadow",
+    "version": "V1.05",
+    "source_url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/LPSR_85S_060M_201608.TIF",
+    "label_url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/LPSR_85S_060M_201608.LBL",
+    "documentation": "https://pgda.gsfc.nasa.gov/products/69",
+    "sha256": "995672dca21db8c70b3ae8fca01f3f795110d44747a25a839884cf54e293c726",
+    "source_sha256": "e9544c081dd4e36f079e92bc3a376d0913857a61a4a53c209175c081762de43c",
+    "label_sha256": "42ae7cb0ae64ff8df7a17106228921bd07eb9afba8fb833c4a8cfd2f53487c0f",
+    "retrieved_at": "2026-11-12",
+    "frame": "MOON_ME_DE421",
+    "reference_radius_m": 1737400,
+    "projection": "Polar stereographic",
+    "pole_latitude": -90,
+    "projected_bounds_m": [
+      -151740,
+      -151740,
+      151740,
+      151740
+    ],
+    "resolution_m": 60,
+    "units": "fraction",
+    "nodata": 255,
+    "scale": 1,
+    "offset": 0,
+    "effective_resolution_m": null,
+    "quality_flags": null,
+    "valid_pixel_count": 25583359,
+    "undocumented_pixels_masked": 5,
+    "quality": "Permanent-shadow classification modeled from LOLA topography.",
+    "parts": [
+      {
+        "path": "water_parts/shadow_south/00/water_shadow_south.part00",
+        "sha256": "995672dca21db8c70b3ae8fca01f3f795110d44747a25a839884cf54e293c726"
+      }
+    ]
+  },
+  "illumination_south": {
+    "path": "water_illumination_south.tif",
+    "layer": "illumination",
+    "product_id": "AVGVISIB_85S_060M_201608",
+    "name": "NASA LOLA long-term solar illumination",
+    "version": "V1.05",
+    "source_url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85S_060M_201608.TIF",
+    "label_url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_85S_060M_201608.LBL",
+    "documentation": "https://pgda.gsfc.nasa.gov/products/69",
+    "sha256": "ee46284144a2b49417938633a056ac9c56a39feecf67d8175b76425d03b19dd0",
+    "source_sha256": "ccf67d4f39e0a970c111196da7d6551ffcf50d075470b93067fb3904c0b05806",
+    "label_sha256": "33decce957d5d4d9608557d8d969d1e1b94056a159b2563624ade4b528a0c917",
+    "retrieved_at": "2026-11-12",
+    "frame": "MOON_ME_DE421",
+    "reference_radius_m": 1737400,
+    "projection": "Polar stereographic",
+    "pole_latitude": -90,
+    "projected_bounds_m": [
+      -151740,
+      -151740,
+      151740,
+      151740
+    ],
+    "resolution_m": 60,
+    "units": "fraction",
+    "nodata": -32768,
+    "scale": 0.00004,
+    "offset": 0,
+    "effective_resolution_m": null,
+    "quality_flags": null,
+    "valid_pixel_count": 25583364,
+    "undocumented_pixels_masked": 0,
+    "quality": "Fraction of modeled time steps with any solar disc visible over an approximately 18.6-year cycle.",
+    "parts": [
+      {
+        "path": "water_parts/illumination_south/00/water_illumination_south.part00",
+        "sha256": "488adf0829947d0f14f03b8c90f404f901ef9fb564da9a86103f15dab00e654b"
+      },
+      {
+        "path": "water_parts/illumination_south/00/water_illumination_south.part01",
+        "sha256": "1d214347a798f5a817af743e588e032b585158cedb4bb9d69ef13432729ef518"
+      },
+      {
+        "path": "water_parts/illumination_south/00/water_illumination_south.part02",
+        "sha256": "64d4cfffe2665b86439f5ebf993eaeaddefe7f8f4b7b5bfa6792fc775495786f"
+      },
+      {
+        "path": "water_parts/illumination_south/00/water_illumination_south.part03",
+        "sha256": "9c9d496fa7c132fb45c7c59fb575572b14a27a9e0239e09d052565f497e1df06"
+      },
+      {
+        "path": "water_parts/illumination_south/00/water_illumination_south.part04",
+        "sha256": "60180f1dd12201eb392e8a037771ab2841cd2c034a8bf588a32073cc5d732e28"
+      },
+      {
+        "path": "water_parts/illumination_south/01/water_illumination_south.part05",
+        "sha256": "2610ffd8107fed9509e95fc323f122d0e7e9ec6af6943feb1e806d480f89d716"
+      },
+      {
+        "path": "water_parts/illumination_south/01/water_illumination_south.part06",
+        "sha256": "4aec5db53007575619a911cde5f25f893e83c6757c317b917f92692de6359d43"
+      },
+      {
+        "path": "water_parts/illumination_south/01/water_illumination_south.part07",
+        "sha256": "5c5f99b5d01bc7f20ae7516aca0f94ace43fff8e3abc3184233c2b0b191a48ef"
+      },
+      {
+        "path": "water_parts/illumination_south/01/water_illumination_south.part08",
+        "sha256": "ad0ab4c5ad07a4a81a7533ccec24a1b4417f8b87b6f0645e5afe20a34b8cb97b"
+      },
+      {
+        "path": "water_parts/illumination_south/01/water_illumination_south.part09",
+        "sha256": "092c822a555c6d7d4fa37a43abac7570097dcd1ccf9271cf0bd3cd94d4eea09d"
+      },
+      {
+        "path": "water_parts/illumination_south/02/water_illumination_south.part10",
+        "sha256": "cd4dd1d23dc08e946dd243ce7b2b13f05bfc28dc392757a38a11c98bd6a26491"
+      },
+      {
+        "path": "water_parts/illumination_south/02/water_illumination_south.part11",
+        "sha256": "8e607152d2d1b19f8d0f8c8898fea8298b19f1c2bc68030e7e80ab8c916574a0"
+      },
+      {
+        "path": "water_parts/illumination_south/02/water_illumination_south.part12",
+        "sha256": "68988c17308260a2fbcd5c0d5569c144d37fc84424d7a320a1b065fc3f1ab34b"
+      },
+      {
+        "path": "water_parts/illumination_south/02/water_illumination_south.part13",
+        "sha256": "efdbd2da8b41fbdb6e556d4ea31d91fad82fcee7717aca0210fc388cfb962f10"
+      },
+      {
+        "path": "water_parts/illumination_south/02/water_illumination_south.part14",
+        "sha256": "8d0d75c497847fa1841c199f4855ff475787ce4d75a23dd6f7689584efef5c18"
+      },
+      {
+        "path": "water_parts/illumination_south/03/water_illumination_south.part15",
+        "sha256": "db29f9d396044b2a0d09e9e0a32f39d0a197f12022f31fbde03b0debeae1877a"
+      },
+      {
+        "path": "water_parts/illumination_south/03/water_illumination_south.part16",
+        "sha256": "9d734c046ef5a54cfdcaece1788bced9f8688d13b3a234705d8d94a5705e9b27"
+      },
+      {
+        "path": "water_parts/illumination_south/03/water_illumination_south.part17",
+        "sha256": "fa7df8a2ea67741147e13ac8620eb2d3b4847aa4352547bd1a4e334e77201b23"
+      }
+    ]
+  },
+  "shadow_north": {
+    "path": "water_shadow_north.tif",
+    "layer": "shadow",
+    "product_id": "LPSR_85N_060M_201608",
+    "name": "NASA LOLA permanent shadow",
+    "version": "V1.05",
+    "source_url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/LPSR_85N_060M_201608.TIF",
+    "label_url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/LPSR_85N_060M_201608.LBL",
+    "documentation": "https://pgda.gsfc.nasa.gov/products/69",
+    "sha256": "2ed26ec751cb26f3bcfbd578132eb088f76d7888f19c2890e78039e4f3c6d45f",
+    "source_sha256": "c36d9d3d6072264509e7567e7057133f8ad6ce1efb1e449e13e149f6a961c60f",
+    "label_sha256": "3549469191c32f8cb459a5a49755580d7850b5f88815667c9b9d1fe1e248e4bd",
+    "retrieved_at": "2026-11-12",
+    "frame": "MOON_ME_DE421",
+    "reference_radius_m": 1737400,
+    "projection": "Polar stereographic",
+    "pole_latitude": 90,
+    "projected_bounds_m": [
+      -151740,
+      -151740,
+      151740,
+      151740
+    ],
+    "resolution_m": 60,
+    "units": "fraction",
+    "nodata": 255,
+    "scale": 1,
+    "offset": 0,
+    "effective_resolution_m": null,
+    "quality_flags": null,
+    "valid_pixel_count": 25583359,
+    "undocumented_pixels_masked": 5,
+    "quality": "Permanent-shadow classification modeled from LOLA topography.",
+    "parts": [
+      {
+        "path": "water_parts/shadow_north/00/water_shadow_north.part00",
+        "sha256": "2ed26ec751cb26f3bcfbd578132eb088f76d7888f19c2890e78039e4f3c6d45f"
+      }
+    ]
+  },
+  "illumination_north": {
+    "path": "water_illumination_north.tif",
+    "layer": "illumination",
+    "product_id": "AVGVISIB_85N_060M_201608",
+    "name": "NASA LOLA long-term solar illumination",
+    "version": "V1.05",
+    "source_url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/AVGVISIB_85N_060M_201608.TIF",
+    "label_url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_85N_060M_201608.LBL",
+    "documentation": "https://pgda.gsfc.nasa.gov/products/69",
+    "sha256": "3f2d450e22c6c8a013ab463981ceaf3247f47f04bb5056ae11fe0ed79b95836a",
+    "source_sha256": "bd2a3e01abaa82200eebe9d64d82ff6739a2a8151c448428b8c535e6a06288c5",
+    "label_sha256": "404729c8cfe79630520ae9d2d46efce1e61070657f4f09507207044450af25d8",
+    "retrieved_at": "2026-11-12",
+    "frame": "MOON_ME_DE421",
+    "reference_radius_m": 1737400,
+    "projection": "Polar stereographic",
+    "pole_latitude": 90,
+    "projected_bounds_m": [
+      -151740,
+      -151740,
+      151740,
+      151740
+    ],
+    "resolution_m": 60,
+    "units": "fraction",
+    "nodata": -32768,
+    "scale": 0.00004,
+    "offset": 0,
+    "effective_resolution_m": null,
+    "quality_flags": null,
+    "valid_pixel_count": 25583364,
+    "undocumented_pixels_masked": 0,
+    "quality": "Fraction of modeled time steps with any solar disc visible over an approximately 18.6-year cycle.",
+    "parts": [
+      {
+        "path": "water_parts/illumination_north/00/water_illumination_north.part00",
+        "sha256": "70736d1fc1d64266d09a91e0ff628c705e1c9cc04fb1be816eed4baa82f80255"
+      },
+      {
+        "path": "water_parts/illumination_north/00/water_illumination_north.part01",
+        "sha256": "4ab55cca2ea3c67826c1ff5320491ebe6be15e03bd7e4878a7184d9ea5c177b9"
+      },
+      {
+        "path": "water_parts/illumination_north/00/water_illumination_north.part02",
+        "sha256": "5ccb34dde753b1ba78c341f41c2237a7dfba1d9dfffe51744a1605b0c4954cb4"
+      },
+      {
+        "path": "water_parts/illumination_north/00/water_illumination_north.part03",
+        "sha256": "328a1c97c964c3e058c566c6770c22c40d4c69982a462a4302978e64cd1ee16d"
+      },
+      {
+        "path": "water_parts/illumination_north/00/water_illumination_north.part04",
+        "sha256": "85ab10cf2aac43368cd55190e8fa3f20b44afbac161bc2a2e2f946c89b526dd4"
+      },
+      {
+        "path": "water_parts/illumination_north/01/water_illumination_north.part05",
+        "sha256": "9aeac05a4716af789efb357892ab020f4e665f90faa91dd94e75f9d3766fede1"
+      },
+      {
+        "path": "water_parts/illumination_north/01/water_illumination_north.part06",
+        "sha256": "0c32a43ad162b265e991bea983fd5d85ea720d0da4c776542e2fc4d687dc938d"
+      },
+      {
+        "path": "water_parts/illumination_north/01/water_illumination_north.part07",
+        "sha256": "9db2ba4fc9fb577b6d7dd97998a8a490d870ce338da14f44d65d8b5dcda2988f"
+      },
+      {
+        "path": "water_parts/illumination_north/01/water_illumination_north.part08",
+        "sha256": "592337244bcf4e9d0f2a978eb209911ac5de438cd624af25e19109563c3b7e01"
+      },
+      {
+        "path": "water_parts/illumination_north/01/water_illumination_north.part09",
+        "sha256": "f93b0d521cc21d1203d8b7bdca9c29b806c633a469b2566aee5e7f99d2afb6a3"
+      },
+      {
+        "path": "water_parts/illumination_north/02/water_illumination_north.part10",
+        "sha256": "3f3dda30f9605fb8e12815b2cc71d09df9bd80960d5711e3f4bb6ed6ee5d3fcb"
+      },
+      {
+        "path": "water_parts/illumination_north/02/water_illumination_north.part11",
+        "sha256": "d6b90567a38afca7f041ff8ced8354ffed9ee39489da272c9bb69a017e79f4ec"
+      },
+      {
+        "path": "water_parts/illumination_north/02/water_illumination_north.part12",
+        "sha256": "af0f23de8a04f264bbc5662c0c9de89559453d346b8ae397d386b242e5fd049d"
+      },
+      {
+        "path": "water_parts/illumination_north/02/water_illumination_north.part13",
+        "sha256": "55da5f04f16e853e6fbfe1a430be0315c70a499092289250e4aab60f2058edc8"
+      },
+      {
+        "path": "water_parts/illumination_north/02/water_illumination_north.part14",
+        "sha256": "e0ab998ee35e4fa2cbc8496604d02c1198ee2022202bc15f1751f4fe4cac4e4d"
+      },
+      {
+        "path": "water_parts/illumination_north/03/water_illumination_north.part15",
+        "sha256": "1aea85989a48e8fea575fbd7019bf7535cfe6e4d6b81c2ea67b84048de9da325"
+      },
+      {
+        "path": "water_parts/illumination_north/03/water_illumination_north.part16",
+        "sha256": "3b25aee1548b39b42b060f639e77bc76d61b0819ce575d0ecbfa60ff9aced22c"
+      },
+      {
+        "path": "water_parts/illumination_north/03/water_illumination_north.part17",
+        "sha256": "8a69e01fde076737523038d5687c29b59267a0736d5e5a1afded88099bb81eb9"
+      },
+      {
+        "path": "water_parts/illumination_north/03/water_illumination_north.part18",
+        "sha256": "5f03b55a1664835133580646b0261065e8b41fdf549ac2c958458e3c3bb43736"
+      }
+    ]
+  }
+}

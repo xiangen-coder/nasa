@@ -149,6 +149,7 @@ def main():
     parser.add_argument("--output", type=Path, default=ROOT / "data/lunar_preview")
     parser.add_argument("--download", action="store_true", help="Fetch missing NASA sources and PDS labels")
     parser.add_argument("--shadow-only", action="store_true", help="Package only the permanent shadow products")
+    parser.add_argument("--split", action="store_true", help="Write verified 2 MB parts for offline deployment")
     args = parser.parse_args()
     args.source_dir.mkdir(parents=True, exist_ok=True)
     args.output.mkdir(parents=True, exist_ok=True)
@@ -180,6 +181,16 @@ def main():
             key = f"{layer}_{hemisphere}"
             output = args.output / f"water_{key}.tif"
             products[key] = package(source, label, output, layer, pole, product_id, source_url, label_url)
+            if args.split:
+                with output.open("rb") as stream:
+                    parts = []
+                    while chunk := stream.read(2_000_000):
+                        folder = args.output / "water_parts" / key / f"{len(parts) // 5:02}"
+                        folder.mkdir(parents=True, exist_ok=True)
+                        part = folder / output.with_suffix(f".part{len(parts):02}").name
+                        part.write_bytes(chunk)
+                        parts.append({"path": part.relative_to(args.output).as_posix(), "sha256": hashlib.sha256(chunk).hexdigest()})
+                products[key]["parts"] = parts
             print(f"{key}: {output.stat().st_size:,} bytes")
     manifest = args.output / "water_evidence.json"
     temporary = manifest.with_suffix(".tmp.json")

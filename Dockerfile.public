@@ -16,9 +16,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app /app/backend/app
 COPY data/kernels /app/data/kernels
 COPY data/lunar_preview /app/data/lunar_preview
-COPY scripts/prepare_water_evidence.py scripts/water_evidence_sources.json /app/scripts/
-RUN --mount=type=cache,target=/var/cache/lunar-water \
-    python scripts/prepare_water_evidence.py --download --source-dir /var/cache/lunar-water
 COPY --from=frontend /src/frontend/.next/standalone /app/frontend
 COPY --from=frontend /src/frontend/.next/static /app/frontend/.next/static
 COPY --from=frontend /src/frontend/public /app/frontend/public
