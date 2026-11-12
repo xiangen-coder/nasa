@@ -503,7 +503,7 @@ export default function ResearchOverview({
                   <dd>{value(temperature?.maximum_k, " K")}</dd>
                 </div>
                 <div>
-                  <dt>Mapped permanent shadow</dt>
+                  <dt>Mapped permanent shadow{result.ice?.radius_m ? ` within ${result.ice.radius_m.toLocaleString("en-GB")} m` : ""}</dt>
                   <dd>
                     {value(
                       result.ice?.radius_m && result.ice.value != null

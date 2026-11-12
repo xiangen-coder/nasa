@@ -13,6 +13,7 @@ function evidence(mission: Mission, score = 80, original = false) {
     warnings: [], limitations: [], terrain: { available: true, resolution_m: 5, radius_m: 100, grid: [],
       slope_max_deg: 5, roughness_m: 1, relief_m: 4 },
     horizon: { available: true }, temperature: { available: !original },
+    ice: { available: true, value: 0, radius_m: 100 },
     factors: Object.fromEntries(["T", "S", "C", "H", "I"].map((key) => [key, {
       score: key === "I" || (original && key === "H") ? null : score,
       weight: 0.2, quality: "Fixture", explanation: "Fixture",
@@ -76,6 +77,8 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
   });
   const plan = await openCompare(page);
   const original = page.getByRole("article", { name: /Pre-result 1:/ });
+  await expect(original).toContainText("0.0% within 100 m");
+  await expect(original).toContainText("Water ice presence and abundance are unconfirmed.");
   const originalText = await original.innerText();
   await expect(plan.getByLabel("Search mode")).toHaveValue("delay");
   await plan.getByRole("button", { name: "Run What IF" }).click();

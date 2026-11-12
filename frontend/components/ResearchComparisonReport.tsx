@@ -58,7 +58,8 @@ const measurements: { label: string; value: (r: Research) => string }[] = [
     ? format(r.hazards.value * 100, "%") : "Unavailable" },
   { label: "Observed seasonal temperature range", value: (r) => r.temperature.available
     ? `${format(r.temperature.minimum_k)}–${format(r.temperature.maximum_k)} K` : "Unavailable" },
-  { label: "Mapped permanent shadow", value: (r) => r.ice?.radius_m && r.ice.value != null ? format(100 * r.ice.value, "%") : "Unavailable" },
+  { label: "Mapped permanent shadow", value: (r) => r.ice?.radius_m && r.ice.value != null
+    ? `${format(100 * r.ice.value, "%")} within ${r.ice.radius_m.toLocaleString("en-GB")} m` : "Unavailable" },
   { label: "Terrain screening", value: (r) => r.geometry.mode === "terrain_screened"
     ? "Terrain-screened" : r.geometry.available ? "Reference geometry only" : "Unavailable" },
   { label: "Research suitability score", value: (r) => format(r.score, r.provisional ? " / 100 · provisional" : " / 100") },

@@ -217,8 +217,11 @@ export default function PreliminaryComparison({
                     </dd>}
                   </div>
                   <div>
-                    <dt>WATER ICE POTENTIAL</dt>
-                    <dd>{r?.ice?.radius_m && r.factors.I.score != null ? `${r.factors.I.score.toFixed(1)}% mapped permanent shadow` : score(r, "I")}</dd>
+                    <dt>MAPPED PERMANENT SHADOW</dt>
+                    <dd>{r?.ice?.radius_m && r.ice.value != null
+                      ? `${(100 * r.ice.value).toFixed(1)}% within ${r.ice.radius_m.toLocaleString("en-GB")} m`
+                      : r ? "Unavailable for the assessment area" : "—"}</dd>
+                    {r && <dd>Water ice presence and abundance are unconfirmed.</dd>}
                   </div>
                   <div>
                     <dt>ENVIRONMENT & LIMITS</dt>
