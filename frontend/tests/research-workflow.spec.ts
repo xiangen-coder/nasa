@@ -38,6 +38,7 @@ test("adding three research sites shares the mission settings and exports their 
   await page.locator("#landing-search-form").getByLabel("End date", { exact: true }).fill("2026-10-02");
   await page.getByRole("link", { name: "Compare", exact: true }).click();
   await page.getByRole("article", { name: "What IF" }).getByText("Change location", { exact: true }).click();
+  await page.getByText("Custom coordinates and terrain suggestions", { exact: true }).click();
   const picker = page.locator("#choose-comparison-sites");
   const addPoint = async (name: string, latitude: string, longitude: string) => {
     await picker.getByLabel("Custom point").fill(name);

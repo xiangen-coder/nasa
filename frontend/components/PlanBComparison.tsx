@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { MapPin } from "lucide-react";
-import { comparisonRadiusKm } from "./ComparisonPicker";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+
+import { comparisonDistanceKm, comparisonRadiusKm } from "./ComparisonPicker";
 import type { Research } from "./LandingResearch";
 import WaterIceFactor from "./WaterIceFactor";
 import type { ResearchPriority } from "./SearchConsole";
@@ -10,9 +10,11 @@ import type { SolarSettings } from "./mission-lab/scenario-science";
 import {
   comparableScores,
   comparableTerrain,
+  comparableVisibility,
   findPlanB,
   initialProgress,
   latestTouchdown,
+  missionKey,
   rankOptions,
   searchDates,
   solarEstimate,
@@ -36,31 +38,40 @@ function metric(value: number | undefined, unit: string, baseline?: number) {
   return `${number.format(value)} ${unit}${delta == null ? "" : ` (${delta > 0 ? "+" : ""}${number.format(delta)} ${unit})`}`;
 }
 
+const optionValue = (value: number | null | undefined, unit = "") =>
+  value == null ? "—" : `${value.toFixed(1)}${unit}`;
+
+function difference(
+  value: number | null | undefined,
+  baseline: number | null | undefined,
+  unit = "",
+) {
+  if (value == null || baseline == null) return null;
+  const delta = Number((value - baseline).toFixed(1));
+  return (
+    <small>
+      {delta === 0
+        ? "Unchanged"
+        : `${delta > 0 ? "+" : "−"}${Math.abs(delta).toFixed(1)}${unit}`}
+    </small>
+  );
+}
+
 function OptionDetails({
   option,
   original,
   equipment,
-  onCompare,
-  onRemove,
-  added,
 }: {
   option: PlanBForecast;
   original: Research;
   equipment: SolarSettings;
-  onCompare: (option: PlanBForecast) => void;
-  onRemove?: () => void;
-  added: boolean;
 }) {
   const { result, bounds } = option;
   const mission = result.mission;
   const hours =
     (Date.parse(mission.start) - Date.parse(original.mission.start)) /
     3_600_000;
-  const compareGeometry =
-    result.geometry.mode === original.geometry.mode &&
-    result.horizon.source?.resolution_m ===
-      original.horizon.source?.resolution_m &&
-    result.horizon.source?.name === original.horizon.source?.name;
+  const compareGeometry = comparableVisibility(original, result);
   const terrain = comparableTerrain(original, result)
     ? original.terrain
     : undefined;
@@ -200,20 +211,6 @@ function OptionDetails({
           <WaterIceFactor result={result} />
         </dl>
       </details>
-      {onRemove ? (
-        <button type="button" className="button subtle" onClick={onRemove}>
-          Remove from Compare
-        </button>
-      ) : (
-        <button
-          type="button"
-          className="button subtle"
-          disabled={added}
-          onClick={() => onCompare(option)}
-        >
-          {added ? "Added to comparison" : "Add to Compare"}
-        </button>
-      )}
     </>
   );
 }
@@ -225,20 +222,25 @@ export default function PlanBComparison({
   alternativePicker,
   onCompare,
   isCompared,
-  removeCompared,
+  comparedCount,
+  hidden,
 }: {
   original?: Research;
   priority: ResearchPriority;
   equipment: SolarSettings;
   alternativePicker: ReactNode;
-  onCompare: (option: PlanBForecast) => void;
+  onCompare: (options: PlanBForecast[]) => void;
   isCompared: (option: PlanBForecast) => boolean;
-  removeCompared: (option: PlanBForecast) => (() => void) | undefined;
+  comparedCount: number;
+  hidden: boolean;
 }) {
   const [mode, setMode] = useState<PlanBMode>("delay");
   const [range, setRange] = useState<PlanBWindow>("month");
   const [custom, setCustom] = useState("");
   const [time, setTime] = useState("");
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [editing, setEditing] = useState(true);
   const [progress, setProgress] = useState(initialProgress);
   const [status, setStatus] = useState<
     "idle" | "running" | "done" | "cancelled" | "error"
@@ -257,6 +259,8 @@ export default function PlanBComparison({
     if (!original || controller.current) return;
     setMessage("");
     setProgress(initialProgress);
+    setSelectedKeys([]);
+    setExpanded(null);
     setStatus("idle");
     let dates;
     try {
@@ -275,6 +279,7 @@ export default function PlanBComparison({
     const active = new AbortController();
     controller.current = active;
     setStatus("running");
+    setEditing(false);
     try {
       await findPlanB({
         original,
@@ -300,9 +305,10 @@ export default function PlanBComparison({
 
   const ranked: PlanBForecast[] =
     status !== "running"
-      ? rankOptions(progress.options, priority, mode)
-          .slice(0, 3)
-          .map((option) => ({ ...option, reasons: [] }))
+      ? rankOptions(progress.options, priority, mode).map((option) => ({
+          ...option,
+          reasons: [],
+        }))
       : [];
   const incomplete =
     status === "cancelled" ||
@@ -311,13 +317,35 @@ export default function PlanBComparison({
     progress.unavailable > 0 ||
     progress.forecastsUnavailable > 0;
   const done = status !== "idle" && status !== "running";
+  const options = new Map<string, PlanBForecast>();
+  if (done) {
+    for (const option of [...ranked, ...progress.forecasts]) {
+      const key = missionKey(option.result.mission);
+      if (!options.has(key)) options.set(key, option);
+    }
+  }
+  const selectedOptions = [...options].filter(
+    ([key, option]) => selectedKeys.includes(key) && !isCompared(option),
+  );
+  function toggleOption(key: string) {
+    setSelectedKeys((keys) =>
+      keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key],
+    );
+  }
   const resetResult = () => {
     setStatus("idle");
     setMessage("");
     setProgress(initialProgress);
+    setSelectedKeys([]);
+    setExpanded(null);
+    setEditing(true);
   };
   return (
-    <article className="pre-result-card glass plan-b-card" aria-label="What IF">
+    <article
+      className="pre-result-card glass plan-b-card"
+      aria-label="What IF"
+      hidden={hidden}
+    >
       <h2>What IF</h2>
       <details className="pre-extra">
         <summary>How the search works</summary>
@@ -353,20 +381,47 @@ export default function PlanBComparison({
           ))}
         </div>
       </fieldset>
-      <div hidden={mode !== "relocate"}>{alternativePicker}</div>
+      <details className="pre-extra" hidden={mode !== "relocate"}>
+        <summary>Custom coordinates and terrain suggestions</summary>
+        {alternativePicker}
+      </details>
       {!original ? (
         <p>
           Evaluate Pre-Result 1 to use its mission settings for a backup search.
         </p>
       ) : (
         <>
+          <div className="what-if-search-centre">
+            <div>
+              <strong>
+                {mode === "delay"
+                  ? "Same location"
+                  : `Within ${comparisonRadiusKm} km`}
+              </strong>
+              {" · "}
+              {mode === "relocate"
+                ? `Same touchdown: ${utc(original.mission.start)}`
+                : `${range === "custom" ? custom || "Custom window" : range === "month" ? "Next month" : "Next year"} · ${time ? `${time} UTC` : utc(original.mission.start).slice(11)}`}
+              <small>Search centre: {original.mission.name}</small>
+            </div>
+            {!editing && status !== "running" && (
+              <button
+                type="button"
+                className="button subtle"
+                onClick={() => setEditing(true)}
+              >
+                Edit search
+              </button>
+            )}
+          </div>
           <form
+            hidden={!editing && status !== "running"}
             onSubmit={(event) => {
               event.preventDefault();
               void run();
             }}
           >
-            <fieldset disabled={status === "running"}>
+            <fieldset disabled={status === "running"} hidden={!editing}>
               {mode !== "relocate" && (
                 <>
                   <label>
@@ -421,20 +476,8 @@ export default function PlanBComparison({
                   </label>
                 </>
               )}
-              {mode === "both" && (
-                <div className="what-if-search-centre">
-                  <MapPin size={20} aria-hidden="true" />
-                  <div>
-                    Nearby points will be screened{" "}
-                    <strong>
-                      within {comparisonRadiusKm} km of Pre-Result 1.
-                    </strong>
-                    <small>Search centre: {original.mission.name}</small>
-                  </div>
-                </div>
-              )}
               <button type="submit" className="button primary">
-                Run What IF
+                {mode === "relocate" ? "Suggest nearby points" : "Run What IF"}
               </button>
             </fieldset>
             {status === "running" && (
@@ -493,115 +536,279 @@ export default function PlanBComparison({
           )}
           {done && (
             <>
-              {ranked.length === 0 ? (
-                <h3>No viable backup found in this search</h3>
-              ) : (
-                <>
-                  <h3>Best of the options evaluated</h3>
-                  <OptionDetails
-                    option={ranked[0]}
-                    original={original}
-                    equipment={equipment}
-                    onCompare={onCompare}
-                    added={isCompared(ranked[0])}
-                    onRemove={removeCompared(ranked[0])}
-                  />
-                  {ranked.slice(1).map((option, index) => (
-                    <details
-                      key={JSON.stringify(option.result.mission)}
-                      className="pre-extra"
-                    >
-                      <summary>
-                        Backup {index + 1} · {option.result.mission.name} ·{" "}
-                        {utc(option.result.mission.start)}
-                      </summary>
-                      <OptionDetails
-                        option={option}
-                        original={original}
-                        equipment={equipment}
-                        onCompare={onCompare}
-                        added={isCompared(option)}
-                        onRemove={removeCompared(option)}
-                      />
-                    </details>
-                  ))}
-                  <p>
-                    Differences are relative to Pre-Result 1. Screening uses
-                    historical thermal observations and sampled visibility.
-                    Flight reachability and landing safety still require
-                    verification.
+              <section aria-label="Suggested comparison options">
+                <h3>
+                  {mode === "delay"
+                    ? "Choose dates to compare"
+                    : mode === "relocate"
+                      ? "Choose locations to compare"
+                      : "Choose options to compare"}
+                </h3>
+                {ranked.length === 0 && (
+                  <p className="info">
+                    No backup passed the checks in this search. Any available
+                    forecasts are marked Unverified.
                   </p>
-                </>
-              )}
-              {progress.sampled && (
-                <p>
-                  The search checks selected touchdown times within your date
-                  window.
-                </p>
-              )}
-              {progress.skipped > 0 && (
-                <p>
-                  The skipped dates share a site with a failed check or missing
-                  evidence. Changing the touchdown date cannot resolve that site
-                  check. Forecasts sample the first and last touchdown times for
-                  that site.
-                </p>
-              )}
-              {(progress.limits > 0 || progress.missing > 0) && (
-                <p>
-                  {progress.limits} exceeded limits · {progress.missing} lacked
-                  required evidence.
-                </p>
-              )}
-              {progress.shortlist && (
-                <p>
-                  Terrain screening covered {progress.shortlist.searched}{" "}
-                  points: {progress.shortlist.outside_or_missing} lacked
-                  evidence, {progress.shortlist.failed_limits} exceeded limits,{" "}
-                  {progress.shortlist.overlap_excluded} overlapped, and{" "}
-                  {progress.shortlist.passing_terrain_candidates} passed.
-                </p>
-              )}
-              {progress.forecastsUnavailable > 0 && (
-                <p>
-                  {progress.forecastsUnavailable} outlooks could not be
-                  calculated.
-                </p>
-              )}
-              {progress.forecasts.length > 0 && (
-                <section aria-label="Forecasts for comparison">
-                  <h3>Forecasts for comparison</h3>
-                  {progress.forecasts.map((option, index) => (
-                    <details
-                      key={JSON.stringify(option.result.mission)}
-                      className="pre-extra"
-                      open={index === 0}
+                )}
+                {options.size > 0 && (
+                  <>
+                    <div
+                      className="what-if-options-scroll table-scroll"
+                      tabIndex={0}
+                      role="region"
+                      aria-label="Suggested options table"
                     >
-                      <summary>
-                        {option.result.mission.name} ·{" "}
-                        {utc(option.result.mission.start)}
-                      </summary>
-                      <p>
-                        Landing checks unresolved or exceeded.{" "}
-                        {option.reasons.join(" ")}
-                      </p>
-                      <p>
-                        {option.result.geometry.mode === "terrain_screened"
-                          ? "Visibility accounts for the mapped terrain skyline."
-                          : "Visibility uses a smooth reference horizon. Local shadows and obstructions are unknown."}
-                      </p>
-                      <OptionDetails
-                        option={option}
-                        original={original}
-                        equipment={equipment}
-                        onCompare={onCompare}
-                        added={isCompared(option)}
-                        onRemove={removeCompared(option)}
-                      />
-                    </details>
-                  ))}
-                </section>
-              )}
+                      <table
+                        className="what-if-options"
+                        aria-label="Suggested plans"
+                      >
+                        <thead>
+                          <tr>
+                            <th scope="col">Select</th>
+                            <th scope="col">Option &amp; touchdown</th>
+                            <th scope="col">Score</th>
+                            <th scope="col">Sunlight</th>
+                            <th scope="col">
+                              {mode === "relocate"
+                                ? "Terrain"
+                                : "Earth visibility"}
+                            </th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Details</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked
+                                disabled
+                                aria-label="Original plan included"
+                              />
+                            </td>
+                            <th scope="row">
+                              {original.mission.name}
+                              <small>{utc(original.mission.start)}</small>
+                            </th>
+                            <td>{optionValue(original.score)}</td>
+                            <td>
+                              {optionValue(original.factors.S?.score, "%")}
+                            </td>
+                            <td>
+                              {optionValue(
+                                mode === "relocate"
+                                  ? original.factors.T?.score
+                                  : original.factors.C?.score,
+                                mode === "relocate" ? "" : "%",
+                              )}
+                            </td>
+                            <td>Baseline</td>
+                            <td>—</td>
+                          </tr>
+                          {[...options].map(([key, option]) => {
+                            const result = option.result;
+                            const candidate = result.mission;
+                            const added = isCompared(option);
+                            const checked = added || selectedKeys.includes(key);
+                            const visibility = comparableVisibility(
+                              original,
+                              result,
+                            );
+                            const isLocationMode = mode === "relocate";
+                            const secondary = isLocationMode ? "T" : "C";
+                            const hours =
+                              (Date.parse(candidate.start) -
+                                Date.parse(original.mission.start)) /
+                              3_600_000;
+                            const distance = comparisonDistanceKm(
+                              original.mission,
+                              candidate,
+                            );
+                            return (
+                              <Fragment key={key}>
+                                <tr
+                                  className={
+                                    checked ? "is-selected" : undefined
+                                  }
+                                >
+                                  <td>
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      disabled={added}
+                                      aria-label={`Select ${candidate.name} · ${utc(candidate.start)}`}
+                                      onChange={() => toggleOption(key)}
+                                    />
+                                  </td>
+                                  <th scope="row">
+                                    {candidate.name}
+                                    <small>{utc(candidate.start)}</small>
+                                    <small>
+                                      {mode !== "delay" &&
+                                        `${number.format(distance)} km away`}
+                                      {mode === "both" && " · "}
+                                      {mode !== "relocate" &&
+                                        `+${number.format(hours)} h`}
+                                    </small>
+                                  </th>
+                                  <td>
+                                    {optionValue(result.score)}
+                                    {comparableScores(original, result) &&
+                                      difference(result.score, original.score)}
+                                  </td>
+                                  <td>
+                                    {optionValue(result.factors.S?.score, "%")}
+                                    {visibility &&
+                                      difference(
+                                        result.factors.S?.score,
+                                        original.factors.S?.score,
+                                        " pp",
+                                      )}
+                                  </td>
+                                  <td>
+                                    {optionValue(
+                                      result.factors[secondary]?.score,
+                                      isLocationMode ? "" : "%",
+                                    )}
+                                    {(isLocationMode
+                                      ? comparableTerrain(original, result)
+                                      : visibility) &&
+                                      difference(
+                                        result.factors[secondary]?.score,
+                                        original.factors[secondary]?.score,
+                                        isLocationMode ? "" : " pp",
+                                      )}
+                                  </td>
+                                  <td>
+                                    {option.reasons.length
+                                      ? "Unverified"
+                                      : "Screened"}
+                                    {added && <small>In comparison</small>}
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="button subtle"
+                                      type="button"
+                                      aria-expanded={expanded === key}
+                                      aria-label={`Details for ${candidate.name} · ${utc(candidate.start)}`}
+                                      onClick={() =>
+                                        setExpanded(
+                                          expanded === key ? null : key,
+                                        )
+                                      }
+                                    >
+                                      {expanded === key ? "Hide" : "Details"}
+                                    </button>
+                                  </td>
+                                </tr>
+                                {expanded === key && (
+                                  <tr>
+                                    <td colSpan={7}>
+                                      {option.reasons.length > 0 && (
+                                        <p>{option.reasons.join(" ")}</p>
+                                      )}
+                                      <OptionDetails
+                                        option={option}
+                                        original={original}
+                                        equipment={equipment}
+                                      />
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p>
+                      Changes are relative to Pre-Result 1. pp = percentage
+                      points.
+                    </p>
+                    <div className="what-if-selection">
+                      <div>
+                        <strong>
+                          {selectedOptions.length} alternatives selected
+                        </strong>
+                        <small>Original included automatically.</small>
+                      </div>
+                      {selectedOptions.map(([key, option]) => (
+                        <button
+                          className="button subtle"
+                          type="button"
+                          key={key}
+                          onClick={() => toggleOption(key)}
+                          aria-label={`Deselect ${option.result.mission.name} · ${utc(option.result.mission.start)}`}
+                        >
+                          {option.result.mission.name} ·{" "}
+                          {option.result.mission.start.slice(0, 10)} ×
+                        </button>
+                      ))}
+                      <button
+                        className="button subtle"
+                        type="button"
+                        disabled={!selectedOptions.length}
+                        onClick={() => setSelectedKeys([])}
+                      >
+                        Clear
+                      </button>
+                      <button
+                        className="button primary"
+                        type="button"
+                        disabled={!selectedOptions.length}
+                        onClick={() => {
+                          onCompare(
+                            selectedOptions.map(([, option]) => option),
+                          );
+                          setSelectedKeys([]);
+                        }}
+                      >
+                        Compare selected (
+                        {comparedCount + selectedOptions.length})
+                      </button>
+                    </div>
+                  </>
+                )}
+              </section>
+              <details className="pre-extra">
+                <summary>Skipped options &amp; screening reasons</summary>
+                {progress.sampled && (
+                  <p>
+                    The search checks selected touchdown times within your date
+                    window.
+                  </p>
+                )}
+                {progress.skipped > 0 && (
+                  <p>
+                    The skipped dates share a site with a failed check or
+                    missing evidence. Changing the touchdown date cannot resolve
+                    that site check. Forecasts sample the first and last
+                    touchdown times for that site.
+                  </p>
+                )}
+                {(progress.limits > 0 || progress.missing > 0) && (
+                  <p>
+                    {progress.limits} exceeded limits · {progress.missing}{" "}
+                    lacked required evidence.
+                  </p>
+                )}
+                {progress.shortlist && (
+                  <p>
+                    Terrain screening covered {progress.shortlist.searched}{" "}
+                    points: {progress.shortlist.outside_or_missing} lacked
+                    evidence, {progress.shortlist.failed_limits} exceeded
+                    limits, {progress.shortlist.overlap_excluded} overlapped,
+                    and {progress.shortlist.passing_terrain_candidates} passed.
+                  </p>
+                )}
+                {progress.forecastsUnavailable > 0 && (
+                  <p>
+                    {progress.forecastsUnavailable} outlooks could not be
+                    calculated.
+                  </p>
+                )}
+              </details>
               {progress.reasons.length > 0 && (
                 <details className="pre-extra" open={ranked.length === 0}>
                   <summary>Assessment notes</summary>

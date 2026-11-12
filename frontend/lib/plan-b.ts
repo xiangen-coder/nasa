@@ -119,6 +119,13 @@ export function comparableScores(original: Research, candidate: Research) {
     }) && comparableTerrain(original, candidate);
 }
 
+export function comparableVisibility(original: Research, candidate: Research) {
+  return original.geometry.available && candidate.geometry.available &&
+    original.geometry.mode === candidate.geometry.mode &&
+    original.horizon.source?.name === candidate.horizon.source?.name &&
+    original.horizon.source?.resolution_m === candidate.horizon.source?.resolution_m;
+}
+
 export function comparableTerrain(original: Research, candidate: Research) {
   return original.terrain.available && candidate.terrain.available &&
     original.terrain.coverage_type === candidate.terrain.coverage_type &&

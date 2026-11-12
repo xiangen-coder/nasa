@@ -1,14 +1,18 @@
 "use client";
 import { ChevronRight } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Mission, Site } from "../app/types";
 import type { Research, ResearchComparison } from "./LandingResearch";
 import type { ResearchPriority } from "./SearchConsole";
 import type { SolarSettings } from "./mission-lab/scenario-science";
-import { comparisonRadiusKm } from "./ComparisonPicker";
+import { comparisonDistanceKm, comparisonRadiusKm } from "./ComparisonPicker";
 import {
   comparableScores,
+  comparableTerrain,
+  comparableVisibility,
+  missionKey,
   sameMission,
+  solarEstimate,
   type PlanBForecast,
 } from "../lib/plan-b";
 import PlanBComparison from "./PlanBComparison";
@@ -21,6 +25,8 @@ const criteria = [
   ["I", "Water ice potential"],
 ] as const;
 const key = (s: Site) => `${s.latitude},${s.longitude}`;
+const withUnit = (value: number | undefined, unit: string) =>
+  value == null ? "Unavailable" : `${value.toFixed(1)} ${unit}`;
 const utc = (time: string) =>
   Number.isFinite(Date.parse(time))
     ? new Date(time).toISOString().slice(0, 19).replace("T", " ") + " UTC"
@@ -62,6 +68,20 @@ export default function PreliminaryComparison({
   onSearch: () => void;
   onCancel: () => void;
 }) {
+  const [comparing, setComparing] = useState(false);
+  const [differencesOnly, setDifferencesOnly] = useState(false);
+  const workspace = useRef<HTMLDivElement>(null);
+  const focusWorkspace = useRef(false);
+  useEffect(() => {
+    if (!focusWorkspace.current) return;
+    focusWorkspace.current = false;
+    workspace.current?.focus({ preventScroll: true });
+    workspace.current?.scrollIntoView({ block: "start" });
+  }, [comparing]);
+  function openWorkspace(compare: boolean) {
+    focusWorkspace.current = true;
+    setComparing(compare);
+  }
   const planned = [
     mission,
     ...alternatives.map((site) => ({ ...mission, ...site })),
@@ -81,6 +101,44 @@ export default function PreliminaryComparison({
       .map((scenario) => ({ site: scenario.result.mission, scenario })),
   ];
   const selected = state?.results.find((r) => sameMission(r.mission, mission));
+  const assessments = cards.map(
+    ({ site, scenario }) =>
+      scenario?.result ??
+      state?.results.find((value) => sameMission(value.mission, site)),
+  );
+  function comparableFactor(candidate: Research, factor: string) {
+    if (!selected) return false;
+    if (factor === "S" || factor === "C")
+      return comparableVisibility(selected, candidate);
+    if (factor === "T") return comparableTerrain(selected, candidate);
+    const originalFactor = selected.factors[factor];
+    const candidateFactor = candidate.factors[factor];
+    return (
+      originalFactor &&
+      candidateFactor &&
+      originalFactor.quality === candidateFactor.quality &&
+      originalFactor.source?.resolution_m ===
+        candidateFactor.source?.resolution_m
+    );
+  }
+  const shownCriteria =
+    comparing && differencesOnly && cards.length > 1
+      ? criteria.filter(([factor]) => {
+          const baseline = selected?.factors[factor]?.score;
+          return (
+            baseline == null ||
+            !assessments
+              .slice(1)
+              .every(
+                (candidate) =>
+                  candidate &&
+                  comparableFactor(candidate, factor) &&
+                  candidate.factors[factor]?.score?.toFixed(1) ===
+                    baseline.toFixed(1),
+              )
+          );
+        })
+      : criteria;
   const hasUnfinished = planned.some(
     (site) =>
       !state?.results.some((result) =>
@@ -91,9 +149,7 @@ export default function PreliminaryComparison({
     { site, scenario }: (typeof cards)[number],
     index: number,
   ) {
-    const result =
-      scenario?.result ??
-      state?.results.find((value) => sameMission(value.mission, site));
+    const result = assessments[index];
     const failure = scenario ? undefined : state?.failures[key(site)];
     const isSelected = index === 0;
     const comparable =
@@ -146,6 +202,26 @@ export default function PreliminaryComparison({
         <header className="pre-result-heading">
           <h2>Pre-Result {index + 1}</h2>
           <p>{site.name}</p>
+          {comparing && (
+            <dl className="what-if-card-window">
+              <div>
+                <dt>Touchdown</dt>
+                <dd>{utc(site.start)}</dd>
+              </div>
+              <div>
+                <dt>Mission end</dt>
+                <dd>{utc(site.end)}</dd>
+              </div>
+              <div>
+                <dt>Distance</dt>
+                <dd>
+                  {isSelected
+                    ? "Original site"
+                    : `${comparisonDistanceKm(mission, site).toFixed(2)} km from original`}
+                </dd>
+              </div>
+            </dl>
+          )}
           {scenario && (
             <span className="eyebrow">
               {scenario.reasons.length
@@ -171,12 +247,33 @@ export default function PreliminaryComparison({
         <section className="pre-criteria" aria-label="Criteria at a glance">
           <h3>Criteria at a glance</h3>
           <dl>
-            {criteria.map(([factor, label]) => {
+            {shownCriteria.map(([factor, label]) => {
               const reading = result?.factors[factor]?.score;
+              const baseline = selected?.factors[factor]?.score;
+              const change =
+                comparing &&
+                !isSelected &&
+                reading != null &&
+                baseline != null &&
+                result &&
+                comparableFactor(result, factor)
+                  ? Number((reading - baseline).toFixed(1))
+                  : null;
               return (
                 <div key={factor}>
                   <dt>{label}</dt>
-                  <dd>{score(result, factor)}</dd>
+                  <dd>
+                    {score(result, factor)}
+                    {change != null && (
+                      <small>
+                        {" "}
+                        ·{" "}
+                        {change === 0
+                          ? "Unchanged"
+                          : `${change > 0 ? "+" : "−"}${Math.abs(change).toFixed(1)}${factor === "S" || factor === "C" ? " pp" : ""}`}
+                      </small>
+                    )}
+                  </dd>
                   {reading != null && (
                     <meter
                       min={0}
@@ -189,6 +286,9 @@ export default function PreliminaryComparison({
               );
             })}
           </dl>
+          {shownCriteria.length === 0 && (
+            <p>All displayed criteria match the original.</p>
+          )}
           <p>
             Percentages show availability. Values out of 100 are factor scores.
           </p>
@@ -447,31 +547,168 @@ export default function PreliminaryComparison({
           {notice}
         </p>
       )}
-      <div className="pre-result-grid" role="region" aria-label="Comparison cards" tabIndex={0}>
-        {renderCard(cards[0], 0)}
-        {cards.slice(1).map((card, index) => renderCard(card, index + 1))}
-        <PlanBComparison
-          key={JSON.stringify([mission, priority, equipment])}
-          original={selected}
-          priority={priority}
-          equipment={equipment}
-          alternativePicker={alternativePicker}
-          isCompared={isCompared}
-          removeCompared={(option) => {
-            const match = scenarios.find((entry) =>
-              sameMission(entry.result.mission, option.result.mission),
-            );
-            return match
-              ? () =>
-                  onScenariosChange(
-                    scenarios.filter((entry) => entry !== match),
-                  )
-              : undefined;
-          }}
-          onCompare={(option) => {
-            if (!isCompared(option)) onScenariosChange([...scenarios, option]);
-          }}
-        />
+      <div className="what-if-workspace" ref={workspace} tabIndex={-1}>
+        {comparing ? (
+          <div className="what-if-compare-heading">
+            <div>
+              <button
+                className="button subtle"
+                onClick={() => openWorkspace(false)}
+              >
+                Back to options
+              </button>
+              <h2>Compare selected plans</h2>
+              <p>
+                Original plan and {cards.length - 1} alternatives · all times
+                UTC
+              </p>
+            </div>
+            <div className="account-actions">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={differencesOnly}
+                  onChange={(event) => setDifferencesOnly(event.target.checked)}
+                />{" "}
+                Show differences only
+              </label>
+              <button
+                className="button subtle"
+                onClick={() => openWorkspace(false)}
+              >
+                Add option
+              </button>
+            </div>
+          </div>
+        ) : (
+          cards.length > 1 && (
+            <button
+              className="button subtle what-if-compare-link"
+              onClick={() => openWorkspace(true)}
+            >
+              Compare added plans ({cards.length})
+            </button>
+          )
+        )}
+        <div
+          className={`pre-result-grid${comparing ? "" : " what-if-browsing"}`}
+          role="region"
+          aria-label="Comparison cards"
+          tabIndex={0}
+        >
+          {renderCard(cards[0], 0)}
+          {cards.slice(1).map((card, index) => renderCard(card, index + 1))}
+          <PlanBComparison
+            key={JSON.stringify([mission, priority, equipment])}
+            original={selected}
+            priority={priority}
+            equipment={equipment}
+            alternativePicker={alternativePicker}
+            isCompared={isCompared}
+            hidden={comparing}
+            comparedCount={cards.length}
+            onCompare={(options) => {
+              onScenariosChange([
+                ...scenarios,
+                ...options.filter((option) => !isCompared(option)),
+              ]);
+              openWorkspace(true);
+            }}
+          />
+        </div>
+        {comparing && (
+          <>
+            <details className="panel what-if-comparison-details">
+              <summary>
+                Mission metrics: sunlight hours, outages &amp; energy
+              </summary>
+              <div className="table-scroll">
+                <table
+                  className="what-if-options"
+                  aria-label="Mission metrics for selected plans"
+                >
+                  <thead>
+                    <tr>
+                      <th scope="col">Plan</th>
+                      <th scope="col">Sunlight</th>
+                      <th scope="col">Longest Earth outage</th>
+                      <th scope="col">Estimated solar energy</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cards.map(({ site, scenario }, index) => {
+                      const result = assessments[index];
+                      let energy = scenario?.energy;
+                      if (energy == null && result) {
+                        try {
+                          energy = solarEstimate(result, equipment)?.total_kwh;
+                        } catch {
+                          // A missing estimate should not hide the other mission metrics.
+                        }
+                      }
+                      return (
+                        <tr key={missionKey(site)}>
+                          <th scope="row">
+                            {site.name}
+                            <small>{utc(site.start)}</small>
+                          </th>
+                          <td>
+                            {withUnit(result?.geometry.sunlight_hours, "h")}
+                          </td>
+                          <td>
+                            {withUnit(
+                              result?.geometry.metrics?.longest_blackout_hours,
+                              "h",
+                            )}
+                          </td>
+                          <td>{withUnit(energy, "kWh")}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+            <details className="panel what-if-comparison-details">
+              <summary>Terrain measurements, evidence &amp; warnings</summary>
+              {cards.map(({ site, scenario }, index) => {
+                const result = assessments[index];
+                const warnings = [
+                  ...new Set([
+                    ...(scenario?.reasons ?? []),
+                    ...(result?.constraints_failed ?? []),
+                    ...(result?.warnings ?? []),
+                  ]),
+                ];
+                return (
+                  <section key={missionKey(site)}>
+                    <h3>
+                      {site.name} · {utc(site.start)}
+                    </h3>
+                    <p>
+                      Maximum slope{" "}
+                      {withUnit(result?.terrain.slope_max_deg, "°")} · Roughness{" "}
+                      {withUnit(result?.terrain.roughness_m, "m")} · Relief{" "}
+                      {withUnit(result?.terrain.relief_m, "m")}
+                    </p>
+                    <p>
+                      {result
+                        ? `${(result.available_weight * 100).toFixed(0)}% nominal evidence · Missing: ${result.missing.join(", ") || "none"}`
+                        : "Assessment unavailable."}
+                    </p>
+                    {!!warnings.length && (
+                      <ul>
+                        {warnings.map((warning) => (
+                          <li key={warning}>{warning}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                );
+              })}
+            </details>
+          </>
+        )}
       </div>
       <p className="preliminary-disclosure">
         Provisional research scores. See More details for evidence and coverage.

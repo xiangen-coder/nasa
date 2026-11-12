@@ -9,15 +9,18 @@ export const siteKey = (s: Site) =>
 export const comparisonRadiusKm = 20;
 export const comparisonAreaMessage = `Choose a comparison point within ${comparisonRadiusKm} km of the first landing point.`;
 
-export function inComparisonArea(first: Site, candidate: Site) {
+export function comparisonDistanceKm(first: Site, candidate: Site) {
   const radians = Math.PI / 180;
   const latitude = first.latitude * radians;
   const otherLatitude = candidate.latitude * radians;
   const halfLongitudeDifference = (candidate.longitude - first.longitude) * radians / 2;
   const haversine = Math.sin((otherLatitude - latitude) / 2) ** 2
     + Math.cos(latitude) * Math.cos(otherLatitude) * Math.sin(halfLongitudeDifference) ** 2;
-  const distanceKm = 2 * 1737.4 * Math.asin(Math.sqrt(Math.min(1, haversine)));
-  return distanceKm <= comparisonRadiusKm + 1e-6;
+  return 2 * 1737.4 * Math.asin(Math.sqrt(Math.min(1, haversine)));
+}
+
+export function inComparisonArea(first: Site, candidate: Site) {
+  return comparisonDistanceKm(first, candidate) <= comparisonRadiusKm + 1e-6;
 }
 type Candidate = {
   location: Site;

@@ -86,6 +86,66 @@
   overflow-x: auto;
   padding-bottom: 8px;
 }
+.what-if-workspace { scroll-margin-top: 160px; }
+.pre-result-grid.what-if-browsing {
+  grid-auto-flow: row;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.25fr);
+  overflow: visible;
+}
+.what-if-browsing > article:first-child { grid-area: 1 / 1; }
+.what-if-browsing > .plan-b-card { grid-area: 1 / 2; }
+.plan-b-card[hidden],
+.plan-b-card form fieldset[hidden] { display: none; }
+.what-if-compare-heading,
+.what-if-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-block: 12px;
+}
+.what-if-compare-link { margin-bottom: 12px; }
+.what-if-selection {
+  padding: 12px;
+  border: 1px solid #dce9ff36;
+  border-radius: 14px;
+  background: #a5bee61a;
+}
+.what-if-selection .button { white-space: normal; overflow-wrap: anywhere; }
+.what-if-options-scroll {
+  max-height: 32rem;
+  overflow: auto;
+  border: 1px solid #dce9ff36;
+  border-radius: 12px;
+}
+.what-if-options :is(th, td) {
+  padding: 10px;
+  border-bottom: 1px solid #dce9ff26;
+  font-size: .875rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+  background: transparent;
+  color: inherit;
+}
+.what-if-options-scroll .what-if-options { min-width: 635px; }
+.what-if-options thead,
+.what-if-options tr.is-selected { background: #a5bee62e; }
+.what-if-options small,
+.what-if-selection small { display: block; color: #b2c5e1; }
+.plan-b-card .what-if-options input { width: auto; }
+.what-if-options td[colspan] > p { white-space: normal; }
+.what-if-comparison-details { padding: 14px; margin-top: 12px; }
+.what-if-comparison-details summary { cursor: pointer; font-weight: 600; }
+.pre-result-card .what-if-card-window > div {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 8px;
+  border: 0;
+  padding: 2px 0;
+}
+.what-if-card-window dt { margin: 0; align-self: center; }
 .pre-result-card {
   display: flex;
   flex-direction: column;
@@ -193,6 +253,9 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-block: 10px;
   padding: 14px;
   border: 1px solid #dce9ff36;
   border-radius: 14px;
@@ -513,6 +576,8 @@
   }
 }
 @media (max-width: 650px) {
+  .pre-result-grid.what-if-browsing { grid-template-columns: minmax(0, 1fr); }
+  .what-if-browsing > .plan-b-card { grid-area: 2 / 1; }
   .pre-result-card {
     padding: clamp(14px, 4vw, 23px);
   }
