@@ -839,7 +839,7 @@ export default function Page() {
             <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(13)}>Account & saved searches</button><button className="button subtle" onClick={()=>setView(12)}>Mission lab</button></div>
           </section>}
           {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} priority={researchPriority} equipment={researchEquipment} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)}
-            alternativePicker={<ComparisonPicker mission={mission()} sites={sites} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
+            alternativePicker={<ComparisonPicker mission={mission()} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
             onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
           {view===11&&<ResearchComparisonReport key={JSON.stringify(mission())} mission={mission()} sites={[selected,...searchRecord.alternatives]} results={researchComparison?.results??[]} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} equipment={researchEquipment}/>}
           {view===13&&<Account record={searchRecord} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}

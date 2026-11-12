@@ -13,6 +13,7 @@ export type PlanBSite = { location: Site; bounds?: TerrainBounds; screening_radi
 export type PlanBShortlist = {
   candidates: PlanBSite[];
   exploration_candidates?: PlanBSite[];
+  comparison_candidates?: PlanBSite[];
   searched: number;
   overlap_excluded: number;
   outside_or_missing: number;
@@ -197,7 +198,7 @@ export async function findPlanB({
   const mission = original.mission;
   const limits = original.limits;
   let locations: PlanBSite[] = [{ location: mission }];
-  let exploration: PlanBSite[] = [];
+  const exploration = new Map<PlanBSite, string[]>();
   const progress = { ...initialProgress, clipped: dates.clipped };
   const report = (stage: string) => update({ ...progress, stage });
   const addReasons = (reasons: string[]) => {
@@ -210,12 +211,18 @@ export async function findPlanB({
     locations = progress.shortlist.candidates.filter(({ location }, index, candidates) =>
       siteKey(location) !== siteKey(mission) && inComparisonArea(mission, location) &&
       candidates.findIndex((candidate) => siteKey(candidate.location) === siteKey(location)) === index);
-    exploration = (progress.shortlist.exploration_candidates ?? []).filter(({ location }) =>
-      siteKey(location) !== siteKey(mission) && inComparisonArea(mission, location));
+    for (const site of progress.shortlist.exploration_candidates ?? []) {
+      if (siteKey(site.location) !== siteKey(mission) && inComparisonArea(mission, site.location))
+        exploration.set(site, ["Available terrain supports comparison. Footprint and uncertainty evidence is incomplete."]);
+    }
+    for (const site of progress.shortlist.comparison_candidates ?? []) {
+      if (siteKey(site.location) !== siteKey(mission) && inComparisonArea(mission, site.location))
+        exploration.set(site, ["Terrain evidence is incomplete for this nearby comparison point."]);
+    }
   }
 
   const coarse = sampledDays(dates.count, mode === "both" ? 6 : 10);
-  progress.sampled = coarse.length < dates.count && (locations.length > 0 || exploration.length > 0);
+  progress.sampled = coarse.length < dates.count && (locations.length > 0 || exploration.size > 0);
   progress.scheduled = coarse.length * locations.length;
   const blocked = new Map<PlanBSite, string[]>();
   const seeds = new Map<PlanBSite, { index: number; energy: number; score: number; viable: boolean }[]>();
@@ -293,8 +300,7 @@ export async function findPlanB({
     for (const { site, index } of refinements) await evaluate(site, index);
   }
   // A site-wide evidence gap still allows a limited outlook for the selected dates.
-  const outlookSites = [...blocked, ...exploration.map((site): [PlanBSite, string[]] =>
-    [site, ["Available terrain supports comparison. Footprint and uncertainty evidence is incomplete."]])];
+  const outlookSites = [...blocked, ...exploration];
   const outlookDates = [...new Set([coarse[0], coarse[coarse.length - 1]])];
   progress.scheduled += outlookSites.length * outlookDates.length;
   for (const [site, reasons] of outlookSites) {

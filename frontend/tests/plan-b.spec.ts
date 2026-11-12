@@ -149,6 +149,25 @@ test("nominal terrain candidates get a forecast for the original window", async 
   await expect(plan.getByRole("heading", { name: "No viable backup found in this search" })).toBeVisible();
 });
 
+test("suggests comparison points around the first selected site when terrain is missing", async ({ page }) => {
+  const point = { name: "Nearby comparison point", latitude: -89.52, longitude: 0 };
+  await page.route("**/api/reliability/plan-b-sites", (route) => {
+    expect(route.request().postDataJSON().mission).toMatchObject({ latitude: -89.54, longitude: 0 });
+    return route.fulfill({
+      json: { candidates: [], comparison_candidates: [{ location: point, distance_m: 606 }],
+        searched: 48, outside_or_missing: 48, failed_limits: 0, overlap_excluded: 0, passing_terrain_candidates: 0 },
+    });
+  });
+  const plan = await openCompare(page);
+  await plan.getByLabel("Search mode").selectOption("relocate");
+  await expect(plan.getByLabel("Reference point")).toHaveCount(0);
+  await plan.getByRole("button", { name: "Suggest points within 20 km" }).click();
+  const suggested = plan.getByRole("region", { name: "Nearby comparison points" });
+  await expect(suggested).toContainText("Terrain evidence is incomplete");
+  await suggested.getByRole("button", { name: "Add for comparison" }).click();
+  await expect(page.getByRole("article", { name: "Pre-result 2: Nearby comparison point" })).toBeVisible();
+});
+
 test("missing evidence blocks recommendations, and cancellation marks a search incomplete", async ({ page }) => {
   await page.route("**/api/research/plan-b", (route) => route.fulfill({
     json: { status: "missing", reasons: ["Mapped hazard fraction is unavailable."] },

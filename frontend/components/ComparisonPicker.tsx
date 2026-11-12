@@ -1,7 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import type { Mission, Site } from "../app/types";
-import { referenceSites } from "../lib/reference-sites";
 export { terrainReference } from "../lib/reference-sites";
 
 export const siteKey = (s: Site) =>
@@ -18,7 +17,7 @@ export function inComparisonArea(first: Site, candidate: Site) {
   const haversine = Math.sin((otherLatitude - latitude) / 2) ** 2
     + Math.cos(latitude) * Math.cos(otherLatitude) * Math.sin(halfLongitudeDifference) ** 2;
   const distanceKm = 2 * 1737.4 * Math.asin(Math.sqrt(Math.min(1, haversine)));
-  return distanceKm <= comparisonRadiusKm;
+  return distanceKm <= comparisonRadiusKm + 1e-6;
 }
 type Candidate = {
   location: Site;
@@ -35,6 +34,7 @@ type Rejected = Pick<Candidate, "location" | "distance_m"> & {
 type Shortlist = {
   candidates: Candidate[];
   exploration_candidates?: TerrainComparisonPoint[];
+  comparison_candidates?: Pick<Candidate, "location" | "distance_m">[];
   inspection_candidates?: Rejected[];
   searched: number;
   overlap_excluded: number;
@@ -46,14 +46,12 @@ type Shortlist = {
 
 export default function ComparisonPicker({
   mission,
-  sites,
   chosen,
   onChange,
   onAdd,
   busy,
 }: {
   mission: Mission;
-  sites: Site[];
   chosen: Site[];
   onChange: (sites: Site[]) => void;
   onAdd: (site: Site) => void;
@@ -63,24 +61,14 @@ export default function ComparisonPicker({
     key: string;
     data: Shortlist;
   }>();
-  const [radius, setRadius] = useState(500);
   const [loading, setLoading] = useState(false);
-  const [entry, setEntry] = useState("");
   const [name, setName] = useState("");
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
   const [error, setError] = useState("");
   const key = siteKey(mission);
   const selected = chosen.filter((s) => siteKey(s) !== key && inComparisonArea(mission, s));
-  const options = [...referenceSites, ...sites.filter((s) => s.id !== "connecting-ridge")].filter(
-    (s, i, all) =>
-      siteKey(s) !== key &&
-      inComparisonArea(mission, s) &&
-      !selected.some((point) => siteKey(point) === siteKey(s)) &&
-      all.findIndex((p) => siteKey(p) === siteKey(s)) === i,
-  );
-  const reference = options.find((s) => siteKey(s) === entry) ?? options[0];
-  const searchKey = `${key}:${radius}`;
+  const searchKey = JSON.stringify(mission);
   const screened = suggestions?.key === searchKey ? suggestions.data : undefined;
   const canAdd = (site: Site) =>
     !busy && selected.length < 2 && inComparisonArea(mission, site) &&
@@ -106,10 +94,10 @@ export default function ComparisonPicker({
     setLoading(true);
     setError("");
     try {
-      const r = await fetch("/api/reliability/alternatives", {
+      const r = await fetch("/api/reliability/plan-b-sites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mission, vehicle: { search_radius_m: radius } }),
+        body: JSON.stringify({ mission }),
       });
       if (!r.ok)
         throw new Error("Terrain suggestions are unavailable for this search.");
@@ -130,46 +118,14 @@ export default function ComparisonPicker({
       open
     >
       <summary>Choose alternative sites</summary>
-      <p>{comparisonAreaMessage} Added sites are assessed automatically using the original mission window.</p>
+      <p>{mission.name} is the centre of the {comparisonRadiusKm} km search. Added points use the original mission window.</p>
       <div className="account-actions">
-        <label>
-          Reference point{" "}
-          <select value={reference ? siteKey(reference) : ""} onChange={(e) => setEntry(e.target.value)} disabled={!reference}>
-            {!reference && <option value="">No nearby references available</option>}
-            {options.map((s) => (
-              <option key={siteKey(s)} value={siteKey(s)}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          className="button subtle"
-          disabled={
-            busy ||
-            !reference ||
-            selected.length >= 2
-          }
-          onClick={() => {
-            if (reference) add(reference);
-          }}
-        >
-          Add reference
-        </button>
-        <label>
-          Nearby search radius
-          <select value={radius} onChange={(event) => setRadius(Number(event.target.value))}>
-            <option value={500}>500 m</option>
-            <option value={1000}>1 km</option>
-            <option value={2000}>2 km</option>
-          </select>
-        </label>
         <button
           className="button subtle"
           disabled={busy || loading}
           onClick={() => void suggest()}
         >
-          {loading ? "Screening nearby terrain…" : "Suggest nearby backups"}
+          {loading ? "Screening nearby terrain…" : "Suggest points within 20 km"}
         </button>
       </div>
       {screened && (
@@ -206,6 +162,20 @@ export default function ComparisonPicker({
                 <div key={siteKey(c.location)} className="saved-search">
                   <span>{c.location.name} · {c.resolution_m} m DEM · {c.slope_p95_deg.toFixed(1)}° p95 slope</span>
                   <button className="button subtle" disabled={!canAdd(c.location)} onClick={() => add(c.location)}>
+                    Add for comparison
+                  </button>
+                </div>
+              ))}
+            </section>
+          )}
+          {!!screened.comparison_candidates?.length && (
+            <section aria-label="Nearby comparison points">
+              <h3>Nearby comparison points</h3>
+              <p>Terrain evidence is incomplete. Compare these points for sunlight and Earth visibility.</p>
+              {screened.comparison_candidates.map((candidate) => (
+                <div key={siteKey(candidate.location)} className="saved-search">
+                  <span>{candidate.location.name} · {candidate.location.latitude.toFixed(5)}°, {candidate.location.longitude.toFixed(5)}°</span>
+                  <button className="button subtle" disabled={!canAdd(candidate.location)} onClick={() => add(candidate.location)}>
                     Add for comparison
                   </button>
                 </div>

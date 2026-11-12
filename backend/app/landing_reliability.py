@@ -137,8 +137,26 @@ def alternatives(request,baseline,*,search_radius_m=None):
 
     selected=distinct_candidates(rows,baseline['screening_radius_m'])
     exploration=[] if selected else exploration_candidates(unverified,baseline['screening_radius_m'],request.limits)
+    comparison=[]
+    if search_radius_m is not None and not selected and not exploration and unverified:
+        # Keep the comparison useful where the terrain archive has gaps.
+        # Pick spaced points from the sampled grid, without assigning a terrain score.
+        around_centre=sorted(
+            (row for row in unverified if not row[2]['constraints_failed']),
+            key=lambda row: rasters.GEOD.inv(request.mission.longitude,request.mission.latitude,
+                                           row[0].longitude,row[0].latitude)[0]%360,
+        )
+        indices=sorted({i*len(around_centre)//3 for i in range(3)}) if around_centre else []
+        for index in indices:
+            mission, distance, _=around_centre[index]
+            comparison.append({
+                'location': {**mission.model_dump(mode='json'),
+                             'name': mission.name.replace('Backup terrain candidate','Nearby comparison point')},
+                'distance_m': distance,
+            })
     return {'searched':8*len(radii),'overlap_excluded':overlap,'outside_or_missing':outside,'failed_limits':rejected,'passing_terrain_candidates':len(rows),'candidates':selected,'inspection_candidates':inspection[:3] if not selected else [],
       'exploration_candidates':exploration,'search_radius_m':maximum,
+      'comparison_candidates':comparison,
 
       'scope':'Local terrain shortlist only. Candidate lighting, thermal suitability, boulders, fuel, navigation and flight reachability must be checked independently. No candidate is a certified landing site.'}
 
@@ -193,16 +211,11 @@ def plan_b_sites(request:ResearchRequest):
     request=ReliabilityRequest(mission=request.mission, limits=request.limits)
     baseline=screened(request.mission,request.limits,request.vehicle)
     result=alternatives(request,baseline,search_radius_m=20_000)
-    return {
-        'candidates':[{'location':{key:row['location'][key] for key in ('name','latitude','longitude')}, 'bounds':row['assessment']['bounds'],
-                       'screening_radius_m':row['assessment']['screening_radius_m']}
-                      for row in result['candidates']],
-        'exploration_candidates':[
-            {'location':{key:row['location'][key] for key in ('name','latitude','longitude')}}
-            for row in result['exploration_candidates']
-        ],
-        **{key:result[key] for key in ('searched','overlap_excluded','outside_or_missing','failed_limits','passing_terrain_candidates')},
-    }
+    for candidate in result['candidates']:
+        candidate['bounds']=candidate['assessment']['bounds']
+        candidate['screening_radius_m']=candidate['assessment']['screening_radius_m']
+        del candidate['assessment']
+    return result
 
 
 @router.post('/assess')
