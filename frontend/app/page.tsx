@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { CalculationDetails, Uncertainty } from "../components/ResultExplanation";
 import NewsSidebar from "../components/NewsSidebar";
 import LandingResearch, { type Research, type ResearchActions, type ResearchComparison } from "../components/LandingResearch";
-import { sameMission, type PlanBForecast } from "../lib/plan-b";
+import { missionKey, sameMission, type PlanBForecast } from "../lib/plan-b";
 import type { ResearchPriority } from "../components/SearchConsole";
 import LandingSearch from "../components/LandingSearch";
 import Navigation, {viewPaths} from "../components/Navigation";
@@ -800,6 +800,12 @@ export default function Page() {
   const comparisonMission = mission();
   const comparisonLimits = researchComparison?.results.find((result) => sameMission(result.mission, comparisonMission))?.limits;
   const whatIfContext = JSON.stringify([comparisonMission, comparisonLimits, researchEquipment]);
+  const comparisonScenarios = whatIfComparison?.context === whatIfContext ? whatIfComparison.scenarios : [];
+  function openComparisonReport() {
+    if (researchResult) setReportSite(missionKey(researchResult.mission));
+    pendingReportFocus.current = true;
+    setView(11);
+  }
   return (
     <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} style={{"--ui-scale":preferences.scale} as CSSProperties}>
       <div className="stars" aria-hidden="true"/>
@@ -810,11 +816,7 @@ export default function Page() {
             { label: "Lunar Journey", select: () => jumpToResultSection("result-journey") },
             { label: "Sun & Earth", select: () => jumpToResultSection("result-visibility") },
             { label: "Terrain evidence", select: () => jumpToResultSection("result-terrain") },
-            { label: "Mission report in Compare", select: () => {
-              setReportSite(siteKey(researchResult.mission));
-              pendingReportFocus.current = true;
-              setView(11);
-            }, primary: true },
+            { label: "Mission report in Compare", select: openComparisonReport, primary: true },
           ] : []),
           { label: "Compare sites", select: () => setView(11) },
           ...(researchResult ? [{ label: "Save search", select: () => setView(13) }] : []),
@@ -830,19 +832,25 @@ export default function Page() {
             <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(13)}>Account & saved searches</button><button className="button subtle" onClick={()=>setView(12)}>Mission lab</button></div>
           </section>}
           {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} priority={researchPriority} equipment={researchEquipment} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)}
-            scenarios={whatIfComparison?.context === whatIfContext ? whatIfComparison.scenarios : []}
+            scenarios={comparisonScenarios}
             onScenariosChange={(scenarios) => setWhatIfComparison({ context: whatIfContext, scenarios })}
             onRemoveSite={(site) => {
               setComparisonNotice("");
               setChosenAlternatives((points) => points.filter((point) => siteKey(point) !== siteKey(site)));
             }}
             alternativePicker={<ComparisonPicker mission={mission()} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
-            onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
-          {view===11&&<ResearchComparisonReport key={JSON.stringify(mission())} mission={mission()} sites={[selected,...searchRecord.alternatives]} results={researchComparison?.results??[]} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} equipment={researchEquipment}/>}
+            onInspect={r=>{
+              if (researchComparison?.results.some((result) => sameMission(result.mission, r.mission))) {
+                researchActions.current?.inspect(r);
+              }
+              setResearchResult(r);
+              setView(8);
+            }} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
+          {view===11&&<ResearchComparisonReport key={missionKey(comparisonMission)} mission={comparisonMission} alternatives={searchRecord.alternatives} comparison={researchComparison} scenarios={comparisonScenarios} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} equipment={researchEquipment}/>}
           {view===13&&<Account record={searchRecord} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}
           {education&&<PortableEducation animate={preferences.animate}/>}
           {labVisited&&<div hidden={!labOpen}><MissionLab mode="professional" classroomNav={null} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
-          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={selected} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={researchPriority} animate={preferences.animate} assessmentError={researchComparison?.error}/>}
+          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={selected} onNavigate={setView} onOpenReport={openComparisonReport} onAddComparison={addComparisonSite} busy={researchBusy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={researchPriority} animate={preferences.animate} assessmentError={researchComparison?.error}/>}
           <div hidden={![0,1,3].includes(view)}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>

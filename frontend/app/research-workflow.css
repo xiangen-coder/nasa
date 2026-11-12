@@ -105,6 +105,9 @@
   border-top: 1px solid var(--line);
   padding-top: 6px;
 }
+.research-print-only {
+  display: none;
+}
 .research-preferred {
   max-width: 32rem;
   margin-block: 12px;
@@ -388,6 +391,10 @@
     zoom: 1 !important;
   }
   #research-report { page: research-report; }
+  #research-report .research-print-only { display: block; }
+  #research-report .research-screen-table { display: none; }
+  #research-report .research-print-only > div + div { margin-top: 12px; }
+  #research-report table { table-layout: fixed; overflow-wrap: anywhere; }
   #research-report .table-scroll { overflow: visible; }
   #research-report .research-elevation-chart {
     --elevation-grid: #ddd;

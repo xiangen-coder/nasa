@@ -92,6 +92,13 @@ export function sameMission(a: Mission, b: Mission) {
     a.interval_minutes === b.interval_minutes && a.clearance_deg === b.clearance_deg;
 }
 
+export function missionKey(mission: Mission) {
+  return JSON.stringify([
+    mission.latitude, mission.longitude, Date.parse(mission.start), Date.parse(mission.end),
+    mission.interval_minutes, mission.clearance_deg,
+  ]);
+}
+
 export function solarEstimate(result: Research, equipment: SolarSettings) {
   const rows = result.geometry.series;
   if (!result.geometry.available || !rows || rows.length < 2 ||

@@ -79,9 +79,12 @@
 }
 .pre-result-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(min(100%, 310px), 1fr);
   gap: 16px;
   align-items: start;
+  overflow-x: auto;
+  padding-bottom: 8px;
 }
 .pre-result-card {
   display: flex;
@@ -510,9 +513,6 @@
   }
 }
 @media (max-width: 650px) {
-  .pre-result-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .pre-result-card {
     padding: clamp(14px, 4vw, 23px);
   }

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import type { Mission, Site } from "../app/types";
-import { siteKey } from "./ComparisonPicker";
-import type { Research, ResearchSpan } from "./LandingResearch";
+import type { Research, ResearchComparison, ResearchSpan } from "./LandingResearch";
+import { missionKey, sameMission, type PlanBForecast } from "../lib/plan-b";
 import ResearchElevationChart from "./ResearchElevationChart";
 import ResearchSolarEstimate from "./ResearchSolarEstimate";
 import type { SolarSettings } from "./mission-lab/scenario-science";
@@ -102,21 +102,45 @@ const csvCell = (value: string) => {
   return `"${safe.replaceAll('"', '""')}"`;
 };
 
-export default function ResearchComparisonReport({ mission, sites, results, evidenceSite, onEvidenceSiteChange, equipment }: {
+export default function ResearchComparisonReport({ mission, alternatives, comparison, scenarios, evidenceSite, onEvidenceSiteChange, equipment }: {
   mission: Mission;
-  sites: Site[];
-  results: Research[];
+  alternatives: Site[];
+  comparison: ResearchComparison | null;
+  scenarios: PlanBForecast[];
   evidenceSite: string;
   onEvidenceSiteChange: (site: string) => void;
   equipment?: SolarSettings;
 }) {
   const [preferred, setPreferred] = useState("");
-  const assessed = sites.map((site) => results.find((result) => siteKey(result.mission) === siteKey(site)));
-  const complete = assessed.filter((r): r is Research => !!r);
+  const planned = [mission, ...alternatives.map((site) => ({ ...mission, ...site }))];
+  const entries = [
+    ...planned.map((point) => ({
+      mission: point,
+      assessment: comparison?.results.find((result) => sameMission(result.mission, point)),
+      failure: comparison?.failures[`${point.latitude},${point.longitude}`],
+      scenario: undefined,
+    })),
+    ...scenarios.filter(({ result }) => !planned.some((point) => sameMission(point, result.mission)))
+      .map((scenario) => ({ mission: scenario.result.mission, assessment: scenario.result, failure: undefined, scenario })),
+  ];
+  const complete = entries.flatMap(({ assessment }) => assessment ? [assessment] : []);
   if (!complete.length) return null;
-  const choice = complete.find((r) => siteKey(r.mission) === preferred);
-  const evidence = complete.find((r) => siteKey(r.mission) === evidenceSite) ?? complete[0];
-  const advice = recommendation(complete, sites.length);
+  const choice = complete.find((r) => missionKey(r.mission) === preferred);
+  const evidence = complete.find((r) => missionKey(r.mission) === evidenceSite) ?? complete[0];
+  const label = (point: Mission) => entries.some((entry) => entry.scenario && sameMission(entry.mission, point))
+    ? `${point.name} · ${utc(point.start)}`
+    : point.name;
+  const assessmentStatus = (entry: (typeof entries)[number]) => {
+    if (entry.scenario?.reasons.length) return "What IF forecast · landing checks unresolved or exceeded";
+    if (entry.assessment) return entry.scenario ? "What IF assessment" : "Assessed";
+    return entry.failure ? "Assessment failed" : "Awaiting assessment";
+  };
+  const incomplete = complete.length < entries.length;
+  const advice = incomplete && !comparison?.busy
+    ? "Some selected points have no assessment. Retry unfinished assessments to compare all points."
+    : entries.some((entry) => entry.scenario?.reasons.length)
+      ? "Use the What IF forecasts to compare mission windows. Their landing checks are unresolved or exceeded."
+      : recommendation(complete, entries.length);
   const settings = [
     ["Start (UTC)", utc(mission.start)],
     ["End (UTC)", utc(mission.end)],
@@ -125,19 +149,43 @@ export default function ResearchComparisonReport({ mission, sites, results, evid
     ["Earth clearance", `${mission.clearance_deg}°`],
   ];
   const grid = [
-    ["Coordinates (planetocentric, east-positive)", ...sites.map((s) => `${s.latitude}°, ${s.longitude}°`)],
-    ...measurements.map(({ label, value }) => [label, ...assessed.map((r) => r ? value(r) : "Awaiting assessment")]),
+    ["Coordinates (planetocentric, east-positive)", ...entries.map(({ mission }) => `${mission.latitude}°, ${mission.longitude}°`)],
+    ["Touchdown (UTC)", ...entries.map(({ mission }) => utc(mission.start))],
+    ["Mission end (UTC)", ...entries.map(({ mission }) => utc(mission.end))],
+    ["Assessment status", ...entries.map(assessmentStatus)],
+    ...measurements.map(({ label, value }) => [
+      label, ...entries.map((entry) => entry.assessment ? value(entry.assessment) : assessmentStatus(entry)),
+    ]),
+    ["Assessment notes", ...entries.map(({ assessment, scenario, failure }) =>
+      [...new Set([...(failure ? [failure] : []), ...(scenario?.reasons ?? []), ...(assessment?.warnings ?? [])])].join(" ") || "—",
+    )],
   ];
+  const headers = ["Evidence", ...entries.map(({ mission }) => label(mission))];
+  function comparisonTable(indices: number[], title: string) {
+    return (
+      <table aria-label={title}>
+        <thead><tr>{indices.map((i) => <th scope="col" key={i}>{headers[i]}</th>)}</tr></thead>
+        <tbody>{grid.map(([row, ...cells]) => (
+          <tr key={row}><th scope="row">{row}</th>{indices.slice(1).map((i) => <td key={i}>{cells[i - 1]}</td>)}</tr>
+        ))}</tbody>
+      </table>
+    );
+  }
+  const columnIndices = headers.map((_, i) => i);
+  const printGroups = Array.from({ length: Math.ceil((entries.length - 1) / 2) }, (_, i) =>
+    [0, 1, ...columnIndices.slice(2 + i * 2, 4 + i * 2)],
+  );
   return (
     <section id="research-report" className="panel research-report" aria-labelledby="research-report-title" tabIndex={-1}>
       <h2 id="research-report-title">Site comparison and mission report</h2>
+      <p role="status">{complete.length} of {entries.length} mission assessments included.</p>
       <dl className="research-report-settings">{settings.map(([label, value]) => (
         <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
       ))}</dl>
       <figure className="research-visibility-bars">
         <figcaption>Share of the mission window above the visibility threshold</figcaption>
-        {complete.map((r) => <div key={siteKey(r.mission)}>
-          <strong>{r.mission.name}</strong>
+        {complete.map((r) => <div key={missionKey(r.mission)}>
+          <strong>{label(r.mission)}</strong>
           {(["sun_visible_pct", "earth_visible_pct"] as const).map((metric) => {
             const value = r.geometry.metrics?.[metric];
             const label = metric === "sun_visible_pct" ? "Sun" : "Earth";
@@ -149,33 +197,37 @@ export default function ResearchComparisonReport({ mission, sites, results, evid
           })}
         </div>)}
       </figure>
-      <div className="table-scroll">
-        <table aria-label="Side-by-side research comparison">
-          <thead><tr><th scope="col">Evidence</th>{sites.map((s) => <th scope="col" key={siteKey(s)}>{s.name}</th>)}</tr></thead>
-          <tbody>{grid.map(([label, ...cells]) => <tr key={label}><th scope="row">{label}</th>{cells.map((cell, i) => <td key={siteKey(sites[i])}>{cell}</td>)}</tr>)}</tbody>
-        </table>
+      <div className={`table-scroll${printGroups.length > 1 ? " research-screen-table" : ""}`}>
+        {comparisonTable(columnIndices, "Side-by-side research comparison")}
       </div>
+      {printGroups.length > 1 && (
+        <div className="research-print-only">
+          {printGroups.map((indices, index) => (
+            <div key={index}>{comparisonTable(indices, `Research comparison ${index + 1}`)}</div>
+          ))}
+        </div>
+      )}
       <h3>Trade-offs and recommendation</h3>
       <p>{advice}</p>
       <p>Research weights are 35% terrain, 25% sunlight, 20% Earth visibility, 15% temperature and 5% ice. Both visibility factors are required for a mission score. Missing factors redistribute their weight across the available evidence. Scores remain provisional where coverage or hazards are incomplete.</p>
       <label className="research-preferred">Preferred point for further study
         <select value={choice ? preferred : ""} onChange={(event) => setPreferred(event.target.value)}>
           <option value="">Select an assessed point</option>
-          {complete.map((r) => <option key={siteKey(r.mission)} value={siteKey(r.mission)}>{r.mission.name}</option>)}
+          {complete.map((r) => <option key={missionKey(r.mission)} value={missionKey(r.mission)}>{label(r.mission)}</option>)}
         </select>
       </label>
-      {choice && <p><strong>{choice.mission.name}</strong> selected for further study. {choice.constraints_failed.join(" ") || "Review the unresolved terrain and mission constraints before proceeding."}</p>}
+      {choice && <p><strong>{label(choice.mission)}</strong> selected for further study. {choice.constraints_failed.join(" ") || "Review the unresolved terrain and mission constraints before proceeding."}</p>}
       <section className="research-report-site" aria-labelledby="report-evidence-title">
-        <h3 id="report-evidence-title">Mission evidence · {evidence.mission.name}</h3>
+        <h3 id="report-evidence-title">Mission evidence · {label(evidence.mission)}</h3>
         {complete.length > 1 && (
           <label className="research-preferred">Site to inspect
-            <select value={siteKey(evidence.mission)} onChange={(event) => onEvidenceSiteChange(event.target.value)}>
-              {complete.map((r) => <option key={siteKey(r.mission)} value={siteKey(r.mission)}>{r.mission.name}</option>)}
+            <select value={missionKey(evidence.mission)} onChange={(event) => onEvidenceSiteChange(event.target.value)}>
+              {complete.map((r) => <option key={missionKey(r.mission)} value={missionKey(r.mission)}>{label(r.mission)}</option>)}
             </select>
           </label>
         )}
         <h4>Sun and Earth elevation over time</h4>
-        <ResearchElevationChart key={siteKey(evidence.mission)} result={evidence} />
+        <ResearchElevationChart key={missionKey(evidence.mission)} result={evidence} />
         <ResearchSolarEstimate result={evidence} equipment={equipment} />
         <details>
           <summary>Scoring and evidence</summary>
@@ -186,8 +238,14 @@ export default function ResearchComparisonReport({ mission, sites, results, evid
         </details>
       </section>
       {complete.map((r) => (
-        <article className="research-report-site" key={siteKey(r.mission)}>
-          <h3>{r.mission.name}</h3>
+        <article className="research-report-site" key={missionKey(r.mission)}>
+          <h3>{label(r.mission)}</h3>
+          {r !== evidence && (
+            <div className="research-print-only">
+              <ResearchElevationChart result={r} />
+              <ResearchSolarEstimate result={r} equipment={equipment} />
+            </div>
+          )}
           <ResearchWindows result={r} />
           <p>{r.horizon.method ?? r.horizon.reason}</p>
           <ul>{Object.entries(r.geometry.sources ?? {}).map(([body, source]) => (
@@ -199,7 +257,7 @@ export default function ResearchComparisonReport({ mission, sites, results, evid
         </article>
       ))}
       <p><a href="https://ssd-api.jpl.nasa.gov/doc/horizons.html">JPL Horizons surface observer data</a></p>
-      <ul>{complete[0].limitations.map((limit) => <li key={limit}>{limit}</li>)}</ul>
+      <ul>{[...new Set(complete.flatMap(({ limitations }) => limitations))].map((limit) => <li key={limit}>{limit}</li>)}</ul>
       <div className="account-actions research-export-controls">
         <button className="button primary" onClick={() => {
           const closed = Array.from(document.querySelectorAll<HTMLDetailsElement>("#research-report details:not([open])"));
@@ -209,11 +267,23 @@ export default function ResearchComparisonReport({ mission, sites, results, evid
         }}>Print or save PDF</button>
         <button className="button subtle" onClick={() => download(JSON.stringify({
           schema_version: 1, mission, preferred_site: choice?.mission ?? null, recommendation: advice,
-          sites: sites.map((site, i) => ({ site, assessment: assessed[i] ?? null })),
+          sites: entries.map((entry) => ({
+            site: { name: entry.mission.name, latitude: entry.mission.latitude, longitude: entry.mission.longitude },
+            mission: entry.mission,
+            assessment: entry.assessment ?? null,
+            status: assessmentStatus(entry),
+            ...(entry.failure ? { error: entry.failure } : {}),
+            ...(entry.scenario ? { what_if: {
+              reasons: entry.scenario.reasons,
+              estimated_energy_kwh: entry.scenario.energy,
+              terrain_bounds: entry.scenario.bounds,
+              screening_radius_m: entry.scenario.screening_radius_m,
+            } } : {}),
+          })),
         }, null, 2), "json")}>Export research JSON</button>
         <button className="button subtle" onClick={() => download([
-          ["Evidence", ...sites.map((s) => s.name)], ...grid, [],
-          ...settings, ...(advice ? [["Preferred point", choice?.mission.name ?? ""], ["Recommendation", advice]] : []),
+          headers, ...grid, [],
+          ...settings, ["Preferred point", choice ? label(choice.mission) : ""], ["Recommendation", advice],
         ].map((row) => row.map(csvCell).join(",")).join("\r\n"), "csv")}>Export comparison CSV</button>
       </div>
     </section>

@@ -447,8 +447,9 @@ export default function PreliminaryComparison({
           {notice}
         </p>
       )}
-      <div className="pre-result-grid">
+      <div className="pre-result-grid" role="region" aria-label="Comparison cards" tabIndex={0}>
         {renderCard(cards[0], 0)}
+        {cards.slice(1).map((card, index) => renderCard(card, index + 1))}
         <PlanBComparison
           key={JSON.stringify([mission, priority, equipment])}
           original={selected}
@@ -471,7 +472,6 @@ export default function PreliminaryComparison({
             if (!isCompared(option)) onScenariosChange([...scenarios, option]);
           }}
         />
-        {cards.slice(1).map((card, index) => renderCard(card, index + 1))}
       </div>
       <p className="preliminary-disclosure">
         Provisional research scores. See More details for evidence and coverage.

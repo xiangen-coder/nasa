@@ -52,6 +52,7 @@ export default function ResearchOverview({
   result,
   comparisonOrigin,
   onNavigate,
+  onOpenReport,
   onAddComparison,
   onNewSearch,
   equipment,
@@ -64,6 +65,7 @@ export default function ResearchOverview({
   result: Research | null;
   comparisonOrigin: Site;
   onNavigate: (view: number) => void;
+  onOpenReport: () => void;
   onAddComparison: (site: Site) => void;
   onNewSearch: () => void;
   equipment: SolarSettings;
@@ -626,7 +628,7 @@ export default function ResearchOverview({
               >
                 Show this point in comparison
               </button>
-              <button className="button primary" onClick={() => onNavigate(15)}>
+              <button className="button primary" onClick={onOpenReport}>
                 Open mission report
               </button>
             </div>

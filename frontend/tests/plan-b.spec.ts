@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import type { Mission } from "../app/types";
 import { calendarEnd, searchDates } from "../lib/plan-b";
 
@@ -136,6 +137,7 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
   await plan.getByText(/Backup 1 ·/).click();
   expect(await original.innerText()).toBe(originalText);
   await page.setViewportSize({ width: 390, height: 850 });
+  await plan.scrollIntoViewIfNeeded();
   const mobile = await plan.boundingBox();
   expect(mobile!.x).toBeGreaterThanOrEqual(0);
   expect(mobile!.x + mobile!.width).toBeLessThanOrEqual(390);
@@ -251,11 +253,31 @@ test("missing evidence blocks recommendations, and cancellation marks a search i
   await expect(pinned).toContainText("WHAT IF FORECAST");
   await expect(pinned).toContainText("0.0 / 100 · 5% nominal weight");
   await expect(pinned).toContainText("2026-10-02 00:00:00 UTC");
-  await expect(page.locator(".pre-result-grid > article").nth(1)).toHaveAttribute("aria-label", "What IF");
+  await expect(page.locator(".pre-result-grid > article").last()).toHaveAttribute("aria-label", "What IF");
   await expect(page.getByRole("article", { name: /Pre-result 1:/ })).toContainText("2026-10-01 00:00:00 UTC");
   await expect(pinned.getByRole("button", { name: "Remove from Compare" })).toBeVisible();
+  const table = page.getByRole("table", { name: "Side-by-side research comparison" });
+  await expect(table.getByRole("columnheader", { name: /Shackleton vicinity · 2026-10-02/ })).toBeVisible();
+  await expect(table.getByRole("row", { name: "Assessment status" })).toContainText("What IF forecast");
+  const inspect = page.getByLabel("Site to inspect");
+  await inspect.selectOption({ label: "Shackleton vicinity · 2026-10-02 00:00:00 UTC" });
+  await expect(page.getByRole("heading", { name: "Mission evidence · Shackleton vicinity · 2026-10-02 00:00:00 UTC" })).toBeVisible();
+  const jsonDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export research JSON" }).click();
+  const exported = JSON.parse(await readFile(await (await jsonDownload).path(), "utf8"));
+  expect(exported.sites).toHaveLength(2);
+  expect(exported.sites.map(({ mission }: { mission: Mission }) => Date.parse(mission.start))).toEqual([
+    Date.parse(start), Date.parse("2026-10-02T00:00:00Z"),
+  ]);
+  expect(exported.sites[1].what_if.reasons).toContain("Mapped hazard fraction is unavailable.");
+  const csvDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export comparison CSV" }).click();
+  const csv = await readFile(await (await csvDownload).path(), "utf8");
+  expect(csv).toContain('"Touchdown (UTC)","2026-10-01 00:00:00 UTC","2026-10-02 00:00:00 UTC"');
+  expect(csv).toContain("Mapped hazard fraction is unavailable.");
   await forecasts.getByRole("button", { name: "Remove from Compare" }).click();
   await expect(pinned).toHaveCount(0);
+  await expect(table.getByRole("columnheader")).toHaveCount(2);
   await page.unroute("**/api/research/plan-b");
   await page.route("**/api/research/plan-b", () => {});
   await plan.getByLabel("Alternate UTC touchdown time").fill("18:00");

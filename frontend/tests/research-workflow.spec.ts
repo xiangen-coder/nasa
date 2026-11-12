@@ -116,7 +116,7 @@ test("adding three research sites shares the mission settings and exports their 
   const reportGraph = page.getByRole("img", { name: /Sun and Earth elevations/ });
   await expect(reportGraph.locator('.recharts-line-curve:not([stroke-dasharray])[d^="M"]')).toHaveCount(2);
   await page.emulateMedia({ media: "print" });
-  await expect(reportGraph).toBeVisible();
+  await expect(reportGraph).toHaveCount(3);
   await expect(toolsTrigger).toBeHidden();
   await page.emulateMedia({ media: "screen" });
   await expect(table.getByRole("row", { name: /Research suitability score/ })).toContainText("100.0 / 100");
