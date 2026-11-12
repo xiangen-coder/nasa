@@ -56,7 +56,7 @@ function expectMissionSettings(missions: Mission[]) {
   }
 }
 
-test("shows the assessed site's Lunar Journey and Water/Ice Evidence in Results", async ({ page }) => {
+test("shows the assessed site's summary, methods, Lunar Journey and Water/Ice Evidence in Results", async ({ page }) => {
   await page.route("**/api/research/water-evidence?*", async (route) => {
     const url = new URL(route.request().url());
     expect(url.searchParams.get("latitude")).toBe("-89.54");
@@ -73,6 +73,14 @@ test("shows the assessed site's Lunar Journey and Water/Ice Evidence in Results"
   });
   await openCompare(page);
   await page.getByRole("article", { name: /Pre-result 1:/ }).getByRole("button", { name: "More Info" }).click();
+  const summary = page.locator("#result-summary");
+  await expect(summary).toContainText("70.00 / 100");
+  await expect(summary).toContainText("80% of nominal weight");
+  await expect(summary).toContainText("Missing Temperature");
+  await expect(summary).toContainText("12.0 h of sunlight");
+  await expect(page.getByRole("region", { name: "NASA landing research" })).toHaveCount(0);
+  const factors = page.locator("#result-methods").getByRole("table", { name: "Research score factors" });
+  await expect(factors.getByRole("row", { name: /Water ice evidence/ })).toContainText("5.0%");
   const journey = page.locator("#result-summary + #result-journey");
   await expect(journey.getByRole("heading", { name: "Earth to your lunar landing point" })).toBeVisible();
   await expect(journey.locator("lunar-journey")).toHaveAttribute("latitude", "-89.54");

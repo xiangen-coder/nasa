@@ -11,6 +11,8 @@ import {
   YAxis,
 } from "recharts";
 import type { Research } from "./LandingResearch";
+import type { ResearchPriority } from "./SearchConsole";
+import ResearchTerrainDetails from "./ResearchTerrainDetails";
 import WaterEvidence from "./WaterEvidence";
 import { PortableJourney } from "./PortableLunar";
 import { ResearchWindows } from "./ResearchComparisonReport";
@@ -28,12 +30,19 @@ import {
   terrainReference,
 } from "./ComparisonPicker";
 
-const evidence = () =>
-  document.getElementById("landing-assessment")?.scrollIntoView({
-    behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? "auto"
-      : "smooth",
-  });
+const focusLabels: Record<ResearchPriority, string> = {
+  overall: "Overall consideration",
+  T: "Terrain safety",
+  S: "Sunlight availability",
+  C: "Earth communication",
+};
+const factorLabels: Record<string, string> = {
+  T: "Terrain",
+  S: "Sunlight",
+  C: "Earth communication",
+  H: "Temperature",
+  I: "Water ice evidence",
+};
 function openResultSection(id: string) {
   const section = document.querySelector<HTMLElement>(`.research-results #${id}`);
   section?.focus({ preventScroll: true });
@@ -47,7 +56,9 @@ export default function ResearchOverview({
   onNewSearch,
   equipment,
   onEquipmentChange,
+  priority,
   animate,
+  assessmentError,
   busy = false,
 }: {
   result: Research | null;
@@ -57,7 +68,9 @@ export default function ResearchOverview({
   onNewSearch: () => void;
   equipment: SolarSettings;
   onEquipmentChange: (equipment: SolarSettings) => void;
+  priority: ResearchPriority;
   animate: boolean;
+  assessmentError?: string;
   busy?: boolean;
 }) {
   const rows = result?.geometry.available ? (result.geometry.series ?? []) : [];
@@ -92,6 +105,10 @@ export default function ResearchOverview({
   ];
   const terrain = result?.terrain;
   const temperature = result?.temperature;
+  const shadowScreening = result?.horizon.available
+    ? result.horizon.method
+    : result?.horizon.reason;
+  const observerHeight = result?.observer_height;
   return (
     <section
       className="research-results"
@@ -150,12 +167,67 @@ export default function ResearchOverview({
                   ? "Reference geometry"
                   : "Geometry unavailable"}
             </p>
+            <dl className="research-report-settings">
+              <div>
+                <dt>Assessment focus</dt>
+                <dd>{focusLabels[priority]}</dd>
+              </div>
+              <div>
+                <dt>Research suitability score</dt>
+                <dd>
+                  {result.score == null ? "Unavailable" : `${result.score.toFixed(2)} / 100`}
+                  {result.score != null && result.provisional && " · Provisional"}
+                </dd>
+              </div>
+              <div>
+                <dt>Scoring evidence</dt>
+                <dd>{(result.available_weight * 100).toFixed(0)}% of nominal weight</dd>
+                {result.missing.length > 0 && (
+                  <dd>
+                    Missing {result.missing.map((key) => factorLabels[key] ?? key).join(", ")}
+                  </dd>
+                )}
+              </div>
+              <div>
+                <dt>Landing safety</dt>
+                <dd>{result.constraints_failed.length ? "Configured limits exceeded" : "Not established"}</dd>
+              </div>
+              {terrain?.radius_m != null && (
+                <div>
+                  <dt>Terrain sampling radius</dt>
+                  <dd>{value(terrain.radius_m, " m")}</dd>
+                </div>
+              )}
+              {observerHeight?.available && observerHeight.value != null && terrain?.elevation_m !== observerHeight.value && (
+                <div>
+                  <dt>{observerHeight.coverage_type === "global" ? "Approximate site elevation" : "Observer elevation used for visibility"}</dt>
+                  <dd>
+                    {value(observerHeight.value, " m")}
+                    {observerHeight.source?.name && ` · ${observerHeight.source.name}`}
+                  </dd>
+                </div>
+              )}
+              {shadowScreening && (
+                <div>
+                  <dt>Terrain shadow screening</dt>
+                  <dd>{shadowScreening}</dd>
+                </div>
+              )}
+              {temperature?.source?.observation_period && (
+                <div><dt>Temperature observation period</dt><dd>{temperature.source.observation_period}</dd></div>
+              )}
+            </dl>
+            {[...new Set([...result.constraints_failed, ...result.warnings])].map((message) => (
+              <p key={message}>{message}</p>
+            ))}
             <div className="result-metric-grid">
               {[
                 [
                   "Sunlight availability",
                   value(result.factors.S?.score, "%"),
-                  "Share of the mission window with the Sun above the applicable horizon.",
+                  result.geometry.sunlight_hours != null
+                    ? `${value(result.geometry.sunlight_hours, " h")} of sunlight during the mission window.`
+                    : "Share of the mission window with the Sun above the applicable horizon.",
                 ],
                 [
                   "Earth visibility",
@@ -272,6 +344,12 @@ export default function ResearchOverview({
                           Earth {sample.earth_azimuth.toFixed(2)}° az /{" "}
                           {sample.earth_elevation.toFixed(2)}° el ·{" "}
                           {sample.earth_visible ? "visible" : "below threshold"}
+                        </p>
+                        <p>
+                          Earth range {value(sample.earth_distance_km, " km")} ·{" "}
+                          One-way light time {sample.earth_light_time_seconds == null
+                            ? "Unavailable"
+                            : `${sample.earth_light_time_seconds.toFixed(3)} s`}
                         </p>
                         {sample.sun_horizon_deg != null &&
                           sample.earth_horizon_deg != null && (
@@ -493,6 +571,7 @@ export default function ResearchOverview({
                   )}
               </aside>
             </div>
+            <ResearchTerrainDetails result={result} />
           </section>
           <section
             id="result-environment"
@@ -545,44 +624,16 @@ export default function ResearchOverview({
             className="result-section"
           >
             <h2>Comparison</h2>
-            <div className="research-result-columns">
-              <div>
-                <p>
-                  Research suitability score{" "}
-                  <strong>{value(result.score, " / 100")}</strong>
-                  {result.provisional && " · Provisional"}
-                </p>
-                <p>
-                  {result.constraints_failed.length
-                    ? result.constraints_failed.join(" ")
-                    : "Landing safety is not established."}
-                </p>
-                <div className="account-actions">
-                  <button
-                    className="button subtle"
-                    onClick={() => onAddComparison(result.mission)}
-                  >
-                    Show this point in comparison
-                  </button>
-                  <button
-                    className="button primary"
-                    onClick={() => onNavigate(15)}
-                  >
-                    Open mission report
-                  </button>
-                </div>
-              </div>
-              <aside aria-label="Interpreting the research score">
-                <h3>Evidence used in the score</h3>
-                <p>
-                  {(result.available_weight * 100).toFixed(0)}% of nominal
-                  scoring weight has data.{" "}
-                  {result.missing.length
-                    ? `Unavailable: ${result.missing.map((key) => result.factors[key]?.name || key).join(", ")}.`
-                    : "All five factors have evidence."}{" "}
-                  Compare sites with similar data coverage.
-                </p>
-              </aside>
+            <div className="account-actions">
+              <button
+                className="button subtle"
+                onClick={() => onAddComparison(result.mission)}
+              >
+                Show this point in comparison
+              </button>
+              <button className="button primary" onClick={() => onNavigate(15)}>
+                Open mission report
+              </button>
             </div>
           </section>
           <section id="result-methods" tabIndex={-1} className="result-section">
@@ -602,9 +653,8 @@ export default function ResearchOverview({
                     </p>
                   ),
                 )}
-                <button className="text-button" onClick={evidence}>
-                  Inspect factor contributions and datasets{" "}
-                  <ArrowUpRight size={14} />
+                <button className="text-button" onClick={() => onNavigate(0)}>
+                  Open map for research thresholds and saved points <ArrowUpRight size={14} />
                 </button>
               </div>
               <aside aria-label="Assessment limitations">
@@ -615,6 +665,46 @@ export default function ResearchOverview({
                   ))}
                 </ul>
               </aside>
+            </div>
+            <h3>Five-factor score calculation</h3>
+            <p>
+              The score adds each available factor score multiplied by its used weight.
+              The model scales the available weights to total 100% and requires both
+              sunlight and Earth visibility to calculate an overall score.
+              Compare sites with similar evidence coverage.
+            </p>
+            <div className="table-scroll">
+              <table aria-label="Research score factors">
+                <thead>
+                  <tr>
+                    <th scope="col">Factor</th>
+                    <th scope="col">Factor score / 100</th>
+                    <th scope="col">Nominal weight</th>
+                    <th scope="col">Used weight</th>
+                    <th scope="col">Contribution</th>
+                    <th scope="col">Evidence quality</th>
+                    <th scope="col">Method and source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(result.factors).map(([key, factor]) => (
+                    <tr key={key}>
+                      <th scope="row">{factorLabels[key] ?? factor.name}</th>
+                      <td>{value(factor.score, "")}</td>
+                      <td>{value(factor.weight == null ? null : factor.weight * 100, "%")}</td>
+                      <td>{value(factor.effective_weight == null ? null : factor.effective_weight * 100, "%")}</td>
+                      <td>{value(factor.contribution, " points")}</td>
+                      <td>{factor.quality}</td>
+                      <td>
+                        {factor.explanation}
+                        {factor.source?.source_url && (
+                          <> <a href={factor.source.source_url}>{factor.source.name || "Dataset source"}</a></>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </section>
         </>
@@ -630,6 +720,7 @@ export default function ResearchOverview({
               ? "Reading ephemerides and available terrain data."
               : "Run a search to see your mission summary, graphs and terrain evidence here."}
           </p>
+          {assessmentError && <p className="error" role="alert">{assessmentError}</p>}
         </div>
       )}
     </section>
