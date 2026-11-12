@@ -11,22 +11,20 @@ import Navigation, {viewPaths} from "../components/Navigation";
 import ResultTools from "../components/ResultTools";
 import PreferencesControls, {type Preferences} from "../components/Preferences";
 import ResearchOverview from "../components/ResearchOverview";
-import ResearchComparisonReport from "../components/ResearchComparisonReport";
-import { defaultSolar } from "../components/mission-lab/scenario-science";
+import { PortableEducation, PortableJourney } from "../components/PortableLunar";
 import PreliminaryComparison from "../components/PreliminaryComparison";
 import ComparisonPicker, { comparisonAreaMessage, inComparisonArea, siteKey } from "../components/ComparisonPicker";
 import type { SearchRecord } from "../lib/search-record";
 import { referenceSites } from "../lib/reference-sites";
 const Account = dynamic(() => import("../components/Account"));
 const MissionLab = dynamic(() => import("../components/mission-lab/MissionLab"));
+
 import TerrainAssessment from "../components/TerrainAssessment";
+import ResearchComparisonReport from "../components/ResearchComparisonReport";
+import { defaultSolar } from "../components/mission-lab/scenario-science";
 import {AlternativeCards} from "../components/AssessmentOverview";
 const CinematicHero = dynamic(() => import("../components/CinematicHero"), { ssr: false });
 const AstronomySimulation = dynamic(() => import("../components/AstronomySimulation"), { ssr: false, loading: () => <div className="panel empty">Loading astronomical simulation…</div> });
-const CelestialViewer = dynamic(() => import("../components/CelestialViewer"), {
-  ssr: false,
-  loading: () => <div className="panel empty">Loading 3D viewer…</div>,
-});
 import {
   Area,
   CartesianGrid,
@@ -514,9 +512,8 @@ export default function Page() {
   const [chosenAlternatives, setChosenAlternatives] = useState<Site[]>([]);
   const [comparisonNotice, setComparisonNotice] = useState("");
   const education = view === 14;
-  const [classroomNav, setClassroomNav] = useState<HTMLDivElement | null>(null);
   const [labVisited, setLabVisited] = useState(false);
-  const labOpen = [12, 14, 16].includes(view);
+  const labOpen = [12, 16].includes(view);
   useEffect(() => {
     if (labOpen) setLabVisited(true);
   }, [labOpen]);
@@ -551,7 +548,7 @@ export default function Page() {
   const updatePreferences=(p:Preferences)=>{setPreferences(p);try{localStorage.setItem("lunar-preferences-v1",JSON.stringify(p));}catch{}};
   const full=preferences.detailed??true;
   const [astronomyVisited, setAstronomyVisited] = useState(false);
-  const [observatoryMode, setObservatoryMode] = useState<"system" | "surface">("system");
+  const [observatoryMode, setObservatoryMode] = useState<"system" | "journey">("journey");
   useEffect(() => { if (view === 5 && observatoryMode === "system") setAstronomyVisited(true); }, [view, observatoryMode]);
   const [sites, setSites] = useState<Site[]>([]);
   const [missionSites, setMissionSites] = useState<MissionCatalogEntry[]>([]);
@@ -804,12 +801,13 @@ export default function Page() {
   const comparisonLimits = researchComparison?.results.find((result) => sameMission(result.mission, comparisonMission))?.limits;
   const whatIfContext = JSON.stringify([comparisonMission, comparisonLimits, researchEquipment]);
   return (
-    <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} data-classroom-theme={education ? "" : undefined} style={{"--ui-scale":preferences.scale} as CSSProperties}>
+    <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} style={{"--ui-scale":preferences.scale} as CSSProperties}>
       <div className="stars" aria-hidden="true"/>
-      <Navigation view={view} education={education} classroomNavRef={setClassroomNav} accountName={accountName} onNavigate={setView} preferences={preferences} onPreferences={updatePreferences}/>
+      <Navigation view={view} education={education} accountName={accountName} onNavigate={setView} preferences={preferences} onPreferences={updatePreferences}/>
       {showResultTools && (
         <ResultTools key={view} actions={[
           ...(view === 8 && researchResult ? [
+            { label: "Lunar Journey", select: () => jumpToResultSection("result-journey") },
             { label: "Sun & Earth", select: () => jumpToResultSection("result-visibility") },
             { label: "Terrain evidence", select: () => jumpToResultSection("result-terrain") },
             { label: "Mission report in Compare", select: () => {
@@ -837,7 +835,7 @@ export default function Page() {
               </button>
             </section>
           )}
-          {view!==7&&view!==8&&view!==11&&view!==13&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div>{showResultTools&&<button type="button" className="button primary new-search" onClick={openSearchForm}>New search</button>}</div></>}
+          {view!==7&&view!==8&&view!==11&&view!==13&&!education&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div>{showResultTools&&<button type="button" className="button primary new-search" onClick={openSearchForm}>New search</button>}</div></>}
           {view===7&&<section className="search-layout revised-search" aria-label="Search for a lunar landing site">
             <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration"><div className="hero-copy"><span className="eyebrow">A NEW PERSPECTIVE ON THE MOON</span><h1>Find your place<br/>on the <em>Moon.</em></h1><p>Every mission starts with a possibility. Explore lunar locations through real sunlight, communication and terrain data.</p><div className="hero-hairline"/><span className="hero-footnote">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}>Explore the Moon <ArrowRight size={15}/></button></div><CinematicHero animate={preferences.animate}/></section>
             <LandingSearch selected={selected} missionSites={missionSites} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{assessComparison(searchRecord.alternatives);setView(11);}} onMap={()=>setView(0)}/>
@@ -854,9 +852,10 @@ export default function Page() {
             onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
           {view===11&&<ResearchComparisonReport key={JSON.stringify(mission())} mission={mission()} sites={[selected,...searchRecord.alternatives]} results={researchComparison?.results??[]} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} equipment={researchEquipment}/>}
           {view===13&&<Account record={searchRecord} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}
-          {labVisited&&<div hidden={!labOpen}><MissionLab mode={education?"education":"professional"} classroomNav={classroomNav} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
-          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={selected} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment}/>}
-          <div hidden={![0,1,3].includes(view)&&!(view===5&&observatoryMode==="surface")}>
+          {education&&<PortableEducation animate={preferences.animate}/>}
+          {labVisited&&<div hidden={!labOpen}><MissionLab mode="professional" classroomNav={null} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
+          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={selected} onNavigate={setView} onAddComparison={addComparisonSite} busy={researchBusy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} animate={preferences.animate}/>}
+          <div hidden={![0,1,3].includes(view)}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>
               <p>Choose a site and dates, calculate how often the Sun and Earth are both visible, then compare alternatives. These exploratory results do not establish landing safety.</p>
@@ -1094,7 +1093,7 @@ export default function Page() {
                 </div>
               </>
             )}
-            {analysis && view !== 4 && (view !== 5 || observatoryMode === "surface") && (
+            {analysis && view !== 4 && (
               <div className="metrics-grid">
                 {[
                   {
@@ -1572,40 +1571,10 @@ export default function Page() {
             {view === 5 && (
               <>
                 <div className="panel astro-camera-controls" role="group" aria-label="Observatory view" style={{padding:16}}>
+                  <button className={`button ${observatoryMode === "journey" ? "primary" : "subtle"}`} aria-pressed={observatoryMode === "journey"} onClick={() => setObservatoryMode("journey")}>Lunar Journey</button>
                   <button className={`button ${observatoryMode === "system" ? "primary" : "subtle"}`} aria-pressed={observatoryMode === "system"} onClick={() => setObservatoryMode("system")}>Sun–Earth–Moon simulation</button>
-                  <button className={`button ${observatoryMode === "surface" ? "primary" : "subtle"}`} aria-pressed={observatoryMode === "surface"} onClick={() => setObservatoryMode("surface")}>Reference models & local sky</button>
                 </div>
-                {observatoryMode === "surface" && <CelestialViewer sample={current} />}
-                {observatoryMode === "surface" && analysis && (
-                  <section className="panel playback-panel">
-                    <div className="panel-heading">
-                      <h2>Computed sample · {utc(current!.time)} UTC</h2>
-                    </div>
-                    <div className="playback">
-                      <button
-                        className="button primary icon-button"
-                        aria-label={
-                          playing ? "Pause 3D animation" : "Play 3D animation"
-                        }
-                        onClick={() => setPlaying(!playing)}
-                      >
-                        {playing ? <Pause size={18} /> : <Play size={18} />}
-                      </button>
-                      <input
-                        type="range"
-                        aria-label="3D simulation time"
-                        min={0}
-                        max={analysis.series.length - 1}
-                        value={index}
-                        onChange={(e) => {
-                          setPlaying(false);
-                          setIndex(+e.target.value);
-                        }}
-                      />
-                    </div>
-                  </section>
-                )}
-                {observatoryMode === "surface" && !analysis && <div className="panel">{empty}</div>}
+                {observatoryMode === "journey" && <PortableJourney target={selected} animate={preferences.animate} />}
               </>
             )}
             <div hidden={![0,3,8].includes(view)}><LandingResearch onComparisonChange={setResearchComparison} onResultChange={setResearchResult} actionRef={researchActions} priority={researchPriority} onBusyChange={setResearchBusy} mission={mission()} sites={sites} onAddComparison={addComparisonSite} onSelect={site => { setSelected(site); setView(7); }} /></div>

@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import type { Research } from "./LandingResearch";
 import WaterEvidence from "./WaterEvidence";
+import { PortableJourney } from "./PortableLunar";
 import { ResearchWindows } from "./ResearchComparisonReport";
 import ResearchElevationChart, {
   ResearchVisibilityStatus,
@@ -33,6 +34,11 @@ const evidence = () =>
       ? "auto"
       : "smooth",
   });
+function openResultSection(id: string) {
+  const section = document.querySelector<HTMLElement>(`.research-results #${id}`);
+  section?.focus({ preventScroll: true });
+  section?.scrollIntoView({ block: "start" });
+}
 export default function ResearchOverview({
   result,
   comparisonOrigin,
@@ -41,6 +47,7 @@ export default function ResearchOverview({
   onNewSearch,
   equipment,
   onEquipmentChange,
+  animate,
   busy = false,
 }: {
   result: Research | null;
@@ -50,6 +57,7 @@ export default function ResearchOverview({
   onNewSearch: () => void;
   equipment: SolarSettings;
   onEquipmentChange: (equipment: SolarSettings) => void;
+  animate: boolean;
   busy?: boolean;
 }) {
   const rows = result?.geometry.available ? (result.geometry.series ?? []) : [];
@@ -74,6 +82,7 @@ export default function ResearchOverview({
     number == null ? "Unavailable" : `${number.toFixed(1)}${unit}`;
   const sections = [
     "Summary",
+    "Journey",
     "Visibility",
     "Energy",
     "Terrain",
@@ -122,11 +131,7 @@ export default function ResearchOverview({
                   href={`#${id}`}
                   onClick={(event) => {
                     event.preventDefault();
-                    const target = event.currentTarget
-                      .closest(".research-results")
-                      ?.querySelector<HTMLElement>(`#${id}`);
-                    target?.focus({ preventScroll: true });
-                    target?.scrollIntoView({ block: "start" });
+                    openResultSection(id);
                   }}
                 >
                   {label}
@@ -185,6 +190,9 @@ export default function ResearchOverview({
                 </article>
               ))}
             </div>
+          </section>
+          <section id="result-journey" tabIndex={-1} className="result-section">
+            <PortableJourney target={result.mission} animate={animate} />
           </section>
           <section
             id="result-visibility"
@@ -362,8 +370,8 @@ export default function ResearchOverview({
                     </p>
                   </div>
                 )}
-                <button className="text-button" onClick={() => onNavigate(5)}>
-                  Open 3D observatory <ArrowUpRight size={14} />
+                <button className="text-button" onClick={() => openResultSection("result-journey")}>
+                  View this site in Lunar Journey <ArrowUpRight size={14} />
                 </button>
               </div>
               <aside aria-label="Interpreting visibility">

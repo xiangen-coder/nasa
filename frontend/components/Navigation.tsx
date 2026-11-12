@@ -5,7 +5,6 @@ import {
   Archive,
   ArrowUpRight,
   ChevronDown,
-  Compass,
   Moon,
   Orbit,
   Rocket,
@@ -36,8 +35,7 @@ export const viewPaths = [
   "mission-planner",
 ];
 export const toolItems = [
-  { view: 0, label: "Map explorer", icon: Compass, detail: "Coordinates & geographic references" },
-  { view: 5, label: "3D observatory", icon: Orbit, detail: "NASA positions & computed local sky" },
+  { view: 5, label: "3D observatory", icon: Orbit, detail: "Earth-to-Moon journey & NASA positions" },
   { view: 16, label: "Mission planner", icon: Rocket, detail: "Vehicle worksheet & launch weather" },
   { view: 4, label: "Lunar mission archive", icon: Archive, detail: "Historical missions & documented 3D paths" },
   { view: 12, label: "Mission lab", icon: FlaskConical, detail: "Scenarios, equipment & classroom activities" },
@@ -47,7 +45,6 @@ export const toolItems = [
 export default function Navigation({
   view,
   education,
-  classroomNavRef,
   accountName,
   onNavigate,
   preferences,
@@ -55,7 +52,6 @@ export default function Navigation({
 }: {
   view: number;
   education: boolean;
-  classroomNavRef: (element: HTMLDivElement | null) => void;
   accountName?: string | null;
   onNavigate: (view: number) => void;
   preferences: Preferences;
@@ -93,7 +89,6 @@ export default function Navigation({
           LUNAR<span className="brand-caption">A NEW PERSPECTIVE</span>
         </span>
       </a>
-      {education && <div className="classroom-nav" ref={classroomNavRef} />}
       {!education && <nav className="nav-pill glass" aria-label="Main navigation">
         {[
           { label: "Configure", view: 7 },

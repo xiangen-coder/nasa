@@ -56,7 +56,7 @@ function expectMissionSettings(missions: Mission[]) {
   }
 }
 
-test("shows Water/Ice Evidence for the assessed site in Results", async ({ page }) => {
+test("shows the assessed site's Lunar Journey and Water/Ice Evidence in Results", async ({ page }) => {
   await page.route("**/api/research/water-evidence?*", async (route) => {
     const url = new URL(route.request().url());
     expect(url.searchParams.get("latitude")).toBe("-89.54");
@@ -73,6 +73,10 @@ test("shows Water/Ice Evidence for the assessed site in Results", async ({ page 
   });
   await openCompare(page);
   await page.getByRole("article", { name: /Pre-result 1:/ }).getByRole("button", { name: "More Info" }).click();
+  const journey = page.locator("#result-summary + #result-journey");
+  await expect(journey.getByRole("heading", { name: "Earth to your lunar landing point" })).toBeVisible();
+  await expect(journey.locator("lunar-journey")).toHaveAttribute("latitude", "-89.54");
+  await expect(page.locator("#result-journey + #result-visibility")).toBeVisible();
   const environment = page.locator("#result-environment");
   await expect(environment.getByText("Water/Ice Evidence", { exact: true })).toBeVisible();
   await expect(environment.getByText("27.5%", { exact: true })).toBeVisible();

@@ -1,0 +1,35 @@
+{
+  "included_files": {
+    "earth.glb": {
+      "bytes": 12916400,
+      "sha256": "05a5aea99db8ab472487a06debc3b5d0b2cae7636a1a6b9ecfa40b7d1722ba23"
+    },
+    "sun.glb": {
+      "bytes": 4343656,
+      "sha256": "a178f5c43c2c9a6ee6c011c315149a7ab5a2594fd5aa9119ee219625a18da1dd"
+    },
+    "moon-texture.jpg": {
+      "bytes": 238093,
+      "sha256": "fcb0f1f5548e6e18d40063dd55c6aacd3daedf2407b181dab85b61e22bf9fe57"
+    }
+  },
+  "earth_sun_attribution": "User-supplied assets. Original authorship/license not independently established. Visual reference only; not terrain, scale, or frame calibration.",
+  "original_earth_sun_metadata": {
+    "earth.glb": {
+      "bytes": 12916400,
+      "sha256": "05a5aea99db8ab472487a06debc3b5d0b2cae7636a1a6b9ecfa40b7d1722ba23"
+    },
+    "sun.glb": {
+      "bytes": 4343656,
+      "sha256": "a178f5c43c2c9a6ee6c011c315149a7ab5a2594fd5aa9119ee219625a18da1dd"
+    }
+  },
+  "moon_texture_source": [
+    {
+      "name": "moon-texture.jpg",
+      "url": "https://threejs.org/examples/textures/planets/moon_1024.jpg",
+      "bytes": 238093,
+      "sha256": "fcb0f1f5548e6e18d40063dd55c6aacd3daedf2407b181dab85b61e22bf9fe57"
+    }
+  ]
+}

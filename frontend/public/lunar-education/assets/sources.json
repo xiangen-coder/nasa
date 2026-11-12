@@ -1,0 +1,50 @@
+[
+  {
+    "name": "moon-texture.jpg",
+    "url": "https://threejs.org/examples/textures/planets/moon_1024.jpg",
+    "bytes": 238093,
+    "sha256": "fcb0f1f5548e6e18d40063dd55c6aacd3daedf2407b181dab85b61e22bf9fe57"
+  },
+  {
+    "name": "moon-plains.jpg",
+    "url": "https://images.pexels.com/photos/47367/full-moon-moon-bright-sky-47367.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "bytes": 87046,
+    "sha256": "67a420fc019da65c8b5b1bd01e77290e6e749deec4d28c107052c4442a32e977"
+  },
+  {
+    "name": "moon-highlands.jpg",
+    "url": "https://images.pexels.com/photos/73873/moon-lunar-surface-space-astronomy-73873.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "error": "HTTP Error 404: Not Found"
+  },
+  {
+    "name": "moon-poles.jpg",
+    "url": "https://images.pexels.com/photos/87651/moon-lunar-landscape-space-astronomy-87651.jpeg?auto=compress&cs=tinysrgb&w=800",
+    "error": "HTTP Error 404: Not Found"
+  },
+  {
+    "name": "Nunito.ttf",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/Nunito%5Bwght%5D.ttf",
+    "bytes": 276932,
+    "sha256": "bb55a5ca5c2042335b3991af27c4d0705d0ef41cac6164ac737fd8f2a1e85207"
+  },
+  {
+    "name": "Nunito-OFL.txt",
+    "url": "https://raw.githubusercontent.com/google/fonts/main/ofl/nunito/OFL.txt",
+    "bytes": 4385,
+    "sha256": "580df76c95a1ec5ab878ceb25bb3d85c6a076804e9c970c8c6972aea775fdf65"
+  },
+  {
+    "name": "moon-highlands.jpg",
+    "replacement": "User-approved local Moon texture; illustrative thumbnail, not region-specific imagery",
+    "source_url": "https://threejs.org/examples/textures/planets/moon_1024.jpg",
+    "bytes": 238093,
+    "sha256": "fcb0f1f5548e6e18d40063dd55c6aacd3daedf2407b181dab85b61e22bf9fe57"
+  },
+  {
+    "name": "moon-poles.jpg",
+    "replacement": "User-approved local Moon texture; illustrative thumbnail, not region-specific imagery",
+    "source_url": "https://threejs.org/examples/textures/planets/moon_1024.jpg",
+    "bytes": 238093,
+    "sha256": "fcb0f1f5548e6e18d40063dd55c6aacd3daedf2407b181dab85b61e22bf9fe57"
+  }
+]
