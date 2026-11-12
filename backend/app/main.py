@@ -15,6 +15,7 @@ from .terrain import terrain
 from .external import news, weather, PADS
 from .astronomy import router as astronomy_router
 from .landing_research import router as research_router
+from .water_evidence import router as water_evidence_router
 from .landing_reliability import router as reliability_router
 from datetime import date as Date
 
@@ -38,6 +39,7 @@ async def lifespan(app):
 app = FastAPI(title='Lunar Landing Site Navigator', version=ALGORITHM_VERSION, lifespan=lifespan)
 app.include_router(astronomy_router)
 app.include_router(research_router)
+app.include_router(water_evidence_router)
 app.include_router(reliability_router)
 
 @app.exception_handler(Exception)

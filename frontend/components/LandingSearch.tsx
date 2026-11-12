@@ -5,6 +5,7 @@ import { ArrowUpRight, MapPin, SlidersHorizontal } from "lucide-react";
 import type { MissionCatalogEntry, Site } from "../app/types";
 import { referenceSites } from "../lib/reference-sites";
 import LandingAtlas from "./LandingAtlas";
+import WaterEvidence from "./WaterEvidence";
 
 export default function LandingSearch({
   selected,
@@ -250,6 +251,7 @@ export default function LandingSearch({
           </p>
         )}
         <LandingAtlas selected={selected} onSelect={onSelected} />
+        <WaterEvidence location={selected} />
         <div className="search-form-footer">
           <details className="search-advanced">
             <summary>

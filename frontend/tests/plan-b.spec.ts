@@ -192,6 +192,7 @@ test("missing evidence blocks recommendations, and cancellation marks a search i
   const pinned = page.getByRole("article", { name: /Pre-result 2:/ });
   await expect(pinned).toContainText("WHAT IF FORECAST");
   await expect(pinned).toContainText("2026-10-02 00:00:00 UTC");
+  await expect(page.locator(".pre-result-grid > article").last()).toHaveAttribute("aria-label", "What IF");
   await expect(page.getByRole("article", { name: /Pre-result 1:/ })).toContainText("2026-10-01 00:00:00 UTC");
   await expect(pinned.getByRole("button", { name: "Remove from Compare" })).toBeVisible();
   await forecasts.getByRole("button", { name: "Remove from Compare" }).click();

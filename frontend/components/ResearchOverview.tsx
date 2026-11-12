@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import type { Research } from "./LandingResearch";
+import WaterEvidence from "./WaterEvidence";
 import { ResearchWindows } from "./ResearchComparisonReport";
 import ResearchElevationChart, {
   ResearchVisibilityStatus,
@@ -528,6 +529,7 @@ export default function ResearchOverview({
                 )}
               </aside>
             </div>
+            <WaterEvidence location={result.mission} />
           </section>
           <section
             id="result-comparison"

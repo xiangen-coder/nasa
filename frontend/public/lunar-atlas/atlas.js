@@ -4,6 +4,7 @@ import {DEG, MOON_RADIUS, clamp, wrap, dot, vector, coordinates, cameraBasis} fr
 const $=id=>document.getElementById(id);
 const canvas=$('overlay'), surface=$('surface'), ctx=canvas.getContext('2d');
 const state = { lat: -5.831, lon: 8.151, zoom: 1, flat: false, relief: 3, selected: null };
+const southPole = { name: 'Lunar south pole', lat: -90, lon: 0, type: 'Geographic pole', info: 'Longitude is undefined at the pole.' };
 let landingPoint = null;
 let renderer, fallbackImage, elevation, features = [], missions = [], marks = [], frame = 0, noticeTimer, view;
 const majorNames=new Set(['Tycho','Copernicus','Plato','Clavius','Aristarchus','Kepler','Grimaldi','Theophilus','Ptolemaeus','Orientale','Tsiolkovskiy','Montes Apenninus','Rupes Recta','Vallis Alpes','Bailly','Langrenus','Gassendi','Posidonius','Humboldt','Petavius','Schickard','Schiller','Archimedes','Eratosthenes','Atlas','Hercules','Endymion','Wargentin','Pico','Mons Piton','Reiner Gamma','Hyginus','Triesnecker','Linné','Mare Moscoviense']);
@@ -93,14 +94,15 @@ function drawLabels() {
   }
   for(const mission of missions) candidates.unshift([mission,'#f5c480',3.5]);
   if(state.selected) candidates.unshift([state.selected,'#fff',4.5]);
+  candidates.unshift([southPole,'#ffc477',5]);
   ctx.font='11px Geist, system-ui, sans-serif';
   ctx.textBaseline='middle';
   const boxes=[];
   for(const [feature,color,size] of candidates){
-    const pos=project(feature.lat,feature.lon);
+    const pos=project(feature.lat,feature === southPole && state.flat ? state.lon : feature.lon);
     if(!pos) continue;
     const [x,y]=pos;
-    if(x<4||y<7||x>view.width-4||y>view.height-30) continue;
+    if(x<4||y<7||x>view.width-4||y>view.height-(feature === southPole ? 6 : 30)) continue;
     const width=ctx.measureText(feature.name).width+14;
     if(boxes.some(([bx,by,bw])=>Math.abs(y-by)<16 && x+width>bx && bx+bw>x)) continue;
     boxes.push([x,y,width]);
@@ -163,13 +165,14 @@ function centerLanding() {
   redraw();
 }
 function setLandingPoint(point, recenter = false) {
+  const firstSelectionSync = landingPoint === null;
   const coordinatesChanged = point?.latitude !== landingPoint?.latitude ||
     point?.longitude !== landingPoint?.longitude;
   landingPoint = point;
   $('landing-point').textContent = point
     ? `Selected: ${point.name || 'Landing point'} · ${coordText(point.latitude, point.longitude)}`
     : '';
-  if (point && coordinatesChanged && recenter) {
+  if (point && coordinatesChanged && recenter && !(firstSelectionSync && state.selected === southPole)) {
     $('dismiss').click();
     centerLanding();
   } else {
@@ -211,7 +214,9 @@ function select(feature) {
   $('feature').hidden=false;
   $('feature-type').textContent=feature.type;
   $('feature-name').textContent=feature.name;
-  $('feature-info').textContent=[coordText(feature.lat,feature.lon),feature.info].filter(Boolean).join(' · ');
+  $('feature-info').textContent=feature === southPole ? `90° S · ${feature.info}` :
+    [coordText(feature.lat,feature.lon),feature.info].filter(Boolean).join(' · ');
+  $('select-pole').hidden = feature !== southPole;
   redraw();
 }
 $('dismiss').onclick=()=>{
@@ -227,12 +232,23 @@ function setProjection(flat) {
   $('globe').setAttribute('aria-pressed',String(!state.flat));
   $('flat').setAttribute('aria-pressed',String(state.flat));
   $('globe').disabled=!renderer;
-  if (changed && landingPoint) centerLanding();
+  if (changed && state.selected === southPole) focusSouthPole();
+  else if (changed && landingPoint) centerLanding();
   else redraw();
 }
 $('globe').onclick=()=>setProjection(false);
 $('flat').onclick=()=>setProjection(true);
+function focusSouthPole() {
+  state.lat = state.flat ? 0 : -90;
+  state.lon = 0;
+  state.zoom = 1;
+  select(southPole);
+}
+$('south-pole').onclick=focusSouthPole;
+$('select-pole').onclick=()=>pickLandingPoint(southPole.lat, southPole.lon, southPole.name);
 setProjection(state.flat);
+$('flat').disabled = false;
+$('south-pole').disabled = false;
 
 function setZoom(value) {
   state.zoom=clamp(value,.5,450);

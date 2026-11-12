@@ -8,8 +8,9 @@
 </head>
 <body>
   <div class="projections" role="group" aria-label="Map projection">
-    <button id="globe" aria-pressed="true">3D globe</button>
-    <button id="flat" aria-pressed="false">2D map</button>
+    <button id="globe" aria-pressed="true" disabled>3D globe</button>
+    <button id="flat" aria-pressed="false" disabled>2D map</button>
+    <button id="south-pole" type="button" disabled>Find south pole</button>
   </div>
   <main class="viewport" aria-label="Interactive lunar surface">
     <canvas id="surface" aria-hidden="true"></canvas>
@@ -28,6 +29,7 @@
       <p id="feature-type"></p>
       <h2 id="feature-name"></h2>
       <p id="feature-info"></p>
+      <button id="select-pole" type="button" hidden>Use south pole</button>
     </div>
     <p id="notice" role="status"></p>
     <footer>

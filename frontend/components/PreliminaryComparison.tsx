@@ -1,6 +1,6 @@
 "use client";
 import { ArrowUpRight } from "lucide-react";
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { Mission, Site } from "../app/types";
 import type { Research, ResearchComparison } from "./LandingResearch";
 import type { ResearchPriority } from "./SearchConsole";
@@ -129,8 +129,8 @@ export default function PreliminaryComparison({
               ? r.score - selected.score
               : null;
           return (
-            <Fragment key={JSON.stringify([site.latitude, site.longitude, Date.parse(site.start), Date.parse(site.end), site.interval_minutes, site.clearance_deg])}>
             <article
+              key={JSON.stringify([site.latitude, site.longitude, Date.parse(site.start), Date.parse(site.end), site.interval_minutes, site.clearance_deg])}
               className="pre-result-card glass"
               aria-label={`Pre-result ${i + 1}: ${site.name}`}
             >
@@ -264,20 +264,19 @@ export default function PreliminaryComparison({
                 </button>}
               </div>
             </article>
-            {i === 0 && <PlanBComparison
-              key={JSON.stringify([mission, priority, equipment])}
-              original={selected} priority={priority} equipment={equipment}
-              alternativePicker={alternativePicker}
-              isCompared={isCompared}
-              removeCompared={(option) => {
-                const match = scenarios.find((entry) => sameMission(entry.result.mission, option.result.mission));
-                return match ? () => onScenariosChange(scenarios.filter((entry) => entry !== match)) : undefined;
-              }}
-              onCompare={(option) => { if (!isCompared(option)) onScenariosChange([...scenarios, option]); }}
-            />}
-            </Fragment>
           );
         })}
+        <PlanBComparison
+          key={JSON.stringify([mission, priority, equipment])}
+          original={selected} priority={priority} equipment={equipment}
+          alternativePicker={alternativePicker}
+          isCompared={isCompared}
+          removeCompared={(option) => {
+            const match = scenarios.find((entry) => sameMission(entry.result.mission, option.result.mission));
+            return match ? () => onScenariosChange(scenarios.filter((entry) => entry !== match)) : undefined;
+          }}
+          onCompare={(option) => { if (!isCompared(option)) onScenariosChange([...scenarios, option]); }}
+        />
       </div>
       <p className="preliminary-disclosure">
         Provisional research scores. See More Info for evidence and coverage.
