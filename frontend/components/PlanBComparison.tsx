@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Research } from "./LandingResearch";
+import WaterIceFactor from "./WaterIceFactor";
 import type { ResearchPriority } from "./SearchConsole";
 import type { SolarSettings } from "./mission-lab/scenario-science";
 import {
@@ -60,6 +61,7 @@ function OptionDetails({ option, original, equipment, onCompare, onRemove, added
         <dd>DEM pixels {metric(result.terrain.resolution_m, "m")} / {metric(original.limits?.max_resolution_m, "m")} limit</dd>
         {bounds && <dd>Apollo terrain screen ({metric(option.screening_radius_m, "m")} radius) · mean slope {metric(bounds.slope_mean_deg, "°")} / 6° limit · maximum slope {metric(bounds.slope_max_deg, "°")} / {metric(Math.min(12, original.limits?.max_slope_deg ?? 12), "°")} limit</dd>}
       </div>
+      <WaterIceFactor result={result} />
       <div>
         <dt>Research score</dt>
         <dd>{metric(result.score ?? undefined, "/ 100", scoreComparable ? original.score ?? undefined : undefined)}</dd>

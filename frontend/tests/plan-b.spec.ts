@@ -9,14 +9,14 @@ const limits = { max_slope_deg: 13 };
 function evidence(mission: Mission, score = 80, original = false) {
   return {
     mission, limits, score, available_weight: original ? 0.8 : 0.95,
-    missing: original ? ["H", "I"] : ["I"], provisional: true, constraints_failed: [], safety_status: "not_established",
+    missing: original ? ["H"] : [], provisional: true, constraints_failed: [], safety_status: "not_established",
     warnings: [], limitations: [], terrain: { available: true, resolution_m: 5, radius_m: 100, grid: [],
       slope_max_deg: 5, roughness_m: 1, relief_m: 4 },
     horizon: { available: true }, temperature: { available: !original },
     ice: { available: true, value: 0, radius_m: 100 },
     factors: Object.fromEntries(["T", "S", "C", "H", "I"].map((key) => [key, {
-      score: key === "I" || (original && key === "H") ? null : score,
-      weight: 0.2, quality: "Fixture", explanation: "Fixture",
+      score: key === "I" ? 0 : original && key === "H" ? null : score,
+      weight: key === "I" ? 0.05 : 0.2, quality: "Fixture", explanation: "Fixture",
     }])),
     geometry: {
       available: true, mode: "terrain_screened", sunlight_hours: original ? 12 : 24,
@@ -103,6 +103,7 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
   const original = page.getByRole("article", { name: /Pre-result 1:/ });
   await expect(original).toContainText("0.0% within 100 m");
   await expect(original).toContainText("Water ice presence and abundance are unconfirmed.");
+  await expect(original).toContainText("0.0 / 100 · 5% nominal weight");
   const originalText = await original.innerText();
   await expect(plan.getByLabel("Search mode")).toHaveValue("delay");
   await plan.getByRole("button", { name: "Run What IF" }).click();
@@ -113,6 +114,7 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
   expectMissionSettings(candidates);
   await expect(plan.locator("dl").first()).toContainText("2026-10-02 00:00:00 UTC");
   await expect(plan.locator("dl").first()).toContainText("Scores are incomparable");
+  await expect(plan.locator("dl").first()).toContainText("Water ice potential");
   await plan.getByText(/Backup 1 ·/).click();
   expect(await original.innerText()).toBe(originalText);
   await page.setViewportSize({ width: 390, height: 850 });
@@ -218,6 +220,7 @@ test("missing evidence blocks recommendations, and cancellation marks a search i
   await addForecast.click();
   const pinned = page.getByRole("article", { name: /Pre-result 2:/ });
   await expect(pinned).toContainText("WHAT IF FORECAST");
+  await expect(pinned).toContainText("0.0 / 100 · 5% nominal weight");
   await expect(pinned).toContainText("2026-10-02 00:00:00 UTC");
   await expect(page.locator(".pre-result-grid > article").last()).toHaveAttribute("aria-label", "What IF");
   await expect(page.getByRole("article", { name: /Pre-result 1:/ })).toContainText("2026-10-01 00:00:00 UTC");

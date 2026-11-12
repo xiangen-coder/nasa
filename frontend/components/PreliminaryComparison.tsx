@@ -8,6 +8,7 @@ import type { SolarSettings } from "./mission-lab/scenario-science";
 import { comparisonRadiusKm } from "./ComparisonPicker";
 import { comparableScores, sameMission, type PlanBForecast } from "../lib/plan-b";
 import PlanBComparison from "./PlanBComparison";
+import WaterIceFactor from "./WaterIceFactor";
 const key = (s: Site) => `${s.latitude},${s.longitude}`;
 const utc = (time: string) => Number.isFinite(Date.parse(time))
   ? new Date(time).toISOString().slice(0, 19).replace("T", " ") + " UTC"
@@ -216,13 +217,7 @@ export default function PreliminaryComparison({
                       Observed seasonal range {r.temperature.minimum_k?.toFixed(1)}–{r.temperature.maximum_k?.toFixed(1)} K
                     </dd>}
                   </div>
-                  <div>
-                    <dt>MAPPED PERMANENT SHADOW</dt>
-                    <dd>{r?.ice?.radius_m && r.ice.value != null
-                      ? `${(100 * r.ice.value).toFixed(1)}% within ${r.ice.radius_m.toLocaleString("en-GB")} m`
-                      : r ? "Unavailable for the assessment area" : "—"}</dd>
-                    {r && <dd>Water ice presence and abundance are unconfirmed.</dd>}
-                  </div>
+                  <WaterIceFactor result={r} />
                   <div>
                     <dt>ENVIRONMENT & LIMITS</dt>
                     <dd>{scenario?.reasons.length ? "Landing checks unresolved or exceeded. " + scenario.reasons.join(" ") : failure || (!r
