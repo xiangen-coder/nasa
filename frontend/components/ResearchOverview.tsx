@@ -167,61 +167,49 @@ export default function ResearchOverview({
                   ? "Reference geometry"
                   : "Geometry unavailable"}
             </p>
-            <dl className="research-report-settings">
-              <div>
-                <dt>Assessment focus</dt>
-                <dd>{focusLabels[priority]}</dd>
-              </div>
-              <div>
-                <dt>Research suitability score</dt>
-                <dd>
-                  {result.score == null ? "Unavailable" : `${result.score.toFixed(2)} / 100`}
-                  {result.score != null && result.provisional && " · Provisional"}
-                </dd>
-              </div>
-              <div>
-                <dt>Scoring evidence</dt>
-                <dd>{(result.available_weight * 100).toFixed(0)}% of nominal weight</dd>
-                {result.missing.length > 0 && (
-                  <dd>
-                    Missing {result.missing.map((key) => factorLabels[key] ?? key).join(", ")}
-                  </dd>
-                )}
-              </div>
-              <div>
-                <dt>Landing safety</dt>
-                <dd>{result.constraints_failed.length ? "Configured limits exceeded" : "Not established"}</dd>
-              </div>
-              {terrain?.radius_m != null && (
-                <div>
-                  <dt>Terrain sampling radius</dt>
-                  <dd>{value(terrain.radius_m, " m")}</dd>
-                </div>
-              )}
-              {observerHeight?.available && observerHeight.value != null && terrain?.elevation_m !== observerHeight.value && (
-                <div>
-                  <dt>{observerHeight.coverage_type === "global" ? "Approximate site elevation" : "Observer elevation used for visibility"}</dt>
-                  <dd>
-                    {value(observerHeight.value, " m")}
-                    {observerHeight.source?.name && ` · ${observerHeight.source.name}`}
-                  </dd>
-                </div>
-              )}
-              {shadowScreening && (
-                <div>
-                  <dt>Terrain shadow screening</dt>
-                  <dd>{shadowScreening}</dd>
-                </div>
-              )}
-              {temperature?.source?.observation_period && (
-                <div><dt>Temperature observation period</dt><dd>{temperature.source.observation_period}</dd></div>
-              )}
-            </dl>
-            {[...new Set([...result.constraints_failed, ...result.warnings])].map((message) => (
-              <p key={message}>{message}</p>
-            ))}
             <div className="result-metric-grid">
               {[
+                ["Assessment focus", focusLabels[priority]],
+                [
+                  "Research suitability score",
+                  result.score == null ? "Unavailable" : `${result.score.toFixed(2)} / 100`,
+                  result.score != null && result.provisional ? "Provisional" : undefined,
+                ],
+                [
+                  "Scoring evidence",
+                  `${(result.available_weight * 100).toFixed(0)}% of nominal weight`,
+                  result.missing.length > 0
+                    ? `Missing ${result.missing.map((key) => factorLabels[key] ?? key).join(", ")}`
+                    : undefined,
+                ],
+                [
+                  "Landing safety",
+                  result.constraints_failed.length ? "Configured limits exceeded" : "Not established",
+                ],
+                terrain?.radius_m != null
+                  ? ["Terrain sampling radius", value(terrain.radius_m, " m")]
+                  : null,
+                observerHeight?.available &&
+                observerHeight.value != null &&
+                terrain?.elevation_m !== observerHeight.value
+                  ? [
+                      observerHeight.coverage_type === "global"
+                        ? "Approximate site elevation"
+                        : "Observer elevation used for visibility",
+                      value(observerHeight.value, " m"),
+                      observerHeight.source?.name,
+                    ]
+                  : null,
+                shadowScreening
+                  ? [
+                      "Terrain shadow screening",
+                      result.horizon.available ? "Local horizon available" : "Local horizon unavailable",
+                      shadowScreening,
+                    ]
+                  : null,
+                temperature?.source?.observation_period
+                  ? ["Temperature observation period", temperature.source.observation_period]
+                  : null,
                 [
                   "Sunlight availability",
                   value(result.factors.S?.score, "%"),
@@ -254,14 +242,21 @@ export default function ResearchOverview({
                   value(energy?.total_kwh, " kWh"),
                   "Panel output over the mission window using the assumptions in Energy.",
                 ],
-              ].map(([label, reading, explanation]) => (
-                <article key={label}>
-                  <h3>{label}</h3>
-                  <strong>{reading}</strong>
-                  <p>{explanation}</p>
-                </article>
-              ))}
+              ].map((metric) => {
+                if (!metric) return null;
+                const [label, reading, explanation] = metric;
+                return (
+                  <article key={label}>
+                    <h3>{label}</h3>
+                    <strong>{reading}</strong>
+                    {explanation && <p>{explanation}</p>}
+                  </article>
+                );
+              })}
             </div>
+            {[...new Set([...result.constraints_failed, ...result.warnings])].map((message) => (
+              <p key={message}>{message}</p>
+            ))}
           </section>
           <section id="result-journey" tabIndex={-1} className="result-section">
             <PortableJourney target={result.mission} animate={animate} />
