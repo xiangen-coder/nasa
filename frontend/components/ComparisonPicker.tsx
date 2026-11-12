@@ -70,6 +70,12 @@ export default function ComparisonPicker({
   const selected = chosen.filter((s) => siteKey(s) !== key && inComparisonArea(mission, s));
   const searchKey = JSON.stringify(mission);
   const screened = suggestions?.key === searchKey ? suggestions.data : undefined;
+  const suggestedKeys = new Set([
+    ...(screened?.candidates ?? []),
+    ...(screened?.exploration_candidates ?? []),
+    ...(screened?.comparison_candidates ?? []),
+    ...(screened?.inspection_candidates ?? []),
+  ].map((candidate) => siteKey(candidate.location)));
   const canAdd = (site: Site) =>
     !busy && selected.length < 2 && inComparisonArea(mission, site) &&
     ![mission, ...selected].some((s) => siteKey(s) === siteKey(site));
@@ -81,6 +87,19 @@ export default function ComparisonPicker({
       return setError("That point is already selected.");
     setError("");
     onAdd(site);
+  }
+  function remove(site: Site) {
+    onChange(selected.filter((point) => siteKey(point) !== siteKey(site)));
+  }
+  function suggestionAction(site: Site, addLabel: string) {
+    const added = selected.some((point) => siteKey(point) === siteKey(site));
+    return <div>
+      <button type="button" className="button subtle"
+        disabled={added ? busy : !canAdd(site)}
+        onClick={() => added ? remove(site) : add(site)}>
+        {added ? "Remove from Compare" : addLabel}
+      </button>
+    </div>;
   }
   function custom(e: FormEvent) {
     e.preventDefault();
@@ -138,20 +157,14 @@ export default function ComparisonPicker({
             <p>{screened.scope}</p>
           </details>
           {screened.candidates.map((c) => (
-            <div key={siteKey(c.location)} className="saved-search">
+            <div key={siteKey(c.location)} className="saved-search comparison-suggestion">
               <span>
                 {c.location.name} · {Math.round(c.distance_m)} m away
                 {c.terrain_score_change == null
                   ? ""
                   : ` · ${c.terrain_score_change > 0 ? "+" : ""}${c.terrain_score_change.toFixed(1)} terrain points`}
               </span>
-              <button
-                className="button subtle"
-                disabled={!canAdd(c.location)}
-                onClick={() => add(c.location)}
-              >
-                Add to comparison
-              </button>
+              {suggestionAction(c.location, "Add to comparison")}
             </div>
           ))}
           {!!screened.exploration_candidates?.length && (
@@ -159,11 +172,9 @@ export default function ComparisonPicker({
               <h3>Terrain comparison points</h3>
               <p>Nominal terrain checks passed. Apollo footprint and uncertainty evidence is incomplete.</p>
               {screened.exploration_candidates.map((c) => (
-                <div key={siteKey(c.location)} className="saved-search">
+                <div key={siteKey(c.location)} className="saved-search comparison-suggestion">
                   <span>{c.location.name} · {c.resolution_m} m DEM · {c.slope_p95_deg.toFixed(1)}° p95 slope</span>
-                  <button className="button subtle" disabled={!canAdd(c.location)} onClick={() => add(c.location)}>
-                    Add for comparison
-                  </button>
+                  {suggestionAction(c.location, "Add for comparison")}
                 </div>
               ))}
             </section>
@@ -173,11 +184,9 @@ export default function ComparisonPicker({
               <h3>Nearby comparison points</h3>
               <p>Terrain evidence is incomplete. Compare these points for sunlight and Earth visibility.</p>
               {screened.comparison_candidates.map((candidate) => (
-                <div key={siteKey(candidate.location)} className="saved-search">
+                <div key={siteKey(candidate.location)} className="saved-search comparison-suggestion">
                   <span>{candidate.location.name} · {candidate.location.latitude.toFixed(5)}°, {candidate.location.longitude.toFixed(5)}°</span>
-                  <button className="button subtle" disabled={!canAdd(candidate.location)} onClick={() => add(candidate.location)}>
-                    Add for comparison
-                  </button>
+                  {suggestionAction(candidate.location, "Add for comparison")}
                 </div>
               ))}
             </section>
@@ -186,11 +195,9 @@ export default function ComparisonPicker({
             <details>
               <summary>Points that exceeded terrain limits</summary>
               {screened.inspection_candidates.map((c) => (
-                <div key={siteKey(c.location)} className="saved-search">
+                <div key={siteKey(c.location)} className="saved-search comparison-suggestion">
                   <span>{c.location.name} · {c.assessment.constraints_failed.join(" ")}</span>
-                  <button className="button subtle" disabled={!canAdd(c.location)} onClick={() => add({ ...c.location, name: c.location.name.replace("Backup terrain candidate", "Rejected terrain point") })}>
-                    Compare rejected point
-                  </button>
+                  {suggestionAction({ ...c.location, name: c.location.name.replace("Backup terrain candidate", "Rejected terrain point") }, "Compare rejected point")}
                 </div>
               ))}
             </details>
@@ -243,7 +250,7 @@ export default function ComparisonPicker({
           {error}
         </p>
       )}
-      {selected.map((s) => (
+      {selected.filter((site) => !suggestedKeys.has(siteKey(site))).map((s) => (
         <div key={siteKey(s)} className="saved-search">
           <span>
             {s.name} · {s.latitude.toFixed(5)}°, {s.longitude.toFixed(5)}°
@@ -251,9 +258,7 @@ export default function ComparisonPicker({
           <button
             className="button subtle"
             disabled={busy}
-            onClick={() =>
-              onChange(selected.filter((p) => siteKey(p) !== siteKey(s)))
-            }
+            onClick={() => remove(s)}
             aria-label={`Remove ${s.name}`}
           >
             Remove

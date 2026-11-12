@@ -18,10 +18,13 @@ function metric(value: number | undefined, unit: string, baseline?: number) {
   return `${number.format(value)} ${unit}${delta == null ? "" : ` (${delta > 0 ? "+" : ""}${number.format(delta)} ${unit})`}`;
 }
 
-function OptionDetails({ option, original, equipment }: {
-  option: Omit<PlanBForecast, "reasons">;
+function OptionDetails({ option, original, equipment, onCompare, onRemove, added }: {
+  option: PlanBForecast;
   original: Research;
   equipment: SolarSettings;
+  onCompare: (option: PlanBForecast) => void;
+  onRemove?: () => void;
+  added: boolean;
 }) {
   const { result, bounds } = option;
   const mission = result.mission;
@@ -36,6 +39,7 @@ function OptionDetails({ option, original, equipment }: {
     try { originalEnergy = solarEstimate(original, equipment)?.total_kwh; } catch {}
   }
   return (
+    <>
     <dl className="plan-b-metrics">
       <div><dt>Landing location</dt><dd>{mission.name} · {mission.latitude.toFixed(5)}°, {mission.longitude.toFixed(5)}°</dd></div>
       {result.observer_height?.available && result.observer_height.coverage_type === "global" && (
@@ -62,14 +66,25 @@ function OptionDetails({ option, original, equipment }: {
         {!scoreComparable && <dd>Scores are incomparable because evidence coverage differs.</dd>}
       </div>
     </dl>
+    {onRemove ? (
+      <button type="button" className="button subtle" onClick={onRemove}>Remove from Compare</button>
+    ) : (
+      <button type="button" className="button subtle" disabled={added} onClick={() => onCompare(option)}>
+        {added ? "Added to comparison" : "Add to Compare"}
+      </button>
+    )}
+    </>
   );
 }
 
-export default function PlanBComparison({ original, priority, equipment, alternativePicker }: {
+export default function PlanBComparison({ original, priority, equipment, alternativePicker, onCompare, isCompared, removeCompared }: {
   original?: Research;
   priority: ResearchPriority;
   equipment: SolarSettings;
   alternativePicker: ReactNode;
+  onCompare: (option: PlanBForecast) => void;
+  isCompared: (option: PlanBForecast) => boolean;
+  removeCompared: (option: PlanBForecast) => (() => void) | undefined;
 }) {
   const [mode, setMode] = useState<PlanBMode>("delay");
   const [range, setRange] = useState<PlanBWindow>("month");
@@ -114,7 +129,9 @@ export default function PlanBComparison({ original, priority, equipment, alterna
     }
   }
 
-  const ranked = status !== "running" ? rankOptions(progress.options, priority, mode).slice(0, 3) : [];
+  const ranked: PlanBForecast[] = status !== "running"
+    ? rankOptions(progress.options, priority, mode).slice(0, 3).map((option) => ({ ...option, reasons: [] }))
+    : [];
   const incomplete = status === "cancelled" || status === "error" || progress.clipped || progress.unavailable > 0 || progress.forecastsUnavailable > 0;
   const done = status !== "idle" && status !== "running";
   const resetResult = () => { setStatus("idle"); setMessage(""); setProgress(initialProgress); };
@@ -184,11 +201,11 @@ export default function PlanBComparison({ original, priority, equipment, alterna
               {ranked.length === 0 ? <h3>No viable backup found in this search</h3> : (
                 <>
                   <h3>Best of the options evaluated</h3>
-                  <OptionDetails option={ranked[0]} original={original} equipment={equipment} />
+                  <OptionDetails option={ranked[0]} original={original} equipment={equipment} onCompare={onCompare} added={isCompared(ranked[0])} onRemove={removeCompared(ranked[0])} />
                   {ranked.slice(1).map((option, index) => (
                     <details key={JSON.stringify(option.result.mission)} className="pre-extra">
                       <summary>Backup {index + 1} · {option.result.mission.name} · {utc(option.result.mission.start)}</summary>
-                      <OptionDetails option={option} original={original} equipment={equipment} />
+                      <OptionDetails option={option} original={original} equipment={equipment} onCompare={onCompare} added={isCompared(option)} onRemove={removeCompared(option)} />
                     </details>
                   ))}
                   <p>Differences are relative to Pre-Result 1. Screening uses historical thermal observations and sampled visibility. Flight reachability and landing safety still require verification.</p>
@@ -207,7 +224,7 @@ export default function PlanBComparison({ original, priority, equipment, alterna
                       <summary>{option.result.mission.name} · {utc(option.result.mission.start)}</summary>
                       <p>Landing checks unresolved or exceeded. {option.reasons.join(" ")}</p>
                       <p>{option.result.geometry.mode === "terrain_screened" ? "Visibility accounts for the mapped terrain skyline." : "Visibility uses a smooth reference horizon. Local shadows and obstructions are unknown."}</p>
-                      <OptionDetails option={option} original={original} equipment={equipment} />
+                      <OptionDetails option={option} original={original} equipment={equipment} onCompare={onCompare} added={isCompared(option)} onRemove={removeCompared(option)} />
                     </details>
                   ))}
                 </section>

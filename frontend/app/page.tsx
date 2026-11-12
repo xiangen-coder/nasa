@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { CalculationDetails, Uncertainty } from "../components/ResultExplanation";
 import NewsSidebar from "../components/NewsSidebar";
 import LandingResearch, { type Research, type ResearchActions, type ResearchComparison } from "../components/LandingResearch";
+import { sameMission, type PlanBForecast } from "../lib/plan-b";
 import type { ResearchPriority } from "../components/SearchConsole";
 import LandingSearch from "../components/LandingSearch";
 import Navigation, {viewPaths} from "../components/Navigation";
@@ -509,6 +510,7 @@ export default function Page() {
   const [reportSite, setReportSite] = useState("");
   const pendingReportFocus = useRef(false);
   const [researchComparison,setResearchComparison]=useState<ResearchComparison|null>(null);
+  const [whatIfComparison, setWhatIfComparison] = useState<{ context: string; scenarios: PlanBForecast[] } | null>(null);
   const [chosenAlternatives, setChosenAlternatives] = useState<Site[]>([]);
   const [comparisonNotice, setComparisonNotice] = useState("");
   const education = view === 14;
@@ -798,6 +800,9 @@ export default function Page() {
     analysis?.mode === "terrain_screened"
       ? "Terrain-screened geometry"
       : "Reference-sphere geometry";
+  const comparisonMission = mission();
+  const comparisonLimits = researchComparison?.results.find((result) => sameMission(result.mission, comparisonMission))?.limits;
+  const whatIfContext = JSON.stringify([comparisonMission, comparisonLimits, researchEquipment]);
   return (
     <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} data-classroom-theme={education ? "" : undefined} style={{"--ui-scale":preferences.scale} as CSSProperties}>
       <div className="stars" aria-hidden="true"/>
@@ -839,6 +844,12 @@ export default function Page() {
             <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(13)}>Account & saved searches</button><button className="button subtle" onClick={()=>setView(12)}>Mission lab</button></div>
           </section>}
           {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} priority={researchPriority} equipment={researchEquipment} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)}
+            scenarios={whatIfComparison?.context === whatIfContext ? whatIfComparison.scenarios : []}
+            onScenariosChange={(scenarios) => setWhatIfComparison({ context: whatIfContext, scenarios })}
+            onRemoveSite={(site) => {
+              setComparisonNotice("");
+              setChosenAlternatives((points) => points.filter((point) => siteKey(point) !== siteKey(site)));
+            }}
             alternativePicker={<ComparisonPicker mission={mission()} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
             onInspect={r=>{researchActions.current?.inspect(r);setResearchResult(r);setView(8);}} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
           {view===11&&<ResearchComparisonReport key={JSON.stringify(mission())} mission={mission()} sites={[selected,...searchRecord.alternatives]} results={researchComparison?.results??[]} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} equipment={researchEquipment}/>}

@@ -6,9 +6,12 @@ import type { Research, ResearchComparison } from "./LandingResearch";
 import type { ResearchPriority } from "./SearchConsole";
 import type { SolarSettings } from "./mission-lab/scenario-science";
 import { comparisonRadiusKm } from "./ComparisonPicker";
-import { sameMission } from "../lib/plan-b";
+import { comparableScores, sameMission, type PlanBForecast } from "../lib/plan-b";
 import PlanBComparison from "./PlanBComparison";
 const key = (s: Site) => `${s.latitude},${s.longitude}`;
+const utc = (time: string) => Number.isFinite(Date.parse(time))
+  ? new Date(time).toISOString().slice(0, 19).replace("T", " ") + " UTC"
+  : "Unspecified";
 const score = (r: Research | undefined, k: string) =>
   !r ? "—" : r.factors[k]?.score == null
     ? "Unavailable"
@@ -17,6 +20,9 @@ export default function PreliminaryComparison({
   mission,
   state,
   alternatives,
+  scenarios,
+  onScenariosChange,
+  onRemoveSite,
   priority,
   equipment,
   notice,
@@ -29,6 +35,9 @@ export default function PreliminaryComparison({
   mission: Mission;
   state: ResearchComparison | null;
   alternatives: Site[];
+  scenarios: PlanBForecast[];
+  onScenariosChange: (scenarios: PlanBForecast[]) => void;
+  onRemoveSite: (site: Site) => void;
   priority: ResearchPriority;
   equipment: SolarSettings;
   notice: string;
@@ -38,7 +47,15 @@ export default function PreliminaryComparison({
   onSearch: () => void;
   onCancel: () => void;
 }) {
-  const planned = [mission, ...alternatives];
+  const planned = [mission, ...alternatives.map((site) => ({ ...mission, ...site }))];
+  const isCompared = (option: PlanBForecast) =>
+    planned.some((site) => sameMission(site, option.result.mission)) ||
+    scenarios.some((scenario) => sameMission(scenario.result.mission, option.result.mission));
+  const cards = [
+    ...planned.map((site) => ({ site, scenario: undefined })),
+    ...scenarios.filter((scenario) => !planned.some((site) => sameMission(site, scenario.result.mission)))
+      .map((scenario) => ({ site: scenario.result.mission, scenario })),
+  ];
   const selected = state?.results.find((r) => sameMission(r.mission, mission));
   const hasUnfinished = planned.some((site) =>
     !state?.results.some((result) => sameMission(result.mission, { ...mission, ...site })),
@@ -98,23 +115,21 @@ export default function PreliminaryComparison({
       )}
       {notice && <p className="info" role="status">{notice}</p>}
       <div className="pre-result-grid">
-        {planned.map((site, i) => {
-          const r = state?.results.find((value) => sameMission(value.mission, { ...mission, ...site })),
-            failure = state?.failures[key(site)],
-            isSelected = key(site) === key(mission);
-          const comparable = !!(
-            selected &&
-            r &&
-            selected.available_weight === r.available_weight &&
-            selected.missing.join() === r.missing.join() &&
-            selected.geometry.mode === r.geometry.mode
-          );
+        {cards.map(({ site, scenario }, i) => {
+          const r = scenario?.result ?? state?.results.find((value) => sameMission(value.mission, site)),
+            failure = scenario ? undefined : state?.failures[key(site)],
+            isSelected = i === 0;
+          const comparable = selected && r && (scenario
+            ? comparableScores(selected, r)
+            : selected.available_weight === r.available_weight &&
+              selected.missing.join() === r.missing.join() &&
+              selected.geometry.mode === r.geometry.mode);
           const delta =
             comparable && r?.score != null && selected?.score != null
               ? r.score - selected.score
               : null;
           return (
-            <Fragment key={key(site)}>
+            <Fragment key={JSON.stringify([site.latitude, site.longitude, Date.parse(site.start), Date.parse(site.end), site.interval_minutes, site.clearance_deg])}>
             <article
               className="pre-result-card glass"
               aria-label={`Pre-result ${i + 1}: ${site.name}`}
@@ -122,7 +137,7 @@ export default function PreliminaryComparison({
               <h2>Pre-Result {i + 1}</h2>
               <div className="pre-point">
                 <span className="eyebrow">
-                  {isSelected
+                  {scenario ? scenario.reasons.length ? "WHAT IF FORECAST" : "WHAT IF SCENARIO" : isSelected
                     ? "SELECTED LANDING LOCATION"
                     : "COMPARISON LOCATION"}
                 </span>
@@ -131,6 +146,8 @@ export default function PreliminaryComparison({
                   {Math.abs(site.latitude).toFixed(4)}° {site.latitude < 0 ? "S" : "N"},{" "}
                   {Math.abs(site.longitude).toFixed(4)}° {site.longitude < 0 ? "W" : "E"}
                 </span>
+                <span>Touchdown {utc(site.start)}</span>
+                <span>Mission end {utc(site.end)}</span>
               </div>
               <div className="pre-score">
                 <strong>{r?.score == null ? "—" : r.score.toFixed(1)}</strong>
@@ -160,6 +177,8 @@ export default function PreliminaryComparison({
                 <div>
                   <dt>SUNLIGHT AVAILABILITY</dt>
                   <dd>{score(r, "S")}</dd>
+                  {scenario && r?.geometry.sunlight_hours != null && <dd>{r.geometry.sunlight_hours.toFixed(1)} h of sunlight</dd>}
+                  {scenario?.energy != null && <dd>{scenario.energy.toFixed(2)} kWh estimated solar energy</dd>}
                 </div>
                 <div>
                   <dt>EARTH COMMUNICATION</dt>
@@ -167,6 +186,7 @@ export default function PreliminaryComparison({
                     {score(r, "C")}{" "}
                     {r?.factors.C.score != null ? "geometric visibility" : ""}
                   </dd>
+                  {scenario && r?.geometry.metrics?.longest_blackout_hours != null && <dd>{r.geometry.metrics.longest_blackout_hours.toFixed(1)} h longest Earth outage</dd>}
                 </div>
                   <div>
                     <dt>TERRAIN SAFETY</dt>
@@ -202,7 +222,7 @@ export default function PreliminaryComparison({
                   </div>
                   <div>
                     <dt>ENVIRONMENT & LIMITS</dt>
-                    <dd>{failure || (!r
+                    <dd>{scenario?.reasons.length ? "Landing checks unresolved or exceeded. " + scenario.reasons.join(" ") : failure || (!r
                       ? "Evaluate this site to check the mission limits."
                       : r.constraints_failed.join(" ") || "No limit failures in the available evidence. Landing safety still requires verification.")}</dd>
                     {r?.limits?.max_slope_deg != null && <dd>Maximum slope {r.limits.max_slope_deg}°</dd>}
@@ -238,12 +258,22 @@ export default function PreliminaryComparison({
                 <button className="button subtle" onClick={onSearch}>
                   Back to Search
                 </button>
+                {!isSelected && <button type="button" className="button subtle" disabled={!scenario && state?.busy}
+                  onClick={() => scenario ? onScenariosChange(scenarios.filter((entry) => entry !== scenario)) : onRemoveSite(site)}>
+                  Remove from Compare
+                </button>}
               </div>
             </article>
             {i === 0 && <PlanBComparison
               key={JSON.stringify([mission, priority, equipment])}
               original={selected} priority={priority} equipment={equipment}
               alternativePicker={alternativePicker}
+              isCompared={isCompared}
+              removeCompared={(option) => {
+                const match = scenarios.find((entry) => sameMission(entry.result.mission, option.result.mission));
+                return match ? () => onScenariosChange(scenarios.filter((entry) => entry !== match)) : undefined;
+              }}
+              onCompare={(option) => { if (!isCompared(option)) onScenariosChange([...scenarios, option]); }}
             />}
             </Fragment>
           );

@@ -165,7 +165,10 @@ test("suggests comparison points around the first selected site when terrain is 
   const suggested = plan.getByRole("region", { name: "Nearby comparison points" });
   await expect(suggested).toContainText("Terrain evidence is incomplete");
   await suggested.getByRole("button", { name: "Add for comparison" }).click();
-  await expect(page.getByRole("article", { name: "Pre-result 2: Nearby comparison point" })).toBeVisible();
+  const added = page.getByRole("article", { name: "Pre-result 2: Nearby comparison point" });
+  await expect(added).toBeVisible();
+  await suggested.getByRole("button", { name: "Remove from Compare" }).click();
+  await expect(added).toHaveCount(0);
 });
 
 test("missing evidence blocks recommendations, and cancellation marks a search incomplete", async ({ page }) => {
@@ -184,6 +187,15 @@ test("missing evidence blocks recommendations, and cancellation marks a search i
   await expect(plan).toContainText("1 lacked required evidence");
   await expect(plan.getByText("Assessment notes")).toBeVisible();
   await expect(plan).toContainText("Mapped hazard fraction is unavailable.");
+  const addForecast = forecasts.getByRole("button", { name: "Add to Compare" }).first();
+  await addForecast.click();
+  const pinned = page.getByRole("article", { name: /Pre-result 2:/ });
+  await expect(pinned).toContainText("WHAT IF FORECAST");
+  await expect(pinned).toContainText("2026-10-02 00:00:00 UTC");
+  await expect(page.getByRole("article", { name: /Pre-result 1:/ })).toContainText("2026-10-01 00:00:00 UTC");
+  await expect(pinned.getByRole("button", { name: "Remove from Compare" })).toBeVisible();
+  await forecasts.getByRole("button", { name: "Remove from Compare" }).click();
+  await expect(pinned).toHaveCount(0);
   await page.unroute("**/api/research/plan-b");
   await page.route("**/api/research/plan-b", () => {});
   await plan.getByLabel("Alternate UTC touchdown time").fill("18:00");
