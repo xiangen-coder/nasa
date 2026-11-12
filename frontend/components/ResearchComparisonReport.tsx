@@ -48,7 +48,7 @@ const measurements: { label: string; value: (r: Research) => string }[] = [
   { label: "Longest Earth blackout", value: (r) => format(r.geometry.metrics?.longest_blackout_hours, " h") },
   { label: "Elevation above reference sphere", value: (r) => r.terrain.available
     ? format(r.terrain.elevation_m, r.terrain.coverage_type === "regional" ? " m · regional" : " m · footprint")
-    : format(r.observer_height?.value, " m · regional") },
+    : format(r.observer_height?.value, r.observer_height?.coverage_type === "global" ? " m · approximate global" : " m · regional") },
   { label: "DEM pixel spacing", value: (r) => format(r.terrain.resolution_m, " m") },
   { label: "Neighbourhood slope (p95 / maximum)", value: (r) => r.terrain.available
     ? `${format(r.terrain.slope_p95_deg, "°")} / ${format(r.terrain.slope_max_deg, "°")}` : "Unavailable" },

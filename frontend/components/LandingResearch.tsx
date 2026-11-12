@@ -70,7 +70,7 @@ export type Research = {
       slope_deg: number;
     }[];
   };
-  observer_height?: { available: boolean; value?: number; source?: Source };
+  observer_height?: { available: boolean; value?: number; source?: Source; coverage_type?: "global" | "regional" };
   horizon: {
     available: boolean;
     reason?: string;
@@ -752,10 +752,11 @@ export default function LandingResearch({
             </p>
             {result.observer_height?.available && (
               <p className="muted">
-                Observer elevation used for visibility:{" "}
+                {result.observer_height.coverage_type === "global"
+                  ? "Approximate elevation: "
+                  : "Observer elevation used for visibility: "}
                 {num(result.observer_height.value, " m")} ·{" "}
-                {result.observer_height.source?.name}. This does not establish
-                fine-footprint terrain coverage.
+                {result.observer_height.source?.name}
               </p>
             )}
             {result.terrain.grid.length > 0 && (

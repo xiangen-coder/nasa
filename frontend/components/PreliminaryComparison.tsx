@@ -177,7 +177,14 @@ export default function PreliminaryComparison({
                         : ""}
                       {r?.terrain.coverage_type === "regional" ? ` · ${r.terrain.resolution_m} m regional screening` : ""}
                     </dd>
-                    {r && r.factors.T.score == null && <dd>{r.factors.T.explanation}</dd>}
+                    {r?.observer_height?.available && r.observer_height.coverage_type === "global" && (
+                      <dd>Approximate elevation: {r.observer_height.value?.toLocaleString("en-GB")} m above the lunar reference sphere · NASA LOLA global map</dd>
+                    )}
+                    {r && r.factors.T.score == null && (
+                      <dd>{r.observer_height?.coverage_type === "global"
+                        ? "Local slope, roughness and relief require finer elevation coverage."
+                        : r.factors.T.explanation}</dd>
+                    )}
                     {r?.factors.T.score == null && r?.horizon.available && (
                       <dd>The available terrain supports skyline estimates. Check the neighbourhood size and DEM resolution limit for slope scoring.</dd>
                     )}

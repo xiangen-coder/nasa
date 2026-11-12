@@ -38,6 +38,9 @@ function OptionDetails({ option, original, equipment }: {
   return (
     <dl className="plan-b-metrics">
       <div><dt>Landing location</dt><dd>{mission.name} · {mission.latitude.toFixed(5)}°, {mission.longitude.toFixed(5)}°</dd></div>
+      {result.observer_height?.available && result.observer_height.coverage_type === "global" && (
+        <div><dt>Approximate elevation</dt><dd>{metric(result.observer_height.value, "m")} above the lunar reference sphere · NASA LOLA global map</dd></div>
+      )}
       <div><dt>Touchdown</dt><dd>{utc(mission.start)}</dd></div>
       <div><dt>Mission end</dt><dd>{utc(mission.end)}</dd></div>
       <div><dt>Delay</dt><dd>{metric(hours, "h")}{hours >= 24 && ` · ${metric(hours / 24, "days")}`}</dd></div>
@@ -192,7 +195,7 @@ export default function PlanBComparison({ original, priority, equipment, alterna
                 </>
               )}
               {progress.sampled && <p>The search checks selected touchdown times within your date window.</p>}
-              {progress.skipped > 0 && <p>Those dates share a site with a failed check or missing evidence. The outlook samples the first and last touchdown times for that site.</p>}
+              {progress.skipped > 0 && <p>The skipped dates share a site with a failed check or missing evidence. Changing the touchdown date cannot resolve that site check. Forecasts sample the first and last touchdown times for that site.</p>}
               {(progress.limits > 0 || progress.missing > 0) && <p>{progress.limits} exceeded limits · {progress.missing} lacked required evidence.</p>}
               {progress.shortlist && <p>Terrain screening covered {progress.shortlist.searched} points: {progress.shortlist.outside_or_missing} lacked evidence, {progress.shortlist.failed_limits} exceeded limits, {progress.shortlist.overlap_excluded} overlapped, and {progress.shortlist.passing_terrain_candidates} passed.</p>}
               {progress.forecastsUnavailable > 0 && <p>{progress.forecastsUnavailable} outlooks could not be calculated.</p>}

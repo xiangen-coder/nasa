@@ -262,6 +262,18 @@
         }
       ]
     },
+    "global_dem": {
+      "name": "NASA LOLA global elevation (LDEM_16)",
+      "path": "Moon_LOLA_global_16ppd.tif",
+      "sha256": "88f42411677b119d33c42a15628ccd0c9a2148a9a2ad3c2075b5a891f27a4a88",
+      "source_url": "https://ode.rsl.wustl.edu/mercury/pagehelp/Content/Missions_Instruments/Lunar%20Reconnaissance%20Orbiter%20%28LRO%29/LOLA/GDR/GDRDEM.htm",
+      "units": "m",
+      "frame": "MOON_ME_DE421",
+      "reference": "radius_minus_1737400m",
+      "resolution_m": 1895.21,
+      "observation_period": "2009-07-13 to 2016-11-29",
+      "quality": "Approximate elevation at 16 pixels per degree (about 1.9 km at the equator). Local slope, roughness, and hazards require finer data."
+    },
     "ice": {
       "name": "NASA LOLA adjusted south-pole permanent shadow mask",
       "path": "south_pole_psr_20m.tif",

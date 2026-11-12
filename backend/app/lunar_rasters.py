@@ -16,6 +16,8 @@ SOURCES={'lola':'https://pgda.gsfc.nasa.gov/products/78',
 for _kind in ['height_uncertainty','slope_uncertainty','sample_count']:
     SOURCES[_kind]='https://pgda.gsfc.nasa.gov/products/78'
 SOURCES['horizon_dem']='https://pgda.gsfc.nasa.gov/products/90'
+SOURCES['global_dem']='https://ode.rsl.wustl.edu/mercury/pagehelp/Content/Missions_Instruments/Lunar%20Reconnaissance%20Orbiter%20%28LRO%29/LOLA/GDR/GDRDEM.htm'
+ELEVATION_PRODUCTS = ('lola', 'horizon_dem', 'global_dem')
 RASTER_ERRORS = (OSError, ValueError, KeyError, rasterio.errors.RasterioError)
 
 def registry():
@@ -28,10 +30,13 @@ def registry():
     except (OSError,ValueError):
         return path.parent,{},{}
     products=manifest.get('products',{})
-    if not override and path==default and 'ice' not in products:
+    if not override and path == default:
         try:
-            bundled=json.loads(preview.read_text())['products']['ice']
-            products['ice']={**bundled,'path':(Path('..')/'lunar_preview'/bundled['path']).as_posix()}
+            bundled = json.loads(preview.read_text())['products']
+            for kind in ('ice', 'global_dem'):
+                if kind not in products and kind in bundled:
+                    product = bundled[kind]
+                    products[kind] = {**product, 'path': (Path('..') / 'lunar_preview' / product['path']).as_posix()}
         except (OSError,ValueError,KeyError):
             pass
     return path.parent,products,manifest.get('missing',{})
@@ -52,15 +57,16 @@ def opened(kind):
     verify(str(path),path.stat().st_mtime_ns,meta['sha256'])
     ds=rasterio.open(path)
     crs=CRS(ds.crs) if ds.crs else None
-    expected='K' if kind.startswith('temperature') else 'm' if kind in ('lola','horizon_dem') else 'fraction'
+    expected='K' if kind.startswith('temperature') else 'm' if kind in ELEVATION_PRODUCTS else 'fraction'
     if not crs or abs(crs.ellipsoid.semi_major_metre-RADIUS)>1 or abs(crs.ellipsoid.semi_minor_metre-RADIUS)>1 or meta.get('units')!=expected:
         ds.close();raise ValueError('Product requires a spherical lunar CRS and declared physical units.')
-    if kind in ('lola','horizon_dem') and (meta.get('reference')!='radius_minus_1737400m' or meta.get('frame')!='MOON_ME_DE421'):
+    if kind in ELEVATION_PRODUCTS and (meta.get('reference')!='radius_minus_1737400m' or meta.get('frame')!='MOON_ME_DE421'):
         ds.close();raise ValueError('LOLA vertical datum / mean-Earth frame not confirmed.')
     return ds,meta
 
 def pixel(ds,lon,lat):
     x,y=Transformer.from_crs(GEO,ds.crs,always_xy=True).transform(lon,lat)
+    if not np.isfinite((x, y)).all(): raise ValueError('Outside product coverage.')
     row,col=ds.index(x,y)
     if not (0<=row<ds.height and 0<=col<ds.width): raise ValueError('Outside product coverage.')
     z=ds.read(1,window=Window(col,row,1,1),masked=True)[0,0]
@@ -70,7 +76,14 @@ def pixel(ds,lon,lat):
 def measurement(kind,location):
     try:
         ds,meta=opened(kind)
-        with ds: value=pixel(ds,location.longitude,location.latitude)
+        with ds:
+            longitude, latitude = location.longitude, location.latitude
+            if kind == 'global_dem':
+                # The seam wraps and each pole is at the outer edge of its last row.
+                longitude = (longitude + 180) % 360 - 180
+                half_pixel = ds.res[1] / 2
+                latitude = min(90 - half_pixel, max(-90 + half_pixel, latitude))
+            value = pixel(ds, longitude, latitude)
         if (kind.startswith('temperature') and not 0<value<=500) or (kind in ('hazards','ice') and not 0<=value<=1):
             raise ValueError('Measurement is nodata or outside documented units/range.')
         if kind=='ice' and meta.get('interpretation') not in ('mapped_ice_evidence','psr_fraction'):
@@ -80,6 +93,16 @@ def measurement(kind,location):
         return {'available':True,'value':value,'source':meta,'kind':'derived raster measurement'}
     except (OSError,ValueError,KeyError,rasterio.errors.RasterioError) as exc:
         return {'available':False,'value':None,'reason':str(exc),'source_url':SOURCES[kind]}
+
+
+def site_elevation(location, terrain):
+    if terrain['available']:
+        return {'available': True, 'value': terrain['elevation_m'], 'source': terrain['source']}
+    for kind in ELEVATION_PRODUCTS:
+        reading = measurement(kind, location)
+        if reading['available']:
+            return {**reading, 'coverage_type': 'global' if kind == 'global_dem' else 'regional'}
+    return reading
 
 def ice_evidence(location, radius_m):
     """Use a complete native PSR window for the fraction of mapped shadow."""
@@ -130,6 +153,7 @@ def _terrain_window(kind, location, radius_m):
             if not ds.crs.is_projected or ds.transform.b or ds.transform.d:
                 raise ValueError('Local slope calculation needs an unrotated projected metre raster.')
             x,y=Transformer.from_crs(GEO,ds.crs,always_xy=True).transform(location.longitude,location.latitude)
+            if not np.isfinite((x, y)).all(): raise ValueError('Outside product coverage.')
             row,col=ds.index(x,y)
             resolution=max(ds.res)
             if not 1<=resolution<=2000: raise ValueError('Unsupported DEM pixel spacing.')

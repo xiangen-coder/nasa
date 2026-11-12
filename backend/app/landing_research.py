@@ -118,7 +118,7 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
 def research(request, *, plan_b=False):
     mission=request.mission;limits=request.limits
     t=rasters.local_terrain(mission,limits.radius_m,allow_regional=True)
-    observer_height={'available':True,'value':t['elevation_m'],'source':t['source']} if t.get('available') else rasters.measurement('horizon_dem',mission)
+    observer_height = rasters.site_elevation(mission, t)
     hazards=rasters.measurement('hazards',mission);ice=rasters.ice_evidence(mission,limits.radius_m)
     lo=rasters.measurement('temperature_min',mission);hi=rasters.measurement('temperature_max',mission)
     thermal={'available':False,'minimum':lo,'maximum':hi}
@@ -138,7 +138,12 @@ def research(request, *, plan_b=False):
             failed.append('The historical temperature range extends beyond the configured operating limits.')
         if failed or missing:
             return {'status':'limits' if failed else 'missing', 'reasons':failed+missing}
-    screening=rasters.horizon(mission,observer_height['value']) if observer_height.get('available') else {'available':False,'profile':None,'reason':'Observer terrain height unavailable.'}
+    if observer_height.get('coverage_type') == 'global':
+        screening = {'available': False, 'profile': None, 'reason': 'Only coarse global elevation is available at this point.'}
+    elif observer_height['available']:
+        screening = rasters.horizon(mission, observer_height['value'])
+    else:
+        screening = {'available': False, 'profile': None, 'reason': 'Observer terrain height unavailable.'}
     if plan_b and not screening['available']:
         return {'status':'missing', 'reasons':[screening.get('reason') or 'The local terrain skyline is unavailable.']}
     try:
@@ -190,7 +195,7 @@ def terrain(latitude:float=Query(ge=-90,le=90),longitude:float=Query(ge=-180,le=
     """Bounded local raster window; no Horizons requests or scientific downloads."""
     location=Location(latitude=latitude,longitude=longitude)
     local=rasters.local_terrain(location,radius_m,allow_regional=True)
-    elevation={'available':True,'value':local['elevation_m'],'source':local['source']} if local.get('available') else rasters.measurement('horizon_dem',location)
+    elevation = rasters.site_elevation(location, local)
     return {'location':location.model_dump(),'radius_m':radius_m,'terrain':local,'regional_elevation':elevation,
             'coordinate_note':'Diagnostic offsets follow projected raster axes, centred on the nearest pixel; grid up is not necessarily geographic north.',
             'limitations':['Elevation is metres above the 1737400 m lunar reference sphere in MOON_ME/DE421.',
