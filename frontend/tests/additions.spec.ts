@@ -116,6 +116,7 @@ test("mission archive uses the site palette and keeps its trajectory controls", 
   const archive = page.frameLocator('iframe[title="Lunar mission archive and interactive 3D paths"]');
   await expect(archive.locator("body")).toHaveCSS("background-color", "rgb(7, 18, 37)");
   await expect(archive.getByRole("heading", { name: "Follow the path beyond Earth." })).toBeVisible();
+  await expect(archive.locator("#trajectory-name")).toHaveText("Apollo 11", { timeout: 15000 });
   const camera = archive.getByRole("button", { name: "Moon", exact: true });
   await camera.click();
   await expect(camera).toHaveAttribute("aria-pressed", "true");
