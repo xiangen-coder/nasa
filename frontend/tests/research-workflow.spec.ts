@@ -37,7 +37,7 @@ test("adding three research sites shares the mission settings and exports their 
   await page.goto("/#search");
   await page.locator("#landing-search-form").getByLabel("End date", { exact: true }).fill("2026-10-02");
   await page.getByRole("link", { name: "Compare", exact: true }).click();
-  await page.getByRole("article", { name: "What IF" }).getByLabel("Search mode").selectOption("relocate");
+  await page.getByRole("article", { name: "What IF" }).getByText("Change location", { exact: true }).click();
   const picker = page.locator("#choose-comparison-sites");
   const addPoint = async (name: string, latitude: string, longitude: string) => {
     await picker.getByLabel("Custom point").fill(name);
@@ -75,7 +75,7 @@ test("adding three research sites shares the mission settings and exports their 
   await expect(table).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeHidden();
   await page.emulateMedia({ media: "screen" });
-  await page.getByRole("article", { name: "Pre-result 2: Shackleton backup A" }).getByRole("button", { name: "More Info" }).click();
+  await page.getByRole("article", { name: "Pre-result 2: Shackleton backup A" }).getByRole("button", { name: "More details" }).click();
   const slider = page.getByRole("slider", { name: "Mission time" });
   await slider.fill("1");
   await expect(slider).toHaveAttribute("aria-valuetext", /02 Oct/);

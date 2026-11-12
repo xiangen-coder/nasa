@@ -72,7 +72,7 @@ test("shows the assessed site's summary, methods, Lunar Journey and Water/Ice Ev
     } } });
   });
   await openCompare(page);
-  await page.getByRole("article", { name: /Pre-result 1:/ }).getByRole("button", { name: "More Info" }).click();
+  await page.getByRole("article", { name: /Pre-result 1:/ }).getByRole("button", { name: "More details" }).click();
   const summary = page.locator("#result-summary");
   await expect(summary).toContainText("70.00 / 100");
   await expect(summary).toContainText("80% of nominal weight");
@@ -113,20 +113,26 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
   });
   const plan = await openCompare(page);
   const original = page.getByRole("article", { name: /Pre-result 1:/ });
-  await expect(original).toContainText("0.0% within 100 m");
-  await expect(original).toContainText("Water ice presence and abundance are unconfirmed.");
-  await expect(original).toContainText("0.0 / 100 · 5% nominal weight");
+  const criteria = original.getByRole("region", { name: "Criteria at a glance" });
+  await expect(criteria.getByRole("meter", { name: "Water ice potential" })).toHaveAttribute("value", "0");
+  await expect(criteria.getByRole("meter", { name: "Temperature" })).toHaveCount(0);
+  await expect(criteria.getByText("Unavailable")).toBeVisible();
+  await original.getByText("Environment & limits", { exact: true }).click();
+  await expect(original.getByText("0.0% within 100 m · mapped permanent shadow")).toBeVisible();
+  await expect(original.getByText("Water ice presence and abundance are unconfirmed.")).toBeVisible();
+  await expect(original.getByText("0.0 / 100 · 5% nominal weight")).toBeVisible();
   const originalText = await original.innerText();
-  await expect(plan.getByLabel("Search mode")).toHaveValue("delay");
+  await expect(plan.getByRole("radio", { name: "Change date" })).toBeChecked();
   await plan.getByRole("button", { name: "Run What IF" }).click();
   await expect(plan.getByRole("heading", { name: "Best of the options evaluated" })).toBeVisible();
   expect(candidates.length).toBeGreaterThan(10);
   expect(candidates[0].start).toBe("2026-10-02T00:00:00.000Z");
   expect(candidates.some((mission) => mission.start.startsWith("2026-11-01"))).toBeTruthy();
   expectMissionSettings(candidates);
-  await expect(plan.locator("dl").first()).toContainText("2026-10-02 00:00:00 UTC");
-  await expect(plan.locator("dl").first()).toContainText("Scores are incomparable");
-  await expect(plan.locator("dl").first()).toContainText("Water ice potential");
+  await expect(plan.getByRole("table").first()).toContainText("2026-10-02 00:00:00 UTC");
+  await expect(plan.getByText("Scores are incomparable because evidence coverage differs.").first()).toBeVisible();
+  await plan.getByText("Mission, terrain and ice details", { exact: true }).first().click();
+  await expect(plan.getByText("Water ice potential", { exact: true }).first()).toBeVisible();
   await plan.getByText(/Backup 1 ·/).click();
   expect(await original.innerText()).toBe(originalText);
   await page.setViewportSize({ width: 390, height: 850 });
@@ -137,32 +143,34 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
 
 test("location and combined searches keep the baseline and enforce the 20 km limit", async ({ page }) => {
   const candidates: Mission[] = [];
+  const longName = "Near B · " + "SouthPolarRidge".repeat(8);
   await page.route("**/api/reliability/plan-b-sites", async (route) => {
     const { mission } = route.request().postDataJSON();
     await route.fulfill({ json: { searched: 3, overlap_excluded: 0, outside_or_missing: 0,
       failed_limits: 0, passing_terrain_candidates: 3,
       candidates: [
         { location: { name: "Near A", latitude: mission.latitude + 0.01, longitude: mission.longitude } },
-        { location: { name: "Near B", latitude: mission.latitude + 0.02, longitude: mission.longitude } },
+        { location: { name: longName, latitude: mission.latitude + 0.02, longitude: mission.longitude } },
         { location: { name: "Far", latitude: 0, longitude: 0 } },
       ] } });
   });
   await page.route("**/api/research/plan-b", async (route) => {
     const { mission } = route.request().postDataJSON();
     candidates.push(mission);
-    await route.fulfill({ json: { status: "evaluated", result: evidence(mission, mission.name === "Near B" ? 95 : 80) } });
+    await route.fulfill({ json: { status: "evaluated", result: evidence(mission, mission.name === longName ? 95 : 80) } });
   });
   const plan = await openCompare(page);
-  await plan.getByLabel("Search mode").selectOption("relocate");
+  await plan.getByText("Change location", { exact: true }).click();
   await expect(plan.getByText("Choose alternative sites")).toBeVisible();
   await expect(plan.getByLabel("Search window")).toHaveCount(0);
   await plan.getByRole("button", { name: "Run What IF" }).click();
   await expect(plan.getByRole("heading", { name: "Best of the options evaluated" })).toBeVisible();
-  await expect(plan.locator("dl").first()).toContainText("Near B");
+  await expect(plan.getByRole("table").first()).toContainText(longName);
   expect(candidates).toHaveLength(2);
   expect(candidates.every((mission) => Date.parse(mission.start) === Date.parse(start))).toBeTruthy();
-  await plan.getByLabel("Search mode").selectOption("both");
-  await expect(plan.getByText("Choose alternative sites")).toHaveCount(0);
+  await plan.getByText("Change both", { exact: true }).click();
+  await expect(plan.getByText("Choose alternative sites")).toBeHidden();
+  await expect(plan).toContainText("Search centre: Shackleton vicinity");
   await plan.getByLabel("Search window").selectOption("custom");
   await plan.getByLabel("Search end date (UTC)").fill("2028-12-01");
   await plan.getByLabel("Alternate UTC touchdown time").fill("12:30");
@@ -172,6 +180,15 @@ test("location and combined searches keep the baseline and enforce the 20 km lim
   expect(candidates.some((mission) => mission.start.startsWith("2028-12-01"))).toBeTruthy();
   expect(candidates.some((mission) => mission.name === "Far")).toBeFalsy();
   expectMissionSettings(candidates);
+  const original = page.getByRole("article", { name: /Pre-result 1:/ });
+  const originalBox = await original.boundingBox();
+  const planBox = await plan.boundingBox();
+  expect(planBox!.x).toBeGreaterThanOrEqual(originalBox!.x + originalBox!.width);
+  expect(planBox!.y).toBeCloseTo(originalBox!.y, 0);
+  await page.setViewportSize({ width: 320, height: 850 });
+  await plan.getByText(/Backup 1 ·/).click();
+  await expect(plan.getByRole("table").nth(1)).toBeVisible();
+  await expect.poll(() => plan.evaluate((card) => card.scrollWidth <= card.clientWidth)).toBe(true);
 });
 
 test("nominal terrain candidates get a forecast for the original window", async ({ page }) => {
@@ -181,7 +198,7 @@ test("nominal terrain candidates get a forecast for the original window", async 
       outside_or_missing: 1, failed_limits: 0, overlap_excluded: 0, passing_terrain_candidates: 0 },
   }));
   const plan = await openCompare(page);
-  await plan.getByLabel("Search mode").selectOption("relocate");
+  await plan.getByText("Change location", { exact: true }).click();
   await plan.getByRole("button", { name: "Run What IF" }).click();
   const forecast = plan.getByRole("region", { name: "Forecasts for comparison" });
   await expect(forecast).toContainText("Unverified ridge");
@@ -200,7 +217,7 @@ test("suggests comparison points around the first selected site when terrain is 
     });
   });
   const plan = await openCompare(page);
-  await plan.getByLabel("Search mode").selectOption("relocate");
+  await plan.getByText("Change location", { exact: true }).click();
   await expect(plan.getByLabel("Reference point")).toHaveCount(0);
   await plan.getByRole("button", { name: "Suggest points within 20 km" }).click();
   const suggested = plan.getByRole("region", { name: "Nearby comparison points" });
@@ -234,7 +251,7 @@ test("missing evidence blocks recommendations, and cancellation marks a search i
   await expect(pinned).toContainText("WHAT IF FORECAST");
   await expect(pinned).toContainText("0.0 / 100 · 5% nominal weight");
   await expect(pinned).toContainText("2026-10-02 00:00:00 UTC");
-  await expect(page.locator(".pre-result-grid > article").last()).toHaveAttribute("aria-label", "What IF");
+  await expect(page.locator(".pre-result-grid > article").nth(1)).toHaveAttribute("aria-label", "What IF");
   await expect(page.getByRole("article", { name: /Pre-result 1:/ })).toContainText("2026-10-01 00:00:00 UTC");
   await expect(pinned.getByRole("button", { name: "Remove from Compare" })).toBeVisible();
   await forecasts.getByRole("button", { name: "Remove from Compare" }).click();
