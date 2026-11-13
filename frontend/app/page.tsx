@@ -21,7 +21,6 @@ const Account = dynamic(() => import("../components/Account"));
 const MissionLab = dynamic(() => import("../components/mission-lab/MissionLab"));
 
 import TerrainAssessment from "../components/TerrainAssessment";
-import MapEvidence from "../components/MapEvidence";
 import ResearchComparisonReport from "../components/ResearchComparisonReport";
 import { defaultSolar } from "../components/mission-lab/scenario-science";
 import {AlternativeCards} from "../components/AssessmentOverview";
@@ -1492,7 +1491,6 @@ export default function Page() {
                 )}
               </section>
             )}
-            {view === 0 && <MapEvidence location={selected} onSelect={setSelected} onAssess={()=>setView(7)}/>}
             {view === 2 && <TerrainAssessment location={selected} onSelect={setSelected}/> }
             {view === 3 && (
               <section className="panel analysis-panel">
