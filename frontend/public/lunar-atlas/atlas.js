@@ -359,7 +359,7 @@ image.onload=()=>{
   redraw();
 };
 image.onerror=()=>notice('Lunar surface imagery could not be loaded.');
-image.src='moon.jpg';
+image.src='moon-trek-wac.jpg';
 
 async function loadCompressed(paths) {
   const parts = await Promise.all(paths.map((path) => load(path, 'arrayBuffer')));
