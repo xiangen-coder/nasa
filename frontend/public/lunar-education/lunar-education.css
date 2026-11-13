@@ -29,18 +29,7 @@
   line-height: 1.6;
 }
 .education-export-banner {
-  font:
-    15px/1.6 Arial,
-    sans-serif;
-  background: #203253;
-  color: #e3edff;
-  padding: 16px 20px;
-  border: 1px solid #476184;
-  border-radius: 18px;
-  margin-bottom: 18px;
-}
-.education-export-banner strong {
-  color: #a2f1d7;
+  display: none;
 }
 .education-export-error {
   font:
