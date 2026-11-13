@@ -111,7 +111,7 @@ export function solarEstimate(result: Research, equipment: SolarSettings) {
 
 export function comparableScores(original: Research, candidate: Research) {
   return original.available_weight === candidate.available_weight &&
-    original.geometry.mode === candidate.geometry.mode &&
+    comparableVisibility(original, candidate) &&
     Object.entries(original.factors).every(([key, factor]) => {
       const other = candidate.factors[key];
       return other && (factor.score == null) === (other.score == null) && factor.quality === other.quality &&

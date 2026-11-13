@@ -24,10 +24,13 @@ for _kind in ['height_uncertainty','slope_uncertainty','sample_count']:
     SOURCES[_kind]='https://pgda.gsfc.nasa.gov/products/78'
 SOURCES['horizon_dem']='https://pgda.gsfc.nasa.gov/products/90'
 SOURCES['global_dem']='https://ode.rsl.wustl.edu/mercury/pagehelp/Content/Missions_Instruments/Lunar%20Reconnaissance%20Orbiter%20%28LRO%29/LOLA/GDR/GDRDEM.htm'
+SOURCES['temperature_min_global'] = SOURCES['temperature_min']
+SOURCES['temperature_max_global'] = SOURCES['temperature_max']
 ELEVATION_PRODUCTS = ('lola', 'horizon_dem', 'global_dem')
 RASTER_ERRORS = (OSError, ValueError, KeyError, rasterio.errors.RasterioError)
 POLAR_HORIZON_URL = 'https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_20MPP_ADJ.TIF'
 POLAR_SHADOW_URL = 'https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ.TIF'
+SOUTH_REGIONAL_URL = 'https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_60S_240MPP_ADJ.TIF'
 HORIZON_RANGE_M = 20_000
 # A site this close to the source's 80° S boundary cannot fit a complete window.
 POLAR_HORIZON_LIMIT = -80 - np.degrees(HORIZON_RANGE_M / RADIUS)
@@ -123,7 +126,7 @@ class _ElevationRangeReader(BufferedIOBase):
 
 
 @contextmanager
-def _remote_polar_raster(url, size, chunk_size=1_048_576):
+def _remote_polar_raster(url, size, chunk_size=1_048_576, *, resolution=20):
     if not _polar_horizon_slots.acquire(timeout=1):
         raise ValueError('NASA raster requests are busy. Try again shortly.')
     try:
@@ -135,7 +138,7 @@ def _remote_polar_raster(url, size, chunk_size=1_048_576):
                 if (crs.to_json_dict().get('id') != {'authority': 'IAU', 'code': 30135}
                         or abs(crs.ellipsoid.semi_major_metre - RADIUS) > 1
                         or abs(crs.ellipsoid.semi_minor_metre - RADIUS) > 1
-                        or ds.res != (20, 20) or ds.count != 1):
+                        or ds.res != (resolution, resolution) or ds.count != 1):
                     raise ValueError('Unexpected NASA polar raster projection or spacing.')
                 yield ds, reader
     finally:
@@ -158,6 +161,10 @@ POLAR_SHADOW_SOURCE = {
     'resolution_m': 20, 'units': 'fraction', 'frame': 'MOON_ME_DE421',
     'interpretation': 'psr_fraction',
 }
+SOUTH_REGIONAL_SOURCE = {
+    **POLAR_ELEVATION_SOURCE, 'name': 'NASA adjusted LOLA south-region 240 m DEM',
+    'source_url': SOUTH_REGIONAL_URL, 'resolution_m': 240,
+}
 
 def registry():
     preview=ROOT/'data/lunar_preview/manifest.json'
@@ -172,7 +179,8 @@ def registry():
     if not override and path == default:
         try:
             bundled = json.loads(preview.read_text())['products']
-            for kind in ('ice', 'global_dem', 'temperature_min', 'temperature_max'):
+            for kind in ('ice', 'global_dem', 'temperature_min', 'temperature_max',
+                         'temperature_min_global', 'temperature_max_global'):
                 product = bundled.get(kind)
                 local = products.get(kind)
                 same_temperature_source = (
@@ -224,7 +232,7 @@ def measurement(kind,location):
         ds,meta=opened(kind)
         with ds:
             longitude, latitude = location.longitude, location.latitude
-            if kind == 'global_dem':
+            if kind == 'global_dem' or kind.endswith('_global'):
                 # The seam wraps and each pole is at the outer edge of its last row.
                 longitude = (longitude + 180) % 360 - 180
                 half_pixel = ds.res[1] / 2
@@ -239,6 +247,18 @@ def measurement(kind,location):
         return {'available':True,'value':value,'source':meta,'kind':'derived raster measurement'}
     except (OSError,ValueError,KeyError,rasterio.errors.RasterioError) as exc:
         return {'available':False,'value':None,'reason':str(exc),'source_url':SOURCES[kind]}
+
+
+def temperature_range(location):
+    for suffix in ('', '_global'):
+        minimum = measurement('temperature_min' + suffix, location)
+        maximum = measurement('temperature_max' + suffix, location)
+        result = {'available': False, 'minimum': minimum, 'maximum': maximum}
+        if (minimum['available'] and maximum['available'] and minimum['value'] <= maximum['value']
+                and minimum['source'].get('observation_period') == maximum['source'].get('observation_period')):
+            return {**result, 'available': True, 'minimum_k': minimum['value'],
+                    'maximum_k': maximum['value'], 'source': minimum['source']}
+    return result
 
 
 def site_elevation(location, terrain):
@@ -266,6 +286,18 @@ def ice_evidence(location, radius_m):
             return _polar_ice(location.latitude, location.longitude, radius_m)
         except RASTER_ERRORS:
             reason = 'NASA permanent-shadow data could not supply a complete neighbourhood.'
+    if location.latitude >= 85 and not os.getenv('LUNAR_DATA_MANIFEST'):
+        from .water_evidence import open_layer
+
+        try:
+            ds, meta = open_layer('shadow', location.latitude)
+            if ds is not None:
+                with ds:
+                    return _ice_window(ds, {**meta, 'interpretation': 'psr_fraction'}, location, radius_m)
+        except RASTER_ERRORS as exc:
+            reason = str(exc)
+    elif abs(location.latitude) < 80 or location.latitude > 0:
+        reason = 'No validated permanent-shadow scoring layer covers this latitude.'
     return {'available': False, 'value': None, 'reason': reason, 'source_url': SOURCES['horizon_dem']}
 
 
@@ -396,12 +428,17 @@ def _sample_horizon_pixels(dataset, xs, ys, prefetch=None):
 def _horizon_profile(ds, meta, location, height, prefetch=None):
     transform = Transformer.from_crs(GEO, ds.crs, always_xy=True)
     azimuths = np.arange(0, 360, 5)
-    step = max(25, max(ds.res))
-    distances = np.arange(step, HORIZON_RANGE_M + 1, step)
+    resolution = meta.get('resolution_m') or max(ds.res)
+    step = max(25, resolution)
+    distances = np.append(np.arange(step, HORIZON_RANGE_M, step), HORIZON_RANGE_M)
     az, dist = np.meshgrid(azimuths, distances, indexing='ij')
     lon, lat, _ = GEOD.fwd(np.full(az.size, location.longitude),
                            np.full(az.size, location.latitude), az.ravel(), dist.ravel())
     xs, ys = transform.transform(lon, lat)
+    if ds.crs.is_geographic:
+        xs = (xs + 180) % 360 - 180
+        half_pixel = ds.res[1] / 2
+        ys = np.clip(ys, -90 + half_pixel, 90 - half_pixel)
     vals = _sample_horizon_pixels(ds, xs, ys, prefetch)
     heights = vals.reshape(az.shape) * ds.scales[0] + ds.offsets[0]
     angle = dist / RADIUS
@@ -410,8 +447,9 @@ def _horizon_profile(ds, meta, location, height, prefetch=None):
     return {
         'available': True,
         'profile': [{'azimuth': int(a), 'elevation': float(e)} for a, e in zip(azimuths, angles.max(axis=1))],
-        'method': f'5 degree azimuth spacing; nearest-neighbour rays to 20 km using {max(ds.res):g} m DEM; farther terrain and subpixel obstacles excluded. Reference-frame alignment and DEM errors remain unquantified.',
+        'method': f'5 degree azimuth spacing; nearest-neighbour rays to 20 km using {resolution:g} m DEM; farther terrain and subpixel obstacles excluded. Reference-frame alignment and DEM errors remain unquantified.',
         'source': meta,
+        'sampled_relief_m': float(max(heights.max(), height) - min(heights.min(), height)),
     }
 
 
@@ -427,8 +465,34 @@ def _polar_horizon(latitude, longitude):
                                               'source': POLAR_ELEVATION_SOURCE, 'coverage_type': 'regional'}}
 
 
+@lru_cache(maxsize=128)
+def _south_regional_horizon(location_latitude, location_longitude):
+    from .models import Location
+
+    location = Location(latitude=location_latitude, longitude=location_longitude)
+    with _remote_polar_raster(SOUTH_REGIONAL_URL, 218_961_039, resolution=240) as (ds, reader):
+        height = pixel(ds, location.longitude, location.latitude)
+        result = _horizon_profile(ds, SOUTH_REGIONAL_SOURCE, location, height, reader.prefetch)
+    return {**result, 'quality': 'regional', 'observer_height': {
+        'available': True, 'value': height, 'source': SOUTH_REGIONAL_SOURCE, 'coverage_type': 'regional'}}
+
+
+@lru_cache(maxsize=128)
+def _global_horizon(latitude, longitude):
+    from .models import Location
+
+    location = Location(latitude=latitude, longitude=longitude)
+    observer = measurement('global_dem', location)
+    if not observer['available']:
+        raise ValueError(observer['reason'])
+    ds, meta = opened('global_dem')
+    with ds:
+        result = _horizon_profile(ds, meta, location, observer['value'])
+    return {**result, 'quality': 'global', 'observer_height': {**observer, 'coverage_type': 'global'}}
+
+
 def horizon(location, height):
-    """Use the bundled raster first, then NASA's south-polar raster where covered."""
+    """Prefer detailed terrain, then regional and Moon-wide LOLA coverage."""
     try:
         try:
             ds,meta=opened('horizon_dem')
@@ -443,9 +507,19 @@ def horizon(location, height):
             return _horizon_profile(ds, meta, location, height)
     except RASTER_ERRORS as exc:
         reason = str(exc)
-    if os.getenv('LUNAR_REMOTE_HORIZON') == '1' and location.latitude <= POLAR_HORIZON_LIMIT:
-        try:
-            return dict(_polar_horizon(location.latitude, location.longitude))
-        except RASTER_ERRORS:
-            reason = 'NASA LOLA elevation could not supply all 20 km horizon samples. Reference geometry remains provisional.'
+    if os.getenv('LUNAR_REMOTE_HORIZON') == '1':
+        if location.latitude <= POLAR_HORIZON_LIMIT:
+            try:
+                return dict(_polar_horizon(location.latitude, location.longitude))
+            except RASTER_ERRORS:
+                reason = 'NASA LOLA elevation could not supply all 20 km horizon samples.'
+        elif location.latitude <= -60 - np.degrees(HORIZON_RANGE_M / RADIUS):
+            try:
+                return dict(_south_regional_horizon(location.latitude, location.longitude))
+            except RASTER_ERRORS:
+                reason = 'NASA regional LOLA elevation could not supply all 20 km horizon samples.'
+    try:
+        return dict(_global_horizon(location.latitude, location.longitude))
+    except RASTER_ERRORS:
+        pass
     return {'available': False, 'profile': None, 'reason': reason}

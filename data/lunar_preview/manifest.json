@@ -293,6 +293,30 @@
       "interpretation": "psr_fraction",
       "sampling": "neighbourhood_fraction",
       "quality": "Native binary permanent-shadow mask. No ice concentration or detection is inferred."
+    },
+    "temperature_min_global": {
+      "name": "Diviner global historical bolometric minimum",
+      "path": "diviner_temperature_min_global.tif",
+      "sha256": "b9028e249e73e76682344e19c525d0763c4d773f0db95dda680e15e4426d8ebf",
+      "source_sha256": "da49b047f810722622b4f366cc6d06a7614224aa5c85be4f9fa8aebeac4b40f9",
+      "source_url": "https://luna1.diviner.ucla.edu/~jpierre/diviner/level4_raster_data/diviner_tbol_min.xyz",
+      "documentation": "https://www.diviner.ucla.edu/data",
+      "units": "K",
+      "resolution_m": 15161.4,
+      "observation_period": "2009-07-05 to 2015-04-01",
+      "quality": "Historical 0.5-degree grid (about 15 km at the equator). A regional temperature range, not a forecast or footprint measurement."
+    },
+    "temperature_max_global": {
+      "name": "Diviner global historical bolometric maximum",
+      "path": "diviner_temperature_max_global.tif",
+      "sha256": "e44c1d3fffa507204efde1501772265c6ade5ed0fff6561dfe6e440daa18f3ce",
+      "source_sha256": "54c12e409160bafe91681acef253e989dfe89a2b8c089e408757e709f1f6485e",
+      "source_url": "https://luna1.diviner.ucla.edu/~jpierre/diviner/level4_raster_data/diviner_tbol_max.xyz",
+      "documentation": "https://www.diviner.ucla.edu/data",
+      "units": "K",
+      "resolution_m": 15161.4,
+      "observation_period": "2009-07-05 to 2015-04-01",
+      "quality": "Historical 0.5-degree grid (about 15 km at the equator). A regional temperature range, not a forecast or footprint measurement."
     }
   },
   "missing": {}

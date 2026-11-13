@@ -12,6 +12,7 @@ export default function WaterIceFactor({ result }: { result?: Research }) {
       {ice?.available && ice.radius_m && ice.value != null && (
         <dd>{(ice.value * 100).toFixed(1)}% within {ice.radius_m.toLocaleString("en-GB")} m · mapped permanent shadow</dd>
       )}
+      {factor?.score == null && factor?.explanation && <dd>{factor.explanation}</dd>}
       {result && <dd>Water ice presence and abundance are unconfirmed.</dd>}
     </div>
   );

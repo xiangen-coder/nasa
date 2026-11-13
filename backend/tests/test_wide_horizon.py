@@ -6,6 +6,21 @@ from hashlib import sha256
 from app import lunar_rasters as r
 from app.models import Location, Mission
 
+
+def test_bundled_moonwide_evidence(monkeypatch):
+    monkeypatch.setenv('LUNAR_DATA_MANIFEST', str(r.ROOT / 'data/lunar_preview/manifest.json'))
+    monkeypatch.delenv('LUNAR_REMOTE_HORIZON', raising=False)
+    for latitude, longitude in [(-74.4726, 145.7015), (0, -180), (0, 180), (90, 180)]:
+        location = Location(latitude=latitude, longitude=longitude)
+        horizon = r.horizon(location, None)
+        assert horizon['quality'] == 'global' and len(horizon['profile']) == 72
+        temperature = r.temperature_range(location)
+        assert temperature['available'] and temperature['minimum_k'] <= temperature['maximum_k']
+    site = Location(latitude=-74.4726, longitude=145.7015)
+    assert round(r.temperature_range(site)['minimum_k'], 1) == 72.2
+    assert not r.ice_evidence(site, 100)['available']
+    assert not r.local_terrain(site, 100, allow_regional=True)['available']
+
 def test_wide_horizon_covers_site_without_local_dem(tmp_path,monkeypatch):
  p=tmp_path/'wide.tif'
  with rasterio.open(p,'w',driver='GTiff',height=601,width=601,count=1,dtype='float32',crs='+proj=stere +lat_0=-90 +lon_0=0 +R=1737400 +units=m',transform=from_origin(-60100,60100,200,200),nodata=-9999) as ds:ds.write(np.zeros((601,601),dtype='float32'),1)

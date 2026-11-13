@@ -176,7 +176,9 @@ export default function ResearchOverview({
               {result.mission.interval_minutes}-minute samples ·{" "}
               {result.geometry.mode === "terrain_screened"
                 ? "Terrain screened"
-                : result.geometry.available
+                : result.geometry.mode === "broad_terrain_screened"
+                  ? "Broad terrain screening"
+                  : result.geometry.available
                   ? "Reference geometry"
                   : "Geometry unavailable"}
             </p>
@@ -216,12 +218,21 @@ export default function ResearchOverview({
                 shadowScreening
                   ? [
                       "Terrain shadow screening",
-                      result.horizon.available ? "Local horizon available" : "Local horizon unavailable",
+                      result.horizon.quality === "global"
+                        ? "Coarse global horizon"
+                        : result.horizon.quality === "regional"
+                          ? "Regional horizon"
+                          : result.horizon.available ? "Local horizon available" : "Local horizon unavailable",
                       shadowScreening,
                     ]
                   : null,
-                temperature?.source?.observation_period
-                  ? ["Temperature observation period", temperature.source.observation_period]
+                result.horizon.quality && result.horizon.sampled_relief_m != null
+                  ? ["Surrounding terrain relief", value(result.horizon.sampled_relief_m, " m"),
+                      "Elevation range along the sampled 20 km rays. Landing-footprint terrain is assessed separately."]
+                  : null,
+                temperature?.available
+                  ? ["Historical temperature range", `${value(temperature.minimum_k, " K")} to ${value(temperature.maximum_k, " K")}`,
+                      [temperature.source?.name, temperature.source?.observation_period, temperature.source?.quality].filter(Boolean).join(" · ")]
                   : null,
                 [
                   "Sunlight availability",
@@ -516,7 +527,9 @@ export default function ResearchOverview({
                 <p>
                   {result.geometry.mode === "terrain_screened"
                     ? "Output uses terrain-screened sunlight."
-                    : "The estimate uses reference geometry. Local terrain shadows could reduce output."}
+                    : result.geometry.mode === "broad_terrain_screened"
+                      ? "Output uses broad terrain screening. Smaller shadows are unresolved."
+                      : "The estimate uses reference geometry. Local terrain shadows could reduce output."}
                 </p>
               </aside>
             </div>

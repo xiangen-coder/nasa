@@ -80,7 +80,7 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
     if geometry.get('available'):
         for key,field in [('S','sun_visible_pct'),('C','earth_visible_pct')]:
             factors[key].update(score=clamp(geometry['metrics'][field]),quality=geometry['mode'],source={'source_url':geometry['source_url'],'name':'JPL Horizons lunar surface observer'},
-                explanation='Duration-weighted percentage of mission intervals with body centre above terrain horizon.' if geometry['mode']=='terrain_screened' else 'Duration-weighted percentage above reference tangent plane. Terrain obstruction unknown; geometric screening only.')
+                explanation='Duration-weighted percentage of mission intervals with body centre above the sampled terrain horizon. Subpixel obstructions are unresolved.' if geometry['mode'].endswith('terrain_screened') else 'Duration-weighted percentage above reference tangent plane. Terrain obstruction unknown; geometric screening only.')
     else: warnings.append(geometry.get('reason','Horizons unavailable.'))
     if thermal.get('available'):
         lo,hi=thermal['minimum_k'],thermal['maximum_k']
@@ -120,10 +120,7 @@ def research(request, *, plan_b=False):
     t=rasters.local_terrain(mission,limits.radius_m,allow_regional=True)
     observer_height = rasters.site_elevation(mission, t)
     hazards=rasters.measurement('hazards',mission);ice=rasters.ice_evidence(mission,limits.radius_m)
-    lo=rasters.measurement('temperature_min',mission);hi=rasters.measurement('temperature_max',mission)
-    thermal={'available':False,'minimum':lo,'maximum':hi}
-    if lo['available'] and hi['available'] and lo['value']<=hi['value'] and lo['source'].get('observation_period')==hi['source'].get('observation_period'):
-        thermal.update(available=True,minimum_k=lo['value'],maximum_k=hi['value'],source=lo['source'])
+    thermal=rasters.temperature_range(mission)
     if plan_b:
         topography=score_factors(t,{},thermal,hazards,ice,limits)
         failed=topography['constraints_failed']
@@ -138,18 +135,11 @@ def research(request, *, plan_b=False):
             failed.append('The historical temperature range extends beyond the configured operating limits.')
         if failed or missing:
             return {'status':'limits' if failed else 'missing', 'reasons':failed+missing}
-    if observer_height.get('coverage_type') == 'global' and mission.latitude > rasters.POLAR_HORIZON_LIMIT:
-        screening = {'available': False, 'profile': None, 'reason': 'Only coarse global elevation is available at this point.'}
-    elif observer_height['available'] or mission.latitude <= rasters.POLAR_HORIZON_LIMIT:
-        regional_height = None
-        if observer_height['available'] and observer_height.get('coverage_type') != 'global':
-            regional_height = observer_height['value']
-        screening = rasters.horizon(mission, regional_height)
-        observer_height = screening.pop('observer_height', observer_height)
-    else:
-        screening = {'available': False, 'profile': None, 'reason': 'Observer terrain height unavailable.'}
-    if plan_b and not screening['available']:
-        return {'status':'missing', 'reasons':[screening.get('reason') or 'The local terrain skyline is unavailable.']}
+    screening = rasters.horizon(mission, None)
+    observer_height = screening.pop('observer_height', observer_height)
+    broad_horizon = screening.get('quality') in ('global', 'regional')
+    if plan_b and (not screening['available'] or broad_horizon):
+        return {'status':'missing', 'reasons':[screening.get('reason') or 'A higher-resolution local terrain skyline is required.']}
     try:
         geometry=surface_observations(mission,observer_height['value'] if observer_height.get('available') else 0)
         for row in geometry['series']:
@@ -159,16 +149,24 @@ def research(request, *, plan_b=False):
             row['sun_visible']=visible(row['sun_elevation'],row['sun_azimuth'],screening['profile'])
             row['earth_visible']=visible(row['earth_elevation'],row['earth_azimuth'],screening['profile'],mission.clearance_deg)
             row['simultaneous']=row['sun_visible'] and row['earth_visible']
-        geometry.update(available=True,mode='terrain_screened' if screening['available'] else 'reference_geometry_only',metrics=metrics(geometry['series']))
+        mode = 'broad_terrain_screened' if broad_horizon else 'terrain_screened' if screening['available'] else 'reference_geometry_only'
+        geometry.update(available=True,mode=mode,metrics=metrics(geometry['series']))
         rows=[dict(r,dt=datetime.fromisoformat(r['time'])) for r in geometry['series']]
         geometry['sunlight_windows']=windows(rows,[r['sun_visible'] for r in rows])
         geometry['earth_windows']=windows(rows,[r['earth_visible'] for r in rows])
         geometry['sunlight_hours']=sum(w['hours'] for w in geometry['sunlight_windows'])
     except HorizonsUnavailable as exc:
         geometry={'available':False,'reason':str(exc)}
+    assessment = score_factors(t,geometry,thermal,hazards,ice,limits)
+    if broad_horizon and not t['available']:
+        resolution = screening['source']['resolution_m']
+        assessment['factors']['T']['explanation'] = (
+            f'The {resolution:g} m elevation layer supports surrounding-terrain screening. '
+            f'Footprint scoring requires a complete local window with pixels at most {limits.max_resolution_m:g} m.'
+        )
     return {'mission':mission.model_dump(mode='json'),'limits':limits.model_dump(),'terrain':t,'horizon':screening,'observer_height':observer_height,
             'geometry':geometry,'temperature':thermal,'hazards':hazards,'ice':ice,
-            **score_factors(t,geometry,thermal,hazards,ice,limits),
+            **assessment,
             'limitations':['Research ranking only; never a NASA landing certification or a safe-site recommendation.',
                 'Visibility is not a power model or communication link budget. Horizons uses apparent airless body centres; finite body disks and eclipses are excluded.',
                 'Sampling uses left endpoints; transition timing is uncertain by one interval per boundary. Before 1962 Horizons UT is UT1; future leap seconds are unknown.',

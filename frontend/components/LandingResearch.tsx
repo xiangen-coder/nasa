@@ -74,6 +74,8 @@ export type Research = {
   observer_height?: { available: boolean; value?: number; source?: Source; coverage_type?: "global" | "regional" };
   horizon: {
     available: boolean;
+    quality?: "global" | "regional";
+    sampled_relief_m?: number;
     reason?: string;
     method?: string;
     source?: Source;

@@ -62,7 +62,9 @@ const measurements: { label: string; value: (r: Research) => string }[] = [
   { label: "Mapped permanent shadow", value: (r) => r.ice?.radius_m && r.ice.value != null
     ? `${format(100 * r.ice.value, "%")} within ${r.ice.radius_m.toLocaleString("en-GB")} m` : "Unavailable" },
   { label: "Terrain screening", value: (r) => r.geometry.mode === "terrain_screened"
-    ? "Terrain-screened" : r.geometry.available ? "Reference geometry only" : "Unavailable" },
+    ? "Terrain-screened" : r.geometry.mode === "broad_terrain_screened"
+      ? `Broad terrain screening · ${r.horizon.source?.name ?? "LOLA"}`
+      : r.geometry.available ? "Reference geometry only" : "Unavailable" },
   { label: "Research suitability score", value: (r) => format(r.score, r.provisional ? " / 100 · provisional" : " / 100") },
   { label: "Missing factors", value: (r) => r.missing.map((key) => r.factors[key]?.name ?? key).join(", ") || "None" },
   { label: "Measured limits exceeded", value: (r) => r.constraints_failed.join(" ") || "None in available evidence" },
