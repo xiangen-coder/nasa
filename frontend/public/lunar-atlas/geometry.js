@@ -8,6 +8,17 @@ export function vector(lat,lon) {
   return [Math.cos(a)*Math.sin(b),Math.sin(a),Math.cos(a)*Math.cos(b)];
 }
 export const coordinates = ([x,y,z])=>[Math.asin(clamp(y,-1,1))/DEG,Math.atan2(x,z)/DEG];
+export function southPolarPosition(lat, lon) {
+  const distance = 2 * MOON_RADIUS * Math.tan((lat + 90) * DEG / 2);
+  return [distance * Math.sin(lon * DEG), distance * Math.cos(lon * DEG)];
+}
+export function southPolarCoordinates(east, north) {
+  const distance = Math.hypot(east, north);
+  return [
+    2 * Math.atan(distance / (2 * MOON_RADIUS)) / DEG - 90,
+    distance === 0 ? 0 : Math.atan2(east, north) / DEG,
+  ];
+}
 export function cameraBasis(lat,lon) {
   const a=lat*DEG,b=lon*DEG;
   return [[Math.cos(b),0,-Math.sin(b)],[-Math.sin(a)*Math.sin(b),Math.cos(a),-Math.sin(a)*Math.cos(b)],vector(lat,lon)];

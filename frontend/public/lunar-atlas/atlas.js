@@ -1,9 +1,16 @@
 import {createRenderer} from './renderer.js';
-import {DEG, MOON_RADIUS, clamp, wrap, dot, vector, coordinates, cameraBasis} from './geometry.js';
+import {DEG, MOON_RADIUS, clamp, wrap, dot, vector, coordinates, cameraBasis,
+  southPolarPosition, southPolarCoordinates} from './geometry.js';
 
 const $=id=>document.getElementById(id);
 const canvas=$('overlay'), surface=$('surface'), ctx=canvas.getContext('2d');
 const state = { lat: -5.831, lon: 8.151, zoom: 1, flat: false, relief: 3, selected: null };
+// The bundled Moon Trek WMTS crop spans rows and columns 28–35 at level 6.
+const polarHalfSpan = 136.99125;
+const polarCoverage = southPolarPosition(-85.5, 0)[1];
+const polarCenter = { east: 0, north: 0 };
+let polarMode = false;
+let polarImage;
 const southPole = { name: 'Lunar south pole', lat: -90, lon: 0, type: 'Geographic pole', info: 'Longitude is undefined at the pole.' };
 let landingPoint = null;
 let renderer, fallbackImage, elevation, features = [], missions = [], marks = [], frame = 0, noticeTimer, view;
@@ -28,11 +35,17 @@ function layout() {
     const w=Math.round(width*dpr),h=Math.round(height*dpr);
     if(layer.width!==w || layer.height!==h){layer.width=w;layer.height=h;}
   }
-  const radius=(state.flat?Math.min(width/(2*Math.PI),height/Math.PI)*.93:Math.min(width,height)*.405)*state.zoom;
+  const radius=(polarMode ? Math.min(width,height)*.46/polarHalfSpan :
+    state.flat?Math.min(width/(2*Math.PI),height/Math.PI)*.93:Math.min(width,height)*.405)*state.zoom;
   return {width,height,dpr,radius,basis:cameraBasis(state.lat,state.lon)};
 }
 function project(lat,lon) {
   const {width,height,radius,basis}=view;
+  if (polarMode) {
+    const [east, north] = southPolarPosition(lat, lon);
+    if (lat > -85.5) return null;
+    return [width/2+(east-polarCenter.east)*radius,height/2-(north-polarCenter.north)*radius];
+  }
   if(state.flat){
     return [width/2+wrap(lon-state.lon)*DEG*radius,height/2-(lat-state.lat)*DEG*radius];
   }
@@ -43,6 +56,10 @@ function project(lat,lon) {
 function unproject(x,y) {
   const {width,height,radius,basis}=view;
   const a=(x-width/2)/radius,b=(height/2-y)/radius;
+  if (polarMode) {
+    const east = polarCenter.east + a, north = polarCenter.north + b;
+    return Math.hypot(east, north) <= polarCoverage ? southPolarCoordinates(east, north) : null;
+  }
   if(state.flat){
     const lat=state.lat+b/DEG;
     return Math.abs(lat)<=90?[lat,wrap(state.lon+a/DEG)]:null;
@@ -94,12 +111,12 @@ function drawLabels() {
   }
   for(const mission of missions) candidates.unshift([mission,'#f5c480',3.5]);
   if(state.selected) candidates.unshift([state.selected,'#fff',4.5]);
-  candidates.unshift([southPole,'#ffc477',5]);
+  candidates.unshift([southPole,'#ffce45',7]);
   ctx.font='11px Geist, system-ui, sans-serif';
   ctx.textBaseline='middle';
   const boxes=[];
   for(const [feature,color,size] of candidates){
-    const pos=project(feature.lat,feature === southPole && state.flat ? state.lon : feature.lon);
+    const pos=project(feature.lat,feature === southPole && state.flat && !polarMode ? state.lon : feature.lon);
     if(!pos) continue;
     const [x,y]=pos;
     if(x<4||y<7||x>view.width-4||y>view.height-(feature === southPole ? 6 : 30)) continue;
@@ -112,9 +129,14 @@ function drawLabels() {
     ctx.arc(x,y,size,0,Math.PI*2);
     ctx.fill();
     ctx.strokeStyle='#08111b';
+    if (feature === southPole) {
+      ctx.lineWidth=3;
+      ctx.stroke();
+    }
     ctx.lineWidth=3;
-    ctx.strokeText(feature.name,x+7,y);
-    ctx.fillText(feature.name,x+7,y);
+    const labelOffset = feature === southPole ? 12 : 7;
+    ctx.strokeText(feature.name,x+labelOffset,y);
+    ctx.fillText(feature.name,x+labelOffset,y);
   }
 }
 function drawLandingPoint() {
@@ -123,12 +145,16 @@ function drawLandingPoint() {
   if (!position) return;
   const [x, y] = position;
   ctx.beginPath();
-  ctx.arc(x, y, 8, 0, Math.PI * 2);
-  ctx.fillStyle = '#132539';
-  ctx.fill();
+  const atSouthPole = landingPoint.latitude === -90;
+  ctx.arc(x, y, atSouthPole ? 12 : 8, 0, Math.PI * 2);
+  if (!atSouthPole) {
+    ctx.fillStyle = '#132539';
+    ctx.fill();
+  }
   ctx.strokeStyle = '#9ce9ff';
   ctx.lineWidth = 2.5;
   ctx.stroke();
+  if (atSouthPole) return;
   ctx.beginPath();
   ctx.arc(x, y, 3, 0, Math.PI * 2);
   ctx.fillStyle = '#9ce9ff';
@@ -141,7 +167,14 @@ function draw() {
   const {width,height,dpr,radius}=view;
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,width,height);
-  if(renderer){
+  if (polarMode) {
+    if (polarImage?.complete && polarImage.naturalWidth) {
+      const left = width/2-(polarHalfSpan+polarCenter.east)*radius;
+      const top = height/2-(polarHalfSpan-polarCenter.north)*radius;
+      const span = 2*polarHalfSpan*radius;
+      ctx.drawImage(polarImage,left,top,span,span);
+    }
+  } else if(renderer){
     renderer.render({...view,basis:view.basis.flat(),center:[state.lat*DEG,state.lon*DEG],relief:state.relief,night:false,flat:state.flat,sun:[0,0,1]});
   } else if(fallbackImage){
     const offset=width/2-(state.lon+180)*DEG*radius;
@@ -149,16 +182,25 @@ function draw() {
     const span=2*Math.PI*radius;
     for(let x=offset+Math.floor(-offset/span)*span;x<width;x+=span) ctx.drawImage(fallbackImage,x,top,span,span/2);
   }
-  if(state.flat) drawGrid();
+  if(state.flat && !polarMode) drawGrid();
   drawLabels();
   drawLandingPoint();
-  $('scale').textContent=`≈ ${Math.round(50*MOON_RADIUS/radius).toLocaleString()} km / 50 px at center`;
+  const centerScale = polarMode ? 1/radius : MOON_RADIUS/radius;
+  $('scale').textContent=`≈ ${(50*centerScale).toLocaleString(undefined,{maximumSignificantDigits:3})} km / 50 px at center`;
 }
 function coordText(lat,lon) {
   const coordinate=(value,positive,negative)=>`${Math.abs(value).toFixed(3)}° ${value>=0?positive:negative}`;
   return `${coordinate(lat,'N','S')} · ${coordinate(lon,'E','W')}`;
 }
 function centerLanding() {
+  if (polarMode) {
+    const latitude = landingPoint?.latitude ?? -90;
+    const [east, north] = latitude <= -85.5 ? southPolarPosition(latitude, landingPoint?.longitude ?? 0) : [0,0];
+    Object.assign(polarCenter, { east, north });
+    state.zoom = 1;
+    redraw();
+    return;
+  }
   state.lat = state.flat ? 0 : landingPoint?.latitude ?? -5.831;
   state.lon = landingPoint?.longitude ?? 8.151;
   state.zoom = 1;
@@ -229,20 +271,37 @@ $('dismiss').onclick=()=>{
   redraw();
 };
 
-function setProjection(flat) {
-  const next = flat || !renderer;
-  const changed = state.flat !== next;
+function setProjection(flat, polar = false) {
+  const next = flat || polar || !renderer;
+  const changed = state.flat !== next || polarMode !== polar;
   state.flat = next;
+  polarMode = polar;
+  surface.style.visibility = polar ? 'hidden' : '';
   $('globe').setAttribute('aria-pressed',String(!state.flat));
-  $('flat').setAttribute('aria-pressed',String(state.flat));
+  $('flat').setAttribute('aria-pressed',String(state.flat && !polarMode));
+  $('polar').setAttribute('aria-pressed',String(polarMode));
   $('globe').disabled=!renderer;
+  if (polarMode && !polarImage) {
+    polarImage = new Image();
+    polarImage.onload = redraw;
+    polarImage.onerror = () => {
+      polarImage = null;
+      if (polarMode) {
+        setProjection(true);
+        notice('South Pole imagery could not be loaded.');
+      }
+    };
+    polarImage.src = 'moon-trek-south.webp';
+  }
   if (changed && state.selected === southPole) focusSouthPole();
-  else if (changed && landingPoint) centerLanding();
+  else if (changed && (landingPoint || polarMode)) centerLanding();
   else redraw();
 }
 $('globe').onclick=()=>setProjection(false);
 $('flat').onclick=()=>setProjection(true);
+$('polar').onclick=()=>setProjection(true,true);
 function focusSouthPole() {
+  Object.assign(polarCenter, { east: 0, north: 0 });
   state.lat = state.flat ? 0 : -90;
   state.lon = 0;
   state.zoom = 1;
@@ -252,10 +311,11 @@ $('south-pole').onclick=focusSouthPole;
 $('select-pole').onclick=()=>pickLandingPoint(southPole.lat, southPole.lon, southPole.name);
 setProjection(state.flat);
 $('flat').disabled = false;
+$('polar').disabled = false;
 $('south-pole').disabled = false;
 
 function setZoom(value) {
-  state.zoom=clamp(value,.5,450);
+  state.zoom=clamp(value,.5,polarMode ? 40 : 450);
   redraw();
 }
 $('closer').onclick=()=>setZoom(state.zoom*1.3);
@@ -292,8 +352,12 @@ canvas.addEventListener('pointermove',event=>{
       const dx=next[0]-previous[0],dy=next[1]-previous[1];
       moved ||= Math.hypot(next[0]-pointerOrigin[0],next[1]-pointerOrigin[1])>4;
       if(moved){
-        state.lon=wrap(state.lon-dx/view.radius/DEG);
-        state.lat=clamp(state.lat+dy/view.radius/DEG,-89.8,89.8);
+        if (polarMode) {
+          panPolar(-dx/view.radius,dy/view.radius);
+        } else {
+          state.lon=wrap(state.lon-dx/view.radius/DEG);
+          state.lat=clamp(state.lat+dy/view.radius/DEG,-89.8,89.8);
+        }
         redraw();
       }
     }
@@ -327,21 +391,36 @@ canvas.addEventListener('keydown',event=>{
   if(event.key==='Enter') {
     event.preventDefault();
     $('dismiss').click();
-    pickLandingPoint(state.lat, state.lon);
+    const point = view && unproject(view.width/2, view.height/2);
+    if (point) pickLandingPoint(...point);
     return;
   }
   const keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','=','-'];
-  if(!keys.includes(event.key)) return;
+  if(!view || !keys.includes(event.key)) return;
   event.preventDefault();
   const step=9/state.zoom;
-  if(event.key==='ArrowLeft') state.lon=wrap(state.lon-step);
-  if(event.key==='ArrowRight') state.lon=wrap(state.lon+step);
-  if(event.key==='ArrowUp') state.lat=clamp(state.lat+step,-89.8,89.8);
-  if(event.key==='ArrowDown') state.lat=clamp(state.lat-step,-89.8,89.8);
+  if (polarMode) {
+    const distance = 24/view.radius;
+    if(event.key==='ArrowLeft') panPolar(-distance,0);
+    if(event.key==='ArrowRight') panPolar(distance,0);
+    if(event.key==='ArrowUp') panPolar(0,distance);
+    if(event.key==='ArrowDown') panPolar(0,-distance);
+  } else {
+    if(event.key==='ArrowLeft') state.lon=wrap(state.lon-step);
+    if(event.key==='ArrowRight') state.lon=wrap(state.lon+step);
+    if(event.key==='ArrowUp') state.lat=clamp(state.lat+step,-89.8,89.8);
+    if(event.key==='ArrowDown') state.lat=clamp(state.lat-step,-89.8,89.8);
+  }
   if(event.key==='+' || event.key==='=') setZoom(state.zoom*1.3);
   if(event.key==='-') setZoom(state.zoom/1.3);
   redraw();
 });
+function panPolar(east, north) {
+  const nextEast = polarCenter.east + east, nextNorth = polarCenter.north + north;
+  const scale = Math.max(1, Math.hypot(nextEast,nextNorth)/polarCoverage);
+  polarCenter.east = nextEast/scale;
+  polarCenter.north = nextNorth/scale;
+}
 new ResizeObserver(redraw).observe(canvas);
 if (window.parent !== window) {
   window.parent.postMessage({ type: 'lunar-atlas:ready' }, location.origin);

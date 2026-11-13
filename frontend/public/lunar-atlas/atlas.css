@@ -10,7 +10,7 @@ button { color: inherit; font: inherit; cursor: pointer; border: 1px solid #475a
 button[aria-pressed="true"] { background: #233f58; color: #b5e4ff; border-color: #76a0bf; }
 button:disabled { opacity: .6; cursor: default; }
 :focus-visible { outline: 2px solid #a6ddff; outline-offset: -2px; }
-.projections { display: flex; justify-content: center; gap: 6px; padding: 8px; border-bottom: 1px solid #2d3a50; }
+.projections { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 8px; border-bottom: 1px solid #2d3a50; }
 .viewport { --atlas-footer-height: 52px; position: relative; overflow: hidden; isolation: isolate; background: radial-gradient(ellipse at center, #1b2536, #0a101a 64%, #070a10); }
 canvas { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - var(--atlas-footer-height)); }
 #overlay { cursor: grab; touch-action: none; }
