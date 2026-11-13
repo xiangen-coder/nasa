@@ -1,6 +1,6 @@
 "use client";
-import { ArrowUpRight, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowUpRight, ClipboardList, Eye, Layers, Mountain, Route, Scale, Sun, Thermometer, Zap } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import {
   Line,
   LineChart,
@@ -45,10 +45,36 @@ const factorLabels: Record<string, string> = {
   H: "Temperature",
   I: "Water ice evidence",
 };
+const sections = [
+  ["Summary", "Mission summary", ClipboardList],
+  ["Journey", "Journey", Route],
+  ["Visibility", "Visibility", Eye],
+  ["Energy", "Energy", Zap],
+  ["Terrain", "Terrain", Mountain],
+  ["Environment", "Environment", Thermometer],
+  ["Comparison", "Comparison", Scale],
+  ["Methods", "Methods, sources & limitations", Layers],
+] as const;
+
+function SectionHeading({ index, subtitle }: { index: number; subtitle?: string }) {
+  const [, title, Icon] = sections[index];
+  return (
+    <div className="result-panel-heading">
+      <Icon size={23} aria-hidden="true" />
+      <div>
+        <h2>{index + 1}. {title}</h2>
+        {subtitle && <p>{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
 function openResultSection(id: string) {
   const section = document.querySelector<HTMLElement>(`.research-results #${id}`);
-  section?.focus({ preventScroll: true });
-  section?.scrollIntoView({ block: "start" });
+  if (!section) return;
+  section.focus({ preventScroll: true });
+  const offset = Number.parseFloat(getComputedStyle(section).scrollMarginTop) || 0;
+  window.scrollTo({ top: window.scrollY + section.getBoundingClientRect().top - offset, behavior: "instant" });
 }
 export default function ResearchOverview({
   result,
@@ -99,16 +125,28 @@ export default function ResearchOverview({
       : null;
   const value = (number: number | null | undefined, unit: string) =>
     number == null ? "Unavailable" : `${number.toFixed(1)}${unit}`;
-  const sections = [
-    "Summary",
-    "Journey",
-    "Visibility",
-    "Energy",
-    "Terrain",
-    "Environment",
-    "Comparison",
-    "Methods",
-  ];
+  const [activeSection, setActiveSection] = useState("result-summary");
+  const content = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = content.current;
+    if (!result || !container) return;
+    const panels = [...container.querySelectorAll<HTMLElement>("section.result-section")].reverse();
+    function updateSection() {
+      const top = panels[panels.length - 1];
+      if (!top) return;
+      const offset = (Number.parseFloat(getComputedStyle(top).scrollMarginTop) || 0) + 8;
+      const current = panels.find((panel) => panel.getBoundingClientRect().top <= offset);
+      const atEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+      setActiveSection((atEnd ? panels[0] : current ?? top).id);
+    }
+    updateSection();
+    window.addEventListener("scroll", updateSection, { passive: true });
+    window.addEventListener("resize", updateSection);
+    return () => {
+      window.removeEventListener("scroll", updateSection);
+      window.removeEventListener("resize", updateSection);
+    };
+  }, [result]);
   const terrain = result?.terrain;
   const temperature = result?.temperature;
   const shadowScreening = result?.horizon.available
@@ -117,10 +155,29 @@ export default function ResearchOverview({
   const observerHeight = result?.observer_height;
   return (
     <section
-      className="research-results"
+      className={`research-results${result ? " has-assessment" : ""}`}
       aria-label="Landing assessment overview"
       aria-busy={busy}
     >
+      {result && (
+        <nav className="result-section-nav" aria-label="Results sections">
+          <span className="result-nav-label">Assessment</span>
+          {sections.map(([label, , Icon]) => {
+            const id = `result-${label.toLowerCase()}`;
+            return (
+              <a key={id} href={`#${id}`} aria-current={activeSection === id ? "location" : undefined}
+                onClick={(event) => {
+                  event.preventDefault();
+                  openResultSection(id);
+                }}>
+                <Icon size={19} aria-hidden="true" />
+                {label}
+              </a>
+            );
+          })}
+        </nav>
+      )}
+      <div ref={content} className="result-content">
       <header className="research-results-heading">
         <div>
           <span className="eyebrow">LANDING ASSESSMENT</span>
@@ -154,26 +211,8 @@ export default function ResearchOverview({
       </header>
       {result ? (
         <>
-          <nav className="result-section-nav" aria-label="Results sections">
-            {sections.map((label) => {
-              const id = `result-${label.toLowerCase()}`;
-              return (
-                <a
-                  key={id}
-                  className="button subtle"
-                  href={`#${id}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    openResultSection(id);
-                  }}
-                >
-                  {label}
-                </a>
-              );
-            })}
-          </nav>
           <section id="result-summary" tabIndex={-1} className="result-section">
-            <h2>Mission summary</h2>
+            <SectionHeading index={0} />
             <p>
               {utc(result.mission.start)} → {utc(result.mission.end)} UTC ·{" "}
               {result.mission.interval_minutes}-minute samples ·{" "}
@@ -273,7 +312,7 @@ export default function ResearchOverview({
                 if (!metric) return null;
                 const [label, reading, explanation] = metric;
                 return (
-                  <article key={label}>
+                  <article key={label} className={label === "Estimated solar energy" ? "result-summary-energy" : undefined}>
                     <h3>{label}</h3>
                     <strong>{reading}</strong>
                     {explanation && <p>{explanation}</p>}
@@ -286,6 +325,7 @@ export default function ResearchOverview({
             ))}
           </section>
           <section id="result-journey" tabIndex={-1} className="result-section">
+            <SectionHeading index={1} subtitle="Earth to Moon" />
             <PortableJourney target={result.mission} animate={animate} />
           </section>
           <section
@@ -293,7 +333,7 @@ export default function ResearchOverview({
             tabIndex={-1}
             className="result-section"
           >
-            <h2>Sun, Earth &amp; mission time</h2>
+            <SectionHeading index={2} subtitle="Sun, Earth & mission time" />
             <div className="research-result-columns">
               <div>
                 {rows.length > 0 ? (
@@ -490,10 +530,10 @@ export default function ResearchOverview({
             </div>
           </section>
           <section id="result-energy" tabIndex={-1} className="result-section">
-            <h2>Estimated solar energy</h2>
-            <div className="research-result-columns">
-              <div>
-                <EquipmentControls value={equipment} onChange={onEquipmentChange} />
+            <SectionHeading index={3} subtitle="Estimated solar energy" />
+            <div className="result-energy-grid">
+              <EquipmentControls value={equipment} onChange={onEquipmentChange} />
+              <div className="result-energy-chart">
                 {energy ? (
                   <EnergyOnlyCharts analysis={result} energy={energy} />
                 ) : (
@@ -538,7 +578,7 @@ export default function ResearchOverview({
             </div>
           </section>
           <section id="result-terrain" tabIndex={-1} className="result-section">
-            <h2>Terrain</h2>
+            <SectionHeading index={4} />
             <div className="research-result-columns">
               <dl className="research-report-settings">
                 <div>
@@ -596,14 +636,14 @@ export default function ResearchOverview({
                   )}
               </aside>
             </div>
-            <ResearchTerrainDetails result={result} />
+            <div className="result-terrain-evidence"><ResearchTerrainDetails result={result} /></div>
           </section>
           <section
             id="result-environment"
             tabIndex={-1}
             className="result-section"
           >
-            <h2>Environment</h2>
+            <SectionHeading index={5} />
             <div className="research-result-columns">
               <dl className="research-report-settings">
                 <div>
@@ -650,7 +690,7 @@ export default function ResearchOverview({
             tabIndex={-1}
             className="result-section"
           >
-            <h2>Comparison</h2>
+            <SectionHeading index={6} />
             <div className="account-actions">
               <button
                 className="button subtle"
@@ -664,7 +704,7 @@ export default function ResearchOverview({
             </div>
           </section>
           <section id="result-methods" tabIndex={-1} className="result-section">
-            <h2>Methods, sources &amp; limitations</h2>
+            <SectionHeading index={7} />
             <div className="research-result-columns">
               <div>
                 <p>
@@ -750,6 +790,7 @@ export default function ResearchOverview({
           {assessmentError && <p className="error" role="alert">{assessmentError}</p>}
         </div>
       )}
+      </div>
     </section>
   );
 }

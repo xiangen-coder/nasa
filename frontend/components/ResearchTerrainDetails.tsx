@@ -79,6 +79,7 @@ export default function ResearchTerrainDetails({
           </p>
         </details>
       )}
+      <div className="result-lroc-inspection">
       <h3>LROC surface inspection</h3>
       <p className="muted">
         NAC south-pole mosaic: native 1 m/pixel, acquired 23 July–11 December
@@ -135,6 +136,7 @@ export default function ResearchTerrainDetails({
           LROC preview unavailable. Open the selected site in QuickMap to inspect available imagery.
         </p>
       )}
+      </div>
     </>
   );
 }
