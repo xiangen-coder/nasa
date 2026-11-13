@@ -512,7 +512,7 @@ export default function PreliminaryComparison({
           </small>
         </div>
         <div className="preliminary-controls">
-          {!!state?.results.length && (
+          {cards.length > 1 && (!!state?.results.length || scenarios.length > 0) && (
             <a
               className="button subtle"
               href="#research-report"

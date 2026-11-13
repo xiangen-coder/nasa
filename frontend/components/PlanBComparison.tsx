@@ -390,7 +390,7 @@ export default function PlanBComparison({
       </fieldset>
       <details className="pre-extra" hidden={mode !== "relocate"}>
         <summary>Custom coordinates and terrain suggestions</summary>
-        {original && alternativePicker}
+        {!pendingMission && alternativePicker}
       </details>
       {!mission ? (
         <p>
