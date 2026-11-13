@@ -68,7 +68,7 @@ def label_value(label, name):
     return match[1].split("<")[0].strip().strip('"')
 
 
-def package(source, label_path, output, layer, pole, product_id, source_url, label_url):
+def package(source, label_path, output, layer, pole, product_id, source_url, label_url, *, wide=False):
     label = label_path.read_text(encoding="ascii")
     scale = float(label_value(label, "SCALING_FACTOR"))
     offset = float(label_value(label, "OFFSET"))
@@ -84,12 +84,14 @@ def package(source, label_path, output, layer, pole, product_id, source_url, lab
         if stream.read(4) not in (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+"):
             raise ValueError(f"{source}: invalid TIFF signature")
     temporary = output.with_suffix(".tmp.tif")
+    bounds = (-770400, -770400, 770400, 770400) if wide else BOUNDS
+    size, resolution = (6420, 240) if wide else (5058, 60)
     with rasterio.open(source) as src:
         crs = CRS(src.crs)
         operation = {p.name: p.value for p in crs.coordinate_operation.params}
         origin = operation.get("Latitude of natural origin", operation.get("Latitude of standard parallel"))
         meridian = operation.get("Longitude of natural origin", operation.get("Longitude of origin"))
-        if (tuple(src.bounds) != BOUNDS or src.shape != (5058, 5058) or src.res != (60, 60)
+        if (tuple(src.bounds) != bounds or src.shape != (size, size) or src.res != (resolution, resolution)
                 or src.count != 1 or src.dtypes != ("int16",) or src.nodata != -32768
                 or (src.scales[0], src.offsets[0]) != expected or not crs.is_projected
                 or crs.ellipsoid.semi_major_metre != 1737400
@@ -113,14 +115,19 @@ def package(source, label_path, output, layer, pole, product_id, source_url, lab
                     # The converted TIFF contains a few DN=0 pixels outside the label's two classes.
                     undocumented_count += int(np.count_nonzero(valid == 0))
                     missing = np.ma.getmaskarray(data) | (data.data == 0)
+                    if wide:
+                        xs = bounds[0] + (window.col_off + np.arange(window.width) + 0.5) * resolution
+                        ys = bounds[3] - (window.row_off + np.arange(window.height) + 0.5) * resolution
+                        edge = 2 * 1737400 * np.tan(np.radians(25 / 2))
+                        missing |= xs[None, :]**2 + ys[:, None]**2 > edge**2
                     pixels = np.where(missing, 255, data.data == 20000).astype("uint8")
+                    valid_count += int(np.count_nonzero(~missing))
                 else:
                     if ((valid < 0) | (valid > 25000)).any():
                         raise ValueError(f"{source}: illumination outside documented range")
                     pixels = data.filled(-32768)
+                    valid_count += valid.size
                 target.write(pixels, 1, window=window)
-                valid_count += valid.size
-        valid_count -= undocumented_count
         if not valid_count:
             raise ValueError(f"{source}: no valid pixels")
     temporary.replace(output)
@@ -132,7 +139,7 @@ def package(source, label_path, output, layer, pole, product_id, source_url, lab
         "source_sha256": digest(source), "label_sha256": digest(label_path),
         "retrieved_at": datetime.fromtimestamp(source.stat().st_mtime, timezone.utc).date().isoformat(),
         "frame": "MOON_ME_DE421", "reference_radius_m": 1737400, "projection": "Polar stereographic",
-        "pole_latitude": pole, "projected_bounds_m": BOUNDS, "resolution_m": 60,
+        "pole_latitude": pole, "projected_bounds_m": bounds, "resolution_m": resolution,
         "units": "fraction", "nodata": profile["nodata"],
         "scale": 1 if is_shadow else scale, "offset": 0 if is_shadow else offset,
         "effective_resolution_m": None, "quality_flags": None,
@@ -149,18 +156,21 @@ def main():
     parser.add_argument("--output", type=Path, default=ROOT / "data/lunar_preview")
     parser.add_argument("--download", action="store_true", help="Fetch missing NASA sources and PDS labels")
     parser.add_argument("--shadow-only", action="store_true", help="Package only the permanent shadow products")
+    parser.add_argument("--wide-shadow", action="store_true", help="Add the 65° polar shadow products to an existing catalog")
     parser.add_argument("--split", action="store_true", help="Write verified 2 MB parts for offline deployment")
     args = parser.parse_args()
     args.source_dir.mkdir(parents=True, exist_ok=True)
     args.output.mkdir(parents=True, exist_ok=True)
-    products = {}
+    manifest = args.output / "water_evidence.json"
+    products = json.loads(manifest.read_text(encoding="utf-8")) if manifest.exists() else {}
     source_lock = json.loads(LOCK.read_text(encoding="utf-8"))
     layers = [("shadow", "LPSR")]
-    if not args.shadow_only:
+    if not args.shadow_only and not args.wide_shadow:
         layers.append(("illumination", "AVGVISIB"))
     for hemisphere, letter, pole in (("south", "S", -90), ("north", "N", 90)):
         for layer, prefix in layers:
-            product_id = f"{prefix}_85{letter}_060M_201608"
+            product_id = (f"{prefix}_65{letter}_240M_201608" if args.wide_shadow
+                          else f"{prefix}_85{letter}_060M_201608")
             source_url = f"{RASTERS}/{product_id}.TIF"
             label_url = f"{LABELS}/{product_id}.LBL"
             source = args.source_dir / f"{product_id}.TIF"
@@ -178,9 +188,10 @@ def main():
                         fetch(url, path, checksum, size)
             if digest(source) != locked["source_sha256"] or digest(label) != locked["label_sha256"]:
                 raise ValueError(f"{product_id}: source data or label does not match the locked SHA-256")
-            key = f"{layer}_{hemisphere}"
-            output = args.output / f"water_{key}.tif"
-            products[key] = package(source, label, output, layer, pole, product_id, source_url, label_url)
+            key = f"{layer}_{hemisphere}" + ("_wide" if args.wide_shadow else "")
+            output = args.output / (f"{key}.tif" if args.wide_shadow else f"water_{key}.tif")
+            products[key] = package(source, label, output, layer, pole, product_id, source_url, label_url,
+                                    wide=args.wide_shadow)
             if args.split:
                 with output.open("rb") as stream:
                     parts = []
@@ -192,7 +203,6 @@ def main():
                         parts.append({"path": part.relative_to(args.output).as_posix(), "sha256": hashlib.sha256(chunk).hexdigest()})
                 products[key]["parts"] = parts
             print(f"{key}: {output.stat().st_size:,} bytes")
-    manifest = args.output / "water_evidence.json"
     temporary = manifest.with_suffix(".tmp.json")
     temporary.write_text(json.dumps(products, indent=2) + "\n", encoding="utf-8")
     temporary.replace(manifest)

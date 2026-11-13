@@ -38,7 +38,10 @@ def polar_catalog():
 
 def open_layer(layer, latitude):
     hemisphere = "north" if latitude >= 0 else "south"
-    product = polar_catalog().get(f"{layer}_{hemisphere}")
+    key = f"{layer}_{hemisphere}"
+    catalog = polar_catalog()
+    product = catalog.get(f"{key}_wide") if layer == "shadow" and 65 <= abs(latitude) < 85 else None
+    product = product or catalog.get(key)
     if product:
         path = product_path(DATA, product)
         verify(str(path), path.stat().st_mtime_ns, product["sha256"])

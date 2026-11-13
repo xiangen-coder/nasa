@@ -96,6 +96,12 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
                 f"{100 * ice['value']:.1f}% of sampled pixels within {ice['radius_m']:g} m "
                 "are mapped in permanent shadow by NASA LOLA. This is a cold-trap proxy; ice presence and abundance remain unverified."
             )
+        elif ice['source']['interpretation'] == 'psr_pixel':
+            classification = 'mapped in permanent shadow' if ice['value'] else 'outside mapped permanent shadow'
+            factors['I']['explanation'] = (
+                f"The selected {ice['source']['resolution_m']:g} m LOLA map pixel is {classification}. "
+                'The classification is a regional indicator of cold-trap potential. Ice presence is unknown.'
+            )
     else:
         reason = ice.get('reason')
         factors['I']['explanation'] = (
@@ -106,7 +112,7 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
         )
     available=sum(v['weight'] for v in factors.values() if v['score'] is not None)
     missing=[k for k,v in factors.items() if v['score'] is None]
-    provisional=bool(regional or missing or not hazards.get('available') or geometry.get('mode')!='terrain_screened' or thermal.get('available') or ice.get('source',{}).get('interpretation')=='psr_fraction')
+    provisional=bool(regional or missing or not hazards.get('available') or geometry.get('mode')!='terrain_screened' or thermal.get('available') or ice.get('source',{}).get('interpretation') in ('psr_fraction', 'psr_pixel'))
     for f in factors.values():
         f['effective_weight']=f['weight']/available if available and f['score'] is not None else 0
         if f['score'] is not None: f['contribution']=f['score']*f['effective_weight']

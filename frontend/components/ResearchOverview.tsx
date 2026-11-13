@@ -613,7 +613,9 @@ export default function ResearchOverview({
                 <div>
                   <dt>Mapped permanent shadow{result.ice?.radius_m ? ` within ${result.ice.radius_m.toLocaleString("en-GB")} m` : ""}</dt>
                   <dd>
-                    {value(
+                    {result.factors.I?.quality === "psr_pixel"
+                      ? result.ice?.value === 1 ? "Mapped shadow at selected pixel" : "Outside mapped shadow at selected pixel"
+                      : value(
                       result.ice?.radius_m && result.ice.value != null
                         ? result.ice.value * 100
                         : null,

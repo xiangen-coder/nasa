@@ -286,19 +286,25 @@ def ice_evidence(location, radius_m):
             return _polar_ice(location.latitude, location.longitude, radius_m)
         except RASTER_ERRORS:
             reason = 'NASA permanent-shadow data could not supply a complete neighbourhood.'
-    if location.latitude >= 85 and not os.getenv('LUNAR_DATA_MANIFEST'):
+    if abs(location.latitude) >= 65 and not os.getenv('LUNAR_DATA_MANIFEST'):
         from .water_evidence import open_layer
 
         try:
             ds, meta = open_layer('shadow', location.latitude)
             if ds is not None:
                 with ds:
+                    if meta['resolution_m'] > radius_m:
+                        value = pixel(ds, location.longitude, location.latitude)
+                        if value not in (0, 1):
+                            raise ValueError('No mapped shadow classification at this point.')
+                        return {'available': True, 'value': value, 'kind': 'mapped permanent shadow pixel',
+                                'source': {**meta, 'interpretation': 'psr_pixel'}}
                     return _ice_window(ds, {**meta, 'interpretation': 'psr_fraction'}, location, radius_m)
         except RASTER_ERRORS as exc:
             reason = str(exc)
-    elif abs(location.latitude) < 80 or location.latitude > 0:
+    elif abs(location.latitude) < 65:
         reason = 'No validated permanent-shadow scoring layer covers this latitude.'
-    return {'available': False, 'value': None, 'reason': reason, 'source_url': SOURCES['horizon_dem']}
+    return {'available': False, 'value': None, 'reason': reason, 'source_url': 'https://pgda.gsfc.nasa.gov/products/69'}
 
 
 def _ice_window(ds, meta, location, radius_m):

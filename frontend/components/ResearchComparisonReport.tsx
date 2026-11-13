@@ -60,7 +60,10 @@ const measurements: { label: string; value: (r: Research) => string }[] = [
     ? `${format(r.temperature.minimum_k)}–${format(r.temperature.maximum_k)} K` : "Unavailable" },
   { label: "Water ice potential", value: (r) => format(r.factors.I?.score, " / 100") },
   { label: "Mapped permanent shadow", value: (r) => r.ice?.radius_m && r.ice.value != null
-    ? `${format(100 * r.ice.value, "%")} within ${r.ice.radius_m.toLocaleString("en-GB")} m` : "Unavailable" },
+    ? `${format(100 * r.ice.value, "%")} within ${r.ice.radius_m.toLocaleString("en-GB")} m`
+    : r.factors.I?.quality === "psr_pixel"
+      ? `${r.ice?.value === 1 ? "Mapped shadow" : "Outside mapped shadow"} · ${r.ice?.source?.resolution_m} m pixel`
+      : "Unavailable" },
   { label: "Terrain screening", value: (r) => r.geometry.mode === "terrain_screened"
     ? "Terrain-screened" : r.geometry.mode === "broad_terrain_screened"
       ? `Broad terrain screening · ${r.horizon.source?.name ?? "LOLA"}`

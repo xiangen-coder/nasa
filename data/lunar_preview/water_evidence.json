@@ -298,5 +298,73 @@
         "sha256": "5f03b55a1664835133580646b0261065e8b41fdf549ac2c958458e3c3bb43736"
       }
     ]
+  },
+  "shadow_south_wide": {
+    "path": "shadow_south_wide.tif",
+    "layer": "shadow",
+    "product_id": "LPSR_65S_240M_201608",
+    "name": "NASA LOLA permanent shadow",
+    "version": "V1.05",
+    "source_url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/LPSR_65S_240M_201608.TIF",
+    "label_url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/LPSR_65S_240M_201608.LBL",
+    "documentation": "https://pgda.gsfc.nasa.gov/products/69",
+    "sha256": "99febdafc6a647f7f4490cbe06e02ab439a7474d31c768331e372ac4a5ddc3d3",
+    "source_sha256": "3a90c9716c2f586306d6096cadc9a5a2986b9b7f175687ffa8096cdc25a01537",
+    "label_sha256": "e546d988e903c64a77da73d28ea8058caf10953366f6d133d137911c1d9c5a3d",
+    "retrieved_at": "2026-11-13",
+    "frame": "MOON_ME_DE421",
+    "reference_radius_m": 1737400,
+    "projection": "Polar stereographic",
+    "pole_latitude": -90,
+    "projected_bounds_m": [
+      -770400,
+      -770400,
+      770400,
+      770400
+    ],
+    "resolution_m": 240,
+    "units": "fraction",
+    "nodata": 255,
+    "scale": 1,
+    "offset": 0,
+    "effective_resolution_m": null,
+    "quality_flags": null,
+    "valid_pixel_count": 32366728,
+    "undocumented_pixels_masked": 0,
+    "quality": "Permanent-shadow classification modeled from LOLA topography."
+  },
+  "shadow_north_wide": {
+    "path": "shadow_north_wide.tif",
+    "layer": "shadow",
+    "product_id": "LPSR_65N_240M_201608",
+    "name": "NASA LOLA permanent shadow",
+    "version": "V1.05",
+    "source_url": "https://pgda.gsfc.nasa.gov/data/MoonIllumination/LPSR_65N_240M_201608.TIF",
+    "label_url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/LPSR_65N_240M_201608.LBL",
+    "documentation": "https://pgda.gsfc.nasa.gov/products/69",
+    "sha256": "bcce9e243048718abc88b740f794b9fab4dc46f9b2e5b9218b0a39107909375b",
+    "source_sha256": "8b01f452e1d79d5b59c0566f5f03caf061de92d83b875a582acbef4117f128bf",
+    "label_sha256": "0aaa186b0ff5003a32c7e6db18bd742a11c8ca22d18a8fdb82b47bd719b609a0",
+    "retrieved_at": "2026-11-13",
+    "frame": "MOON_ME_DE421",
+    "reference_radius_m": 1737400,
+    "projection": "Polar stereographic",
+    "pole_latitude": 90,
+    "projected_bounds_m": [
+      -770400,
+      -770400,
+      770400,
+      770400
+    ],
+    "resolution_m": 240,
+    "units": "fraction",
+    "nodata": 255,
+    "scale": 1,
+    "offset": 0,
+    "effective_resolution_m": null,
+    "quality_flags": null,
+    "valid_pixel_count": 32366727,
+    "undocumented_pixels_masked": 1,
+    "quality": "Permanent-shadow classification modeled from LOLA topography."
   }
 }

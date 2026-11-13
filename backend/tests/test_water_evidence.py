@@ -1,6 +1,8 @@
 import pytest
 from rasterio.io import MemoryFile
 
+from app.lunar_rasters import ice_evidence
+from app.models import Location
 from app.water_evidence import evidence_map, polar_catalog, water_evidence
 
 pytestmark = pytest.mark.skipif(
@@ -43,3 +45,17 @@ def test_map_serves_native_pixel_window_with_mask():
         assert brightness[64, 64] == 0
         assert alpha[64, 64] == 255
         assert (alpha == 0).any()
+
+
+@pytest.mark.parametrize('latitude', [-74.4726, 74.4726])
+def test_wide_shadow_matches_assessment_at_both_poles(latitude, monkeypatch):
+    monkeypatch.delenv('LUNAR_DATA_MANIFEST', raising=False)
+    longitude = 145.7015
+    reading = water_evidence(latitude, longitude, 1000)['layers']['shadow']
+    assert reading['status'] == 'available'
+    assert reading['source']['resolution_m'] == 240
+    assert evidence_map('shadow', latitude, longitude).media_type == 'image/png'
+    score = ice_evidence(Location(latitude=latitude, longitude=longitude), 100)
+    assert score['value'] == reading['value'] == 0
+    assert score['source']['interpretation'] == 'psr_pixel'
+    assert 'radius_m' not in score
