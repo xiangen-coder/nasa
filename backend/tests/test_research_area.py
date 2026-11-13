@@ -50,3 +50,24 @@ def test_shadow_reports_full_partial_and_missing_coverage():
     assert 0 < partial["coverage_fraction"] < 1
     assert partial["shadow_fraction"] is not None
     assert water.research_shadow(0, 0, 5000)["shadow_fraction"] is None
+
+
+def test_unqualified_area_returns_preliminary_comparisons(monkeypatch):
+    request = research.ResearchAreaRequest(
+        mission=dict(name="Centre", latitude=-86.1315, longitude=148.3593,
+                     start="2026-10-01T00:00:00Z", end="2026-10-08T00:00:00Z",
+                     interval_minutes=60, clearance_deg=0),
+        radius_m=20000,
+    )
+
+    def evaluate(candidate, *, plan_b=False, **kwargs):
+        if plan_b:
+            return {"status": "missing", "reasons": ["Mapped hazard fraction is unavailable."]}
+        return {"mission": candidate.mission, "score": 80}
+
+    monkeypatch.setattr(research, "research", evaluate)
+    result = research.find_research_area(request)
+    assert not result["recommended"]
+    assert result["counts"]["missing"] == 17
+    assert len(result["results"]) == 3
+    assert result["results"][0]["mission"] != request.mission

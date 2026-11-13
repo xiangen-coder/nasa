@@ -106,7 +106,8 @@ export default function PreliminaryComparison({
       .map((scenario) => ({ site: scenario.result.mission, scenario })),
   ];
   const selected = state?.results.find((r) => sameMission(r.mission, mission));
-  const hasRecommendation = !area || !!areaResult?.results.length;
+  const hasResults = !area || !!areaResult?.results.length;
+  const hasRecommendation = hasResults && areaResult?.recommended !== false;
   const assessments = cards.map(
     ({ site, scenario }) =>
       scenario?.result ??
@@ -158,7 +159,7 @@ export default function PreliminaryComparison({
     const result = assessments[index];
     const failure = scenario ? undefined : state?.failures[key(site)];
     const isSelected = index === 0;
-    const title = area ? (isSelected ? "Recommended landing point" : `Alternative ${index}`) : `Pre-Result ${index + 1}`;
+    const title = area && hasRecommendation ? (isSelected ? "Recommended landing point" : `Alternative ${index}`) : `Pre-Result ${index + 1}`;
     const comparable =
       selected &&
       result &&
@@ -208,7 +209,9 @@ export default function PreliminaryComparison({
       >
         <header className="pre-result-heading">
           <h2>{title}</h2>
-          {area && isSelected && <p>Best of the points evaluated within your research area.</p>}
+          {area && isSelected && <p>{hasRecommendation
+            ? "Best of the points evaluated within your research area."
+            : "Preliminary comparison · landing checks unresolved or exceeded."}</p>}
           <p>{site.name}</p>
           {area && <p>
             {site.latitude.toFixed(4)}°, {site.longitude.toFixed(4)}° ·{" "}
@@ -564,8 +567,8 @@ export default function PreliminaryComparison({
       ) : null}
       {state?.busy && (
         <p role="status" className="info">
-          {state.progress || "Preparing the comparison…"} Cards update as each
-          real assessment finishes.
+          {state.progress || "Preparing the comparison…"}{" "}
+          {area && !areaResult ? "Pre-Result cards will appear when the search returns." : "Cards update as assessments finish."}
         </p>
       )}
       {state?.error && (
@@ -578,7 +581,7 @@ export default function PreliminaryComparison({
           {notice}
         </p>
       )}
-      <div hidden={!hasRecommendation} className="what-if-workspace" ref={workspace} tabIndex={-1}>
+      <div hidden={!hasResults} className="what-if-workspace" ref={workspace} tabIndex={-1}>
         {comparing ? (
           <div className="what-if-compare-heading">
             <div>

@@ -11,6 +11,7 @@ export type ResearchArea = {
 
 export type ResearchAreaResult = {
   results: Research[];
+  recommended?: boolean;
   sampled: number;
   reasons: string[];
   counts: { evaluated: number; limits: number; missing: number; unavailable: number; focus_missing: number };

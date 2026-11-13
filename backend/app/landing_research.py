@@ -233,8 +233,9 @@ def find_research_area(request: ResearchAreaRequest):
 
     counts = dict(evaluated=0, limits=0, missing=0, unavailable=0, focus_missing=0)
     qualified = []
+    screened_out = []
     reasons = set()
-    deadline = time.monotonic() + 110
+    deadline = time.monotonic() + 65
     for candidate in candidates:
         if time.monotonic() >= deadline:
             counts["unavailable"] += 1
@@ -251,6 +252,8 @@ def find_research_area(request: ResearchAreaRequest):
         reasons.update(outcome.get("reasons", ()))
         if status == "evaluated":
             qualified.append((candidate, outcome["result"]))
+        else:
+            screened_out.append((status, candidate))
 
     distances = [None]*len(qualified)
     if request.focus == "I" and qualified:
@@ -272,10 +275,27 @@ def find_research_area(request: ResearchAreaRequest):
         return (factor if factor is not None else -1), overall
 
     ranked.sort(key=ranking, reverse=True)
+    results = [result for result, _ in ranked[:3]]
+    recommended = bool(results)
+    if not recommended:
+        # Keep the preliminary comparison available when the strict screen has no winner.
+        fallback_deadline = time.monotonic() + 40
+        ordered = sorted(screened_out, key=lambda row: row[0] != "missing")
+        fallback_sites = [site for _, site in ordered if site != centre][:2]
+        for candidate in [*fallback_sites, centre][:3]:
+            if results and time.monotonic() >= fallback_deadline:
+                break
+            result = research(
+                ResearchRequest(mission=candidate, limits=request.limits),
+                deadline=min(fallback_deadline, time.monotonic() + 12),
+            )
+            results.append(result)
+        results.sort(key=lambda result: result["score"] if result["score"] is not None else -1, reverse=True)
     return {
         "counts": counts,
         "sampled": len(candidates),
-        "results": [result for result, _ in ranked[:3]],
+        "recommended": recommended,
+        "results": results,
         "reasons": sorted(reasons),
     }
 
