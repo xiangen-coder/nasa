@@ -54,6 +54,7 @@ export default function ComparisonPicker({
   radiusKm = comparisonRadiusKm,
   baseline = mission,
   limits,
+  maxAlternatives = 2,
 }: {
   mission: Mission;
   chosen: Site[];
@@ -63,6 +64,7 @@ export default function ComparisonPicker({
   radiusKm?: number;
   baseline?: Site;
   limits?: Record<string, number>;
+  maxAlternatives?: number;
 }) {
   const [suggestions, setSuggestions] = useState<{
     key: string;
@@ -84,12 +86,12 @@ export default function ComparisonPicker({
     ...(screened?.inspection_candidates ?? []),
   ].map((candidate) => siteKey(candidate.location)));
   const canAdd = (site: Site) =>
-    !busy && selected.length < 2 && inComparisonArea(mission, site, radiusKm) &&
+    !busy && selected.length < maxAlternatives && inComparisonArea(mission, site, radiusKm) &&
     ![baseline, ...selected].some((s) => siteKey(s) === siteKey(site));
   function add(site: Site) {
     if (!inComparisonArea(mission, site, radiusKm)) return setError(`Choose a point within ${radiusKm} km of the research centre.`);
-    if (selected.length >= 2)
-      return setError("Choose at most two alternatives.");
+    if (selected.length >= maxAlternatives)
+      return setError("Remove a comparison point before adding another.");
     if ([baseline, ...selected].some((s) => siteKey(s) === siteKey(site)))
       return setError("That point is already selected.");
     setError("");
@@ -247,7 +249,7 @@ export default function ComparisonPicker({
         </label>
         <button
           className="button subtle"
-          disabled={busy || selected.length >= 2}
+          disabled={busy || selected.length >= maxAlternatives}
         >
           Add coordinates
         </button>

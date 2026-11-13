@@ -672,7 +672,7 @@ export default function Page() {
   const searchRecord: SearchRecord = {
     version: 1, mission: mission(), priority: researchPriority, radiusKm,
     alternatives: chosenAlternatives.filter(s =>
-      siteKey(s) !== siteKey(comparisonBaseline) && inComparisonArea(comparisonOrigin, s, comparisonRadius)),
+      siteKey(s) !== siteKey(comparisonBaseline) && inComparisonArea(comparisonOrigin, s, comparisonRadius)).slice(0, 2),
   };
 
   async function searchResearchArea() {
@@ -701,7 +701,6 @@ export default function Page() {
       const result: ResearchAreaResult = await response.json();
       if (controller.signal.aborted) return;
       setAreaSearch({ area, result, busy: false, error: "" });
-      setChosenAlternatives(result.results.slice(1).map(({ mission }) => mission));
       setResearchResult(result.results[0] ?? null);
     } catch (error) {
       if (!controller.signal.aborted) setAreaSearch({ area, busy: false, error: (error as Error).message });
@@ -755,7 +754,7 @@ export default function Page() {
       setComparisonNotice(`${point.name} is already in the comparison cards.`);
     } else if (!inComparisonArea(comparisonOrigin, point, comparisonRadius)) {
       setComparisonNotice(`Choose a point within ${comparisonRadius} km of the research centre.`);
-    } else if (alternatives.length >= 2) {
+    } else if (alternatives.length + comparisonScenarios.length >= 2) {
       setComparisonNotice("Remove a comparison point below before adding another.");
     } else {
       const next = [...alternatives, point];
@@ -937,12 +936,12 @@ export default function Page() {
           </section>}
           {view===11&&<PreliminaryComparison mission={comparisonMission} state={comparisonState} area={activeArea?.area} areaResult={activeArea?.result} radiusKm={comparisonRadius} alternatives={searchRecord.alternatives} priority={researchPriority} equipment={researchEquipment} notice={comparisonNotice} onEvaluate={()=>activeArea && !recommendation ? void searchResearchArea() : void assessComparison(searchRecord.alternatives)}
             scenarios={comparisonScenarios}
-            onScenariosChange={(scenarios) => setWhatIfComparison({ context: whatIfContext, scenarios })}
+            onScenariosChange={(scenarios) => setWhatIfComparison({ context: whatIfContext, scenarios: scenarios.slice(0, 2 - searchRecord.alternatives.length) })}
             onRemoveSite={(site) => {
               setComparisonNotice("");
               setChosenAlternatives((points) => points.filter((point) => siteKey(point) !== siteKey(site)));
             }}
-            alternativePicker={<ComparisonPicker mission={activeArea?.area.centre ?? mission()} radiusKm={comparisonRadius} baseline={comparisonBaseline} limits={activeArea?.area.limits} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={comparisonState?.busy ?? false}/>}
+            alternativePicker={<ComparisonPicker mission={activeArea?.area.centre ?? mission()} radiusKm={comparisonRadius} baseline={comparisonBaseline} limits={activeArea?.area.limits} chosen={chosenAlternatives} maxAlternatives={2 - comparisonScenarios.length} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={comparisonState?.busy ?? false}/>}
             onInspect={r=>{
               if (researchComparison?.results.some((result) => sameMission(result.mission, r.mission))) {
                 researchActions.current?.inspect(r);

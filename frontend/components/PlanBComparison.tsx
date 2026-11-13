@@ -329,6 +329,7 @@ export default function PlanBComparison({
   const selectedOptions = [...options].filter(
     ([key, option]) => selectedKeys.includes(key) && !isCompared(option),
   );
+  const remainingSlots = Math.max(0, 3 - comparedCount);
   function toggleOption(key: string) {
     setSelectedKeys((keys) =>
       keys.includes(key) ? keys.filter((item) => item !== key) : [...keys, key],
@@ -638,7 +639,7 @@ export default function PlanBComparison({
                                     <input
                                       type="checkbox"
                                       checked={checked}
-                                      disabled={added}
+                                      disabled={added || (!checked && selectedOptions.length >= remainingSlots)}
                                       aria-label={`Select ${candidate.name} · ${utc(candidate.start)}`}
                                       onChange={() => toggleOption(key)}
                                     />
@@ -758,7 +759,7 @@ export default function PlanBComparison({
                       <button
                         className="button primary"
                         type="button"
-                        disabled={!selectedOptions.length}
+                        disabled={!selectedOptions.length || selectedOptions.length > remainingSlots}
                         onClick={() => {
                           onCompare(
                             selectedOptions.map(([, option]) => option),
