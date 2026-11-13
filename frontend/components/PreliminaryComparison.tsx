@@ -210,11 +210,13 @@ export default function PreliminaryComparison({
       >
         <header className="pre-result-heading">
           <h2>{title}</h2>
-          {area && isSelected && <p>{hasRecommendation
+          {area && isSelected && !searchingArea && <p>{hasRecommendation
             ? "Best of the points evaluated within your research area."
             : "Preliminary comparison · landing checks unresolved or exceeded."}</p>}
-          <p>{site.name}</p>
-          {area && <p>
+          {searchingArea ? (
+            <p role="status"><span className="pre-result-spinner" aria-hidden="true" />Searching the research area…</p>
+          ) : <p>{site.name}</p>}
+          {area && !searchingArea && <p>
             {site.latitude.toFixed(4)}°, {site.longitude.toFixed(4)}° ·{" "}
             {comparisonDistanceKm(area.centre, site).toFixed(2)} km from research centre
           </p>}
@@ -251,7 +253,7 @@ export default function PreliminaryComparison({
             <strong>
               {result?.score == null ? "—" : result.score.toFixed(1)}
             </strong>
-            <span> / 100</span>
+            {!searchingArea && <span> / 100</span>}
             <p>Overall research score</p>
           </div>
           <span
@@ -279,7 +281,7 @@ export default function PreliminaryComparison({
                 <div key={factor}>
                   <dt>{label}</dt>
                   <dd>
-                    {score(result, factor)}
+                    {searchingArea ? "—" : score(result, factor)}
                     {change != null && (
                       <small>
                         {" "}
@@ -314,14 +316,14 @@ export default function PreliminaryComparison({
           <dl>
             <div>
               <dt>Mission window</dt>
-              <dd>
+              <dd hidden={searchingArea}>
                 {Math.abs(site.latitude).toFixed(4)}°{" "}
                 {site.latitude < 0 ? "S" : "N"},{" "}
                 {Math.abs(site.longitude).toFixed(4)}°{" "}
                 {site.longitude < 0 ? "W" : "E"}
               </dd>
-              <dd>Touchdown {utc(site.start)}</dd>
-              <dd>Mission end {utc(site.end)}</dd>
+              <dd>Touchdown {searchingArea ? "—" : utc(site.start)}</dd>
+              <dd>Mission end {searchingArea ? "—" : utc(site.end)}</dd>
             </div>
             {result && (
               <div>
@@ -582,21 +584,7 @@ export default function PreliminaryComparison({
           {notice}
         </p>
       )}
-      {searchingArea && (
-        <div className="pre-result-grid what-if-browsing pre-result-loading">
-          <article className="pre-result-card glass" aria-labelledby="pending-pre-result">
-            <header className="pre-result-heading">
-              <h2 id="pending-pre-result">Pre-Result 1</h2>
-            </header>
-            <p role="status"><span className="pre-result-spinner" aria-hidden="true" />Searching the research area…</p>
-          </article>
-          <article className="pre-result-card glass plan-b-card" aria-labelledby="pending-what-if">
-            <h2 id="pending-what-if">What IF</h2>
-            <p>Available once the initial assessment is ready.</p>
-          </article>
-        </div>
-      )}
-      <div hidden={!hasResults} className="what-if-workspace" ref={workspace} tabIndex={-1}>
+      <div hidden={!hasResults && !searchingArea} className="what-if-workspace" ref={workspace} tabIndex={-1}>
         {comparing ? (
           <div className="what-if-compare-heading">
             <div>
@@ -648,8 +636,9 @@ export default function PreliminaryComparison({
           {renderCard(cards[0], 0)}
           {cards.slice(1).map((card, index) => renderCard(card, index + 1))}
           <PlanBComparison
-            key={JSON.stringify([mission, priority, equipment])}
+            key={JSON.stringify([area?.centre ?? mission, priority, equipment])}
             original={selected}
+            pendingMission={searchingArea ? mission : undefined}
             area={area}
             priority={priority}
             equipment={equipment}

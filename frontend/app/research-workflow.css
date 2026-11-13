@@ -126,8 +126,6 @@
   padding: 14px 18px;
   margin-block: 12px;
 }
-.pre-result-loading > article { min-height: 160px; }
-.pre-result-loading p { color: #c4d5eb; margin-top: 14px; }
 .pre-result-spinner {
   display: inline-block;
   width: 1em;

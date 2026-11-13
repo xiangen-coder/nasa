@@ -4,6 +4,7 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { comparisonDistanceKm, comparisonRadiusKm } from "./ComparisonPicker";
 import type { Research } from "./LandingResearch";
+import type { Mission } from "../app/types";
 import type { ResearchArea } from "../lib/research-area";
 import type { ResearchPriority } from "./SearchConsole";
 import type { SolarSettings } from "./mission-lab/scenario-science";
@@ -216,6 +217,7 @@ function OptionDetails({
 
 export default function PlanBComparison({
   original,
+  pendingMission,
   area,
   priority,
   equipment,
@@ -226,6 +228,7 @@ export default function PlanBComparison({
   hidden,
 }: {
   original?: Research;
+  pendingMission?: Mission;
   area?: ResearchArea;
   priority: ResearchPriority;
   equipment: SolarSettings;
@@ -343,6 +346,7 @@ export default function PlanBComparison({
     setExpanded(null);
     setEditing(true);
   };
+  const mission = original?.mission ?? pendingMission;
   return (
     <article
       className="pre-result-card glass plan-b-card"
@@ -386,9 +390,9 @@ export default function PlanBComparison({
       </fieldset>
       <details className="pre-extra" hidden={mode !== "relocate"}>
         <summary>Custom coordinates and terrain suggestions</summary>
-        {alternativePicker}
+        {original && alternativePicker}
       </details>
-      {!original ? (
+      {!mission ? (
         <p>
           Evaluate a landing point to use its mission settings for a backup search.
         </p>
@@ -403,9 +407,9 @@ export default function PlanBComparison({
               </strong>
               {" · "}
               {mode === "relocate"
-                ? `Same touchdown: ${utc(original.mission.start)}`
-                : `${range === "custom" ? custom || "Custom window" : range === "month" ? "Next month" : "Next year"} · ${time ? `${time} UTC` : utc(original.mission.start).slice(11)}`}
-              <small>{mode === "delay" ? "Landing point" : "Research centre"}: {mode === "delay" ? original.mission.name : area?.centre.name ?? original.mission.name}</small>
+                ? `Same touchdown: ${(original ? utc(mission.start) : "—")}`
+                : `${range === "custom" ? custom || "Custom window" : range === "month" ? "Next month" : "Next year"} · ${time ? `${time} UTC` : (original ? utc(mission.start).slice(11) : "—")}`}
+              <small>{mode === "delay" ? "Landing point" : "Research centre"}: {mode === "delay" ? original?.mission.name ?? "—" : area?.centre.name ?? mission.name}</small>
             </div>
             {!editing && status !== "running" && (
               <button
@@ -448,10 +452,10 @@ export default function PlanBComparison({
                         type="date"
                         required
                         value={custom}
-                        min={new Date(original.mission.start)
+                        min={new Date(mission.start)
                           .toISOString()
                           .slice(0, 10)}
-                        max={new Date(latestTouchdown(original.mission))
+                        max={new Date(latestTouchdown(mission))
                           .toISOString()
                           .slice(0, 10)}
                         onChange={(event) => {
@@ -474,12 +478,12 @@ export default function PlanBComparison({
                     />
                     <small>
                       Blank uses the original time of{" "}
-                      {utc(original.mission.start).slice(11)}.
+                      {(original ? utc(mission.start).slice(11) : "—")}.
                     </small>
                   </label>
                 </>
               )}
-              <button type="submit" className="button primary">
+              <button type="submit" className="button primary" disabled={!original}>
                 {mode === "relocate" ? "Suggest nearby points" : "Run What IF"}
               </button>
             </fieldset>
@@ -493,6 +497,7 @@ export default function PlanBComparison({
               </button>
             )}
           </form>
+          {pendingMission && <p>Waiting for the initial assessment…</p>}
           {message && (
             <p className="error" role="alert">
               {message}
@@ -537,7 +542,7 @@ export default function PlanBComparison({
               )}
             </div>
           )}
-          {done && (
+          {original && done && (
             <>
               <section aria-label="Suggested comparison options">
                 <h3>
