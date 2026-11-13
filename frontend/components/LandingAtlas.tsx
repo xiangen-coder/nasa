@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, type Ref } from "react";
 import type { Site } from "../app/types";
 
 function validPoint(point: unknown): point is Site {
@@ -11,11 +11,15 @@ function validPoint(point: unknown): point is Site {
     typeof longitude === "number" && Math.abs(longitude) <= 180;
 }
 
-export default function LandingAtlas({ selected, onSelect }: {
+export type LandingAtlasHandle = { focusGlobe: () => void };
+
+export default function LandingAtlas({ ref, selected, onSelect }: {
+  ref: Ref<LandingAtlasHandle>;
   selected: Site;
   onSelect: (point: Site) => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  const section = useRef<HTMLElement>(null);
   const { name, latitude, longitude } = selected;
 
   const syncSelection = useCallback(() => {
@@ -25,6 +29,14 @@ export default function LandingAtlas({ selected, onSelect }: {
       point: validPoint(point) ? point : null,
     }, window.location.origin);
   }, [name, latitude, longitude]);
+
+  useImperativeHandle(ref, () => ({
+    focusGlobe() {
+      section.current?.focus({ preventScroll: true });
+      section.current?.scrollIntoView({ block: "start", behavior: "instant" });
+      frame.current?.contentWindow?.postMessage({ type: "lunar-atlas:show-globe" }, window.location.origin);
+    },
+  }), []);
 
   useEffect(() => {
     const receive = (event: MessageEvent) => {
@@ -41,13 +53,17 @@ export default function LandingAtlas({ selected, onSelect }: {
   }, [syncSelection, onSelect]);
 
   return (
-    <iframe
-      ref={frame}
-      className="landing-atlas"
-      title="Lunar Atlas 3D globe and 2D map"
-      src="/lunar-atlas/index.html"
-      loading="lazy"
-      onLoad={syncSelection}
-    />
+    <section ref={section} className="landing-atlas-picker" aria-label="Choose a landing point on the Moon" tabIndex={-1}>
+      <iframe
+        ref={frame}
+        className="landing-atlas"
+        title="Lunar Atlas 3D globe and 2D map"
+        src="/lunar-atlas/index.html"
+        loading="lazy"
+        onLoad={syncSelection}
+      />
+      <p>Click or tap the Moon to update the coordinates above.</p>
+      <a href="https://trek.nasa.gov/moon/" target="_blank" rel="noreferrer">Open NASA Moon Trek</a>
+    </section>
   );
 }

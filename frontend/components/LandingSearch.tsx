@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, MapPin, SlidersHorizontal } from "lucide-react";
 import type { MissionCatalogEntry, Site } from "../app/types";
 import { referenceSites } from "../lib/reference-sites";
-import LandingAtlas from "./LandingAtlas";
+import LandingAtlas, { type LandingAtlasHandle } from "./LandingAtlas";
 
 export default function LandingSearch({
   selected,
@@ -26,7 +26,6 @@ export default function LandingSearch({
   onPriority,
   busy,
   onSubmit,
-  onMap,
 }: {
   selected: Site;
   missionSites: MissionCatalogEntry[];
@@ -47,8 +46,8 @@ export default function LandingSearch({
   onPriority: (value: string) => void;
   busy: boolean;
   onSubmit: () => void;
-  onMap: () => void;
 }) {
+  const atlas = useRef<LandingAtlasHandle>(null);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
   const missionPoints = missionSites.flatMap((site) =>
@@ -149,9 +148,9 @@ export default function LandingSearch({
         </div>
         <div className="search-group-title">
           <span>Landing location</span>
-          {custom && <button type="button" className="search-map-link" onClick={onMap}>
+          <button type="button" className="search-map-link" onClick={() => atlas.current?.focusGlobe()}>
             <MapPin size={13} /> Choose on map <ArrowUpRight size={13} />
-          </button>}
+          </button>
         </div>
         <div className="search-fields coordinate-fields">
           <label className="search-field location-field">
@@ -249,7 +248,7 @@ export default function LandingSearch({
             <a href={missionSite.source_url} target="_blank" rel="noreferrer">Mission source</a>
           </p>
         )}
-        <LandingAtlas selected={selected} onSelect={onSelected} />
+        <LandingAtlas ref={atlas} selected={selected} onSelect={onSelected} />
         <div className="search-form-footer">
           <details className="search-advanced">
             <summary>

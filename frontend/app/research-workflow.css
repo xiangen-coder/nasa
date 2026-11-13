@@ -125,6 +125,14 @@
   scroll-margin-top: 30px;
 }
 
+.landing-atlas-picker {
+  scroll-margin-top: 150px;
+}
+
+.landing-atlas-picker > p {
+  margin: 0 0 6px;
+}
+
 .landing-atlas {
   display: block;
   width: 100%;

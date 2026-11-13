@@ -191,8 +191,12 @@ function pickLandingPoint(latitude, longitude, name = 'Custom location') {
   }
 }
 window.addEventListener('message', (event) => {
-  if (event.origin !== location.origin || event.source !== window.parent ||
-      event.data?.type !== 'lunar-atlas:set-selection') return;
+  if (event.origin !== location.origin || event.source !== window.parent) return;
+  if (event.data?.type === 'lunar-atlas:show-globe') {
+    setProjection(false);
+    return;
+  }
+  if (event.data?.type !== 'lunar-atlas:set-selection') return;
   const point = event.data.point;
   if (point === null) setLandingPoint(null);
   else if (typeof point?.name === 'string' && point.name.length <= 100 &&
