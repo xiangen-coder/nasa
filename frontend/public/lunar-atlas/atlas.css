@@ -36,3 +36,21 @@ footer a { color: #c2e5ff; }
   .intro h1 { max-width: 13em; }
   .controls { top: 8px; right: 8px; }
 }
+
+.map-legend {
+  display: grid;
+  gap: 5px;
+  width: fit-content;
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border: 1px solid #475a73;
+  border-radius: 8px;
+  background: #0b1321ed;
+  font-size: 11px;
+  list-style: none;
+}
+.map-legend li { display: flex; align-items: center; gap: 7px; }
+.map-legend li span { width: 8px; height: 8px; flex: none; border-radius: 50%; }
+.legend-landmark { background: #e1edf7; }
+.legend-mare { background: #a1dbf2; }
+.legend-mission { background: #f5c480; }

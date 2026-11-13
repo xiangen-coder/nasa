@@ -60,6 +60,9 @@ export default function LandingSearch({
     Number.isFinite(longitude) && Math.abs(longitude) <= 180 &&
     radiusKm >= 0.25 && radiusKm <= 20;
   const shadowKey = JSON.stringify([latitude, longitude, radiusKm]);
+  const shadowFraction = validArea && shadow?.key === shadowKey ? shadow.fraction : null;
+  const shadowPercent = shadowFraction == null ? null
+    : shadowFraction > 0 && shadowFraction < 0.0005 ? "<0.1%" : `${(shadowFraction * 100).toFixed(1)}%`;
   useEffect(() => {
     if (priority !== "I" || !validArea) return;
     const controller = new AbortController();
@@ -282,7 +285,14 @@ export default function LandingSearch({
               {!validArea ? "Enter a valid research area" :
               shadow?.key !== shadowKey ? "Checking mapped permanent shadow…" :
                 shadow.fraction == null ? "Mapped permanent shadow unavailable" :
-                `${(shadow.fraction * 100).toFixed(1)}% mapped permanent shadow within ${radiusKm} km`}
+                `${shadowPercent} mapped permanent shadow within ${radiusKm} km`}
+              {shadowFraction != null && (
+                <small className={shadowFraction > 0 ? "shadow-present" : "shadow-absent"}>
+                  {shadowFraction > 0
+                    ? "Permanent shadow may preserve water ice, whose presence remains unconfirmed."
+                    : "The mapped area has no permanent shadow, so this indicator gives no evidence of water ice."}
+                </small>
+              )}
               {shadow?.key === shadowKey && shadow.fraction != null && shadow.coverage < 0.9999 && (
                 <small>Share of mapped ground · {(100 * shadow.coverage).toFixed(2)}% of the circle mapped</small>
               )}

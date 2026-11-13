@@ -116,6 +116,8 @@
   font-size: 0.85rem;
 }
 .research-shadow-note small { display: block; }
+.research-shadow-note .shadow-present { color: #92e6b3; }
+.research-shadow-note .shadow-absent { color: #ffaaaa; }
 .research-centre-summary {
   display: flex;
   flex-wrap: wrap;
