@@ -339,12 +339,12 @@ def _polar_ice(latitude, longitude, radius_m):
         return _ice_window(ds, POLAR_SHADOW_SOURCE, Location(latitude=latitude, longitude=longitude), radius_m)
 
 
-def local_terrain(location, radius_m=100, *, allow_regional=False):
+def local_terrain(location, radius_m=100, *, allow_regional=False, allow_remote=True):
     footprint = _terrain_window('lola', location, radius_m)
     if footprint['available'] or not allow_regional:
         return footprint
     regional = _terrain_window('horizon_dem', location, radius_m)
-    if not regional['available'] and _remote_polar_enabled(location):
+    if not regional['available'] and allow_remote and _remote_polar_enabled(location):
         try:
             regional = _polar_terrain(location.latitude, location.longitude, radius_m)
         except RASTER_ERRORS:
@@ -503,7 +503,7 @@ def _global_horizon(latitude, longitude):
     return {**result, 'quality': 'global', 'observer_height': {**observer, 'coverage_type': 'global'}}
 
 
-def horizon(location, height):
+def horizon(location, height, *, allow_remote=True):
     """Prefer detailed terrain, then regional and Moon-wide LOLA coverage."""
     try:
         try:
@@ -519,7 +519,7 @@ def horizon(location, height):
             return _horizon_profile(ds, meta, location, height)
     except RASTER_ERRORS as exc:
         reason = str(exc)
-    if os.getenv('LUNAR_REMOTE_HORIZON') == '1':
+    if allow_remote and os.getenv('LUNAR_REMOTE_HORIZON') == '1':
         if location.latitude <= POLAR_HORIZON_LIMIT:
             try:
                 return dict(_polar_horizon(location.latitude, location.longitude))

@@ -131,9 +131,10 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
             'safety_status':'fails_configured_limits' if failures else 'not_established',
             'formula':'0.35T + 0.25S + 0.20C + 0.15H + 0.05I; available weights renormalized for provisional scores only.'}
 
-def research(request, *, plan_b=False, deadline=None):
+def research(request, *, plan_b=False, deadline=None, allow_remote=True):
     mission=request.mission;limits=request.limits
-    t=rasters.local_terrain(mission,limits.radius_m,allow_regional=True)
+    terrain_options = {} if allow_remote else {'allow_remote': False}
+    t=rasters.local_terrain(mission,limits.radius_m,allow_regional=True,**terrain_options)
     observer_height = rasters.site_elevation(mission, t)
     hazards=rasters.measurement('hazards',mission);ice=rasters.ice_evidence(mission,limits.radius_m)
     thermal=rasters.temperature_range(mission)
@@ -153,7 +154,7 @@ def research(request, *, plan_b=False, deadline=None):
             failed.append('The historical temperature range extends beyond the configured operating limits.')
         if failed or missing:
             return {'status':'limits' if failed else 'missing', 'reasons':failed+missing}
-    screening = rasters.horizon(mission, None)
+    screening = rasters.horizon(mission, None, **terrain_options)
     observer_height = screening.pop('observer_height', observer_height)
     broad_horizon = screening.get('quality') in ('global', 'regional')
     if plan_b and (not screening['available'] or broad_horizon):
@@ -288,6 +289,7 @@ def find_research_area(request: ResearchAreaRequest):
             result = research(
                 ResearchRequest(mission=candidate, limits=request.limits),
                 deadline=min(fallback_deadline, time.monotonic() + 12),
+                allow_remote=False,
             )
             results.append(result)
         results.sort(key=lambda result: result["score"] if result["score"] is not None else -1, reverse=True)
