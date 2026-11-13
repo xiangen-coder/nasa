@@ -30,3 +30,39 @@ def test_research_uses_broad_observer_height_without_local_score(monkeypatch):
  m=Mission(latitude=-89,longitude=0,start='2026-11-05T00:00:00Z',end='2026-11-06T00:00:00Z')
  out=module.research(module.ResearchRequest(mission=m))
  assert heights==[123.];assert out['geometry']['mode']=='terrain_screened';assert out['factors']['T']['score'] is None
+
+
+def test_remote_horizon_uses_its_own_observer_height(monkeypatch):
+    from app import landing_research as module
+
+    monkeypatch.setenv('LUNAR_REMOTE_HORIZON', '1')
+    monkeypatch.setattr(r, 'opened', lambda kind: (_ for _ in ()).throw(ValueError('Outside crop')))
+    monkeypatch.setattr(r, 'local_terrain', lambda *a, **kw: {'available': False})
+    monkeypatch.setattr(r, 'measurement', lambda *a: {'available': False})
+    monkeypatch.setattr(r, 'ice_evidence', lambda *a: {'available': False})
+    monkeypatch.setattr(r, 'site_elevation', lambda *a: {
+        'available': True, 'coverage_type': 'global', 'value': 100.,
+    })
+    remote = {
+        'available': True,
+        'profile': [{'azimuth': azimuth, 'elevation': 5.} for azimuth in range(0, 360, 5)],
+        'observer_height': {'available': True, 'coverage_type': 'regional', 'value': 123., 'source': {}},
+    }
+    monkeypatch.setattr(r, '_polar_horizon', lambda *a: remote)
+
+    def geometry(mission, height):
+        assert height == 123.
+        return {'source_url': 'https://ssd.jpl.nasa.gov', 'series': [
+            {'time': epoch.isoformat(), 'sun_elevation': 3., 'sun_azimuth': 0.,
+             'earth_elevation': 6., 'earth_azimuth': 90.}
+            for epoch in (mission.start, mission.end)
+        ]}
+
+    monkeypatch.setattr(module, 'surface_observations', geometry)
+    mission = Mission(latitude=-87.5, longitude=60, start='2026-11-05T00:00:00Z', end='2026-11-06T00:00:00Z')
+    for _ in range(2):
+        result = module.research(module.ResearchRequest(mission=mission))
+        assert result['observer_height']['value'] == 123.
+        assert result['geometry']['mode'] == 'terrain_screened'
+        assert result['geometry']['sunlight_hours'] == 0.
+        assert result['factors']['T']['score'] is None

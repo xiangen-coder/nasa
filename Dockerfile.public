@@ -21,7 +21,7 @@ COPY --from=frontend /src/frontend/.next/static /app/frontend/.next/static
 COPY --from=frontend /src/frontend/public /app/frontend/public
 COPY scripts/start_public.py /app/scripts/start_public.py
 RUN useradd --uid 10001 --create-home navigator && mkdir -p /app/data/runtime && chown -R navigator:navigator /app/data/runtime
-ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 CACHE_PATH=/app/data/runtime/cache.sqlite PORT=10000 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1
+ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 CACHE_PATH=/app/data/runtime/cache.sqlite PORT=10000 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 LUNAR_REMOTE_HORIZON=1
 USER navigator
 EXPOSE 10000
 CMD ["python", "/app/scripts/start_public.py"]

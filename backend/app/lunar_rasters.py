@@ -1,7 +1,13 @@
-"""Verified, windowed lunar raster measurements. No network work at query time."""
+"""Verified local raster measurements and windowed NASA horizon screening."""
 import json
 import os
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
+from io import BufferedIOBase, SEEK_CUR, SEEK_END, SEEK_SET
+from threading import BoundedSemaphore
+from time import monotonic
+import httpx
 import numpy as np
 import rasterio
 from rasterio.windows import Window
@@ -19,6 +25,99 @@ SOURCES['horizon_dem']='https://pgda.gsfc.nasa.gov/products/90'
 SOURCES['global_dem']='https://ode.rsl.wustl.edu/mercury/pagehelp/Content/Missions_Instruments/Lunar%20Reconnaissance%20Orbiter%20%28LRO%29/LOLA/GDR/GDRDEM.htm'
 ELEVATION_PRODUCTS = ('lola', 'horizon_dem', 'global_dem')
 RASTER_ERRORS = (OSError, ValueError, KeyError, rasterio.errors.RasterioError)
+POLAR_HORIZON_URL = 'https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_20MPP_ADJ.TIF'
+HORIZON_RANGE_M = 20_000
+# A site this close to the source's 80° S boundary cannot fit a complete window.
+POLAR_HORIZON_LIMIT = -80 - np.degrees(HORIZON_RANGE_M / RADIUS)
+_polar_horizon_slots = BoundedSemaphore(2)
+
+
+class _ElevationRangeReader(BufferedIOBase):
+    """Seekable view of the public COG that refuses full or mismatched responses."""
+
+    size = 2_696_082_051
+    chunk_size = 1_048_576
+
+    def __init__(self, client):
+        self.client = client
+        self.position = 0
+        self.deadline = monotonic() + 45
+        self.chunk = lru_cache(maxsize=48)(self._fetch_chunk)
+
+    def tell(self):
+        return self.position
+
+    def seekable(self):
+        return True
+
+    def readable(self):
+        return True
+
+    def seek(self, offset, whence=SEEK_SET):
+        # Rasterio's Windows opener stores stat size in a signed C long.
+        # TIFF block offsets still use the original byte positions.
+        stat_size = min(self.size, 2**31 - 1) if os.name == 'nt' else self.size
+        self.position = {SEEK_SET: 0, SEEK_CUR: self.position, SEEK_END: stat_size}[whence] + offset
+        return self.position
+
+    def _fetch_chunk(self, start):
+        end = min(start + self.chunk_size, self.size) - 1
+        remaining = self.deadline - monotonic()
+        if remaining <= 0:
+            raise OSError('NASA elevation window timed out.')
+        try:
+            # A distinct URL per byte range prevents shared caches returning another range.
+            with self.client.stream('GET', POLAR_HORIZON_URL, params={'block': start},
+                                    headers={'Range': f'bytes={start}-{end}'},
+                                    timeout=min(remaining, 8)) as response:
+                if (response.status_code != 206
+                        or response.headers.get('Content-Range') != f'bytes {start}-{end}/{self.size}'
+                        or response.headers.get('Content-Length') != str(end - start + 1)):
+                    raise OSError('NASA returned an unexpected elevation byte range.')
+                data = response.read()
+        except httpx.HTTPError as exc:
+            raise OSError('NASA elevation download failed.') from exc
+        if len(data) != end - start + 1:
+            raise OSError('NASA returned an incomplete elevation byte range.')
+        return data
+
+    def read(self, size=-1):
+        if size < 0 or size > 16 * self.chunk_size:
+            return b''
+        stop = min(self.position + size, self.size)
+        blocks = []
+        while self.position < stop:
+            start = self.position // self.chunk_size * self.chunk_size
+            offset = self.position - start
+            try:
+                data = self.chunk(start)[offset:offset + stop - self.position]
+            except OSError:
+                # A short read signals failure safely across Rasterio's native callback.
+                break
+            blocks.append(data)
+            self.position += len(data)
+        return b''.join(blocks)
+
+    def close(self):
+        self.chunk.cache_clear()
+
+    def open(self, path, mode='rb'):
+        self.seek(0)
+        return self
+
+    def prefetch(self, dataset, block_ids, blocks_per_row):
+        chunks = set()
+        for block_id in block_ids:
+            row, col = divmod(int(block_id), blocks_per_row)
+            offset = dataset.get_tag_item(f'BLOCK_OFFSET_{col}_{row}', 'TIFF', bidx=1)
+            size = dataset.get_tag_item(f'BLOCK_SIZE_{col}_{row}', 'TIFF', bidx=1)
+            if offset and size:
+                first = int(offset) // self.chunk_size
+                last = (int(offset) + int(size) - 1) // self.chunk_size
+                chunks.update(i * self.chunk_size for i in range(first, last + 1))
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            for _ in pool.map(self.chunk, sorted(chunks)):
+                pass
 
 def registry():
     preview=ROOT/'data/lunar_preview/manifest.json'
@@ -181,7 +280,7 @@ def _terrain_window(kind, location, radius_m):
     except (OSError,ValueError,KeyError,rasterio.errors.RasterioError) as exc:
         return {'available':False,'reason':str(exc),'grid':[]}
 
-def _sample_horizon_pixels(dataset, xs, ys):
+def _sample_horizon_pixels(dataset, xs, ys, prefetch=None):
     """Read each raster block touched by the selected site's rays only once."""
     if not np.isfinite(xs).all() or not np.isfinite(ys).all():
         raise ValueError('Invalid horizon ray coordinates.')
@@ -193,6 +292,8 @@ def _sample_horizon_pixels(dataset, xs, ys):
     block_height, block_width = dataset.block_shapes[0]
     blocks_per_row = (dataset.width + block_width - 1) // block_width
     block_ids = (rows // block_height) * blocks_per_row + columns // block_width
+    if prefetch is not None:
+        prefetch(dataset, np.unique(block_ids), blocks_per_row)
     order = np.argsort(block_ids)
     boundaries = np.flatnonzero(np.diff(block_ids[order])) + 1
     values = np.empty(rows.size, dtype=dataset.dtypes[0])
@@ -210,26 +311,79 @@ def _sample_horizon_pixels(dataset, xs, ys):
     return values
 
 
-def horizon(location,height):
-    """Finite 20 km terrain screening; missing rays never imply a flat horizon."""
+def _horizon_profile(ds, meta, location, height, prefetch=None):
+    transform = Transformer.from_crs(GEO, ds.crs, always_xy=True)
+    azimuths = np.arange(0, 360, 5)
+    step = max(25, max(ds.res))
+    distances = np.arange(step, HORIZON_RANGE_M + 1, step)
+    az, dist = np.meshgrid(azimuths, distances, indexing='ij')
+    lon, lat, _ = GEOD.fwd(np.full(az.size, location.longitude),
+                           np.full(az.size, location.latitude), az.ravel(), dist.ravel())
+    xs, ys = transform.transform(lon, lat)
+    vals = _sample_horizon_pixels(ds, xs, ys, prefetch)
+    heights = vals.reshape(az.shape) * ds.scales[0] + ds.offsets[0]
+    angle = dist / RADIUS
+    angles = np.degrees(np.arctan2((RADIUS + heights) * np.cos(angle) - (RADIUS + height),
+                                  (RADIUS + heights) * np.sin(angle)))
+    return {
+        'available': True,
+        'profile': [{'azimuth': int(a), 'elevation': float(e)} for a, e in zip(azimuths, angles.max(axis=1))],
+        'method': f'5 degree azimuth spacing; nearest-neighbour rays to 20 km using {max(ds.res):g} m DEM; farther terrain and subpixel obstacles excluded. Reference-frame alignment and DEM errors remain unquantified.',
+        'source': meta,
+    }
+
+
+@lru_cache(maxsize=128)
+def _polar_horizon(latitude, longitude):
+    from .models import Location
+
+    if not _polar_horizon_slots.acquire(timeout=1):
+        raise ValueError('NASA elevation requests are busy. Try again shortly.')
+    try:
+        with httpx.Client() as client:
+            reader = _ElevationRangeReader(client)
+            with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR'), rasterio.open(
+                    'lola-horizon.tif', opener=reader.open) as ds:
+                crs = CRS(ds.crs)
+                if (crs.to_json_dict().get('id') != {'authority': 'IAU', 'code': 30135}
+                        or abs(crs.ellipsoid.semi_major_metre - RADIUS) > 1
+                        or abs(crs.ellipsoid.semi_minor_metre - RADIUS) > 1
+                        or ds.res != (20, 20) or ds.count != 1):
+                    raise ValueError('Unexpected NASA elevation projection or pixel spacing.')
+                location = Location(latitude=latitude, longitude=longitude)
+                height = pixel(ds, longitude, latitude)
+                source = {
+                    'name': 'NASA adjusted LOLA south-pole 20 m DEM',
+                    'source_url': POLAR_HORIZON_URL, 'documentation': SOURCES['horizon_dem'],
+                    'resolution_m': 20, 'units': 'm', 'frame': 'MOON_ME_DE421',
+                    'reference': 'radius_minus_1737400m',
+                }
+                result = _horizon_profile(ds, source, location, height, reader.prefetch)
+                return {**result, 'observer_height': {'available': True, 'value': height,
+                                                       'source': source, 'coverage_type': 'regional'}}
+    finally:
+        _polar_horizon_slots.release()
+
+
+def horizon(location, height):
+    """Use the bundled raster first, then NASA's south-polar raster where covered."""
     try:
         try:
             ds,meta=opened('horizon_dem')
         except (OSError,ValueError,KeyError,rasterio.errors.RasterioError):
             ds,meta=opened('lola')
         with ds:
-            transform=Transformer.from_crs(GEO,ds.crs,always_xy=True)
-            azimuths=np.arange(0,360,5); distances=np.arange(max(25,max(ds.res)),20001,max(25,max(ds.res)))
-            az,dist=np.meshgrid(azimuths,distances,indexing='ij')
-            lon,lat,_=GEOD.fwd(np.full(az.size,location.longitude),np.full(az.size,location.latitude),az.ravel(),dist.ravel())
-            xs,ys=transform.transform(lon,lat)
-            if np.min(xs)<ds.bounds.left or np.max(xs)>=ds.bounds.right or np.min(ys)<=ds.bounds.bottom or np.max(ys)>ds.bounds.top:
-                raise ValueError('DEM does not cover every horizon ray to 20 km; reference geometry remains provisional.')
-            vals = _sample_horizon_pixels(ds, xs, ys)
-            heights=vals.reshape(az.shape)*ds.scales[0]+ds.offsets[0]
-            angle=dist/RADIUS
-            angles=np.degrees(np.arctan2((RADIUS+heights)*np.cos(angle)-(RADIUS+height),(RADIUS+heights)*np.sin(angle)))
-            return {'available':True,'profile':[{'azimuth':int(a),'elevation':float(e)} for a,e in zip(azimuths,angles.max(axis=1))],
-                    'method':f'5 degree azimuth spacing; nearest-neighbour rays to 20 km using {max(ds.res):g} m DEM; farther terrain and subpixel obstacles excluded. Reference-frame alignment and DEM errors remain unquantified.','source':meta}
-    except (OSError,ValueError,KeyError,rasterio.errors.RasterioError) as exc:
-        return {'available':False,'profile':None,'reason':str(exc)}
+            if height is None:
+                height = pixel(ds, location.longitude, location.latitude)
+                return {**_horizon_profile(ds, meta, location, height),
+                        'observer_height': {'available': True, 'value': height,
+                                            'source': meta, 'coverage_type': 'regional'}}
+            return _horizon_profile(ds, meta, location, height)
+    except RASTER_ERRORS as exc:
+        reason = str(exc)
+    if os.getenv('LUNAR_REMOTE_HORIZON') == '1' and location.latitude <= POLAR_HORIZON_LIMIT:
+        try:
+            return dict(_polar_horizon(location.latitude, location.longitude))
+        except RASTER_ERRORS:
+            reason = 'NASA LOLA elevation could not supply all 20 km horizon samples. Reference geometry remains provisional.'
+    return {'available': False, 'profile': None, 'reason': reason}
