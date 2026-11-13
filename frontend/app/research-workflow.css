@@ -119,6 +119,7 @@
 .research-shadow-note .shadow-present { color: #92e6b3; }
 .research-shadow-note .shadow-absent { color: #ffaaaa; }
 .research-centre-summary {
+  font-weight: 700;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;

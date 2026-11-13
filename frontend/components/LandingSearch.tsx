@@ -284,7 +284,7 @@ export default function LandingSearch({
             <p className="research-shadow-note" role="status">
               {!validArea ? "Enter a valid research area" :
               shadow?.key !== shadowKey ? "Checking mapped permanent shadow…" :
-                shadow.fraction == null ? "Mapped permanent shadow unavailable" :
+                shadow.fraction == null ? <span className="shadow-absent">Mapped permanent shadow unavailable</span> :
                 `${shadowPercent} mapped permanent shadow within ${radiusKm} km`}
               {shadowFraction != null && (
                 <small className={shadowFraction > 0 ? "shadow-present" : "shadow-absent"}>
