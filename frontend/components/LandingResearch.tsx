@@ -133,6 +133,7 @@ export type ResearchComparison = {
   failures: Record<string, string>;
 };
 export type ResearchActions = {
+  getLimits: () => Record<string, number>;
   evaluate: () => Promise<void>;
   compare: (chosen?: Site[]) => Promise<void>;
   inspect: (result: Research) => void;
@@ -390,6 +391,7 @@ export default function LandingResearch({
     onResultChange?.(result ?? null);
   }, [result, onResultChange]);
   useImperativeHandle(actionRef, () => ({
+    getLimits: () => limits,
     evaluate: () => run(false),
     compare: (chosen) => run(true, chosen),
     inspect: (r: Research) => {
@@ -451,7 +453,7 @@ export default function LandingResearch({
             ? "Terrain safety"
             : priority === "S"
               ? "Sunlight availability"
-              : "Earth communication"}
+              : priority === "I" ? "Water-ice potential" : "Earth communication"}
         </p>
         <p className="muted">
           0.35 Terrain + 0.25 Sunlight + 0.20 Communication + 0.15 Temperature +

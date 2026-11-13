@@ -16,13 +16,12 @@ import {
   type PlanBForecast,
 } from "../lib/plan-b";
 import PlanBComparison from "./PlanBComparison";
-import WaterIceFactor from "./WaterIceFactor";
+import type { ResearchArea, ResearchAreaResult } from "../lib/research-area";
 const criteria = [
   ["S", "Sunlight"],
   ["C", "Earth visibility"],
   ["T", "Terrain"],
   ["H", "Temperature"],
-  ["I", "Water ice potential"],
 ] as const;
 const key = (s: Site) => `${s.latitude},${s.longitude}`;
 const withUnit = (value: number | undefined, unit: string) =>
@@ -39,6 +38,9 @@ const score = (r: Research | undefined, k: string) =>
       : `${r.factors[k].score!.toFixed(1)}${k === "S" || k === "C" ? "%" : " / 100"}`;
 export default function PreliminaryComparison({
   mission,
+  area,
+  areaResult,
+  radiusKm = comparisonRadiusKm,
   state,
   alternatives,
   scenarios,
@@ -54,6 +56,9 @@ export default function PreliminaryComparison({
   onCancel,
 }: {
   mission: Mission;
+  area?: ResearchArea;
+  areaResult?: ResearchAreaResult;
+  radiusKm?: number;
   state: ResearchComparison | null;
   alternatives: Site[];
   scenarios: PlanBForecast[];
@@ -101,6 +106,7 @@ export default function PreliminaryComparison({
       .map((scenario) => ({ site: scenario.result.mission, scenario })),
   ];
   const selected = state?.results.find((r) => sameMission(r.mission, mission));
+  const hasRecommendation = !area || !!areaResult?.results.length;
   const assessments = cards.map(
     ({ site, scenario }) =>
       scenario?.result ??
@@ -152,6 +158,7 @@ export default function PreliminaryComparison({
     const result = assessments[index];
     const failure = scenario ? undefined : state?.failures[key(site)];
     const isSelected = index === 0;
+    const title = area ? (isSelected ? "Recommended landing point" : `Alternative ${index}`) : `Pre-Result ${index + 1}`;
     const comparable =
       selected &&
       result &&
@@ -197,11 +204,16 @@ export default function PreliminaryComparison({
           site.clearance_deg,
         ])}
         className="pre-result-card glass"
-        aria-label={`Pre-result ${index + 1}: ${site.name}`}
+        aria-label={`${title}: ${site.name}`}
       >
         <header className="pre-result-heading">
-          <h2>Pre-Result {index + 1}</h2>
+          <h2>{title}</h2>
+          {area && isSelected && <p>Best of the points evaluated within your research area.</p>}
           <p>{site.name}</p>
+          {area && <p>
+            {site.latitude.toFixed(4)}°, {site.longitude.toFixed(4)}° ·{" "}
+            {comparisonDistanceKm(area.centre, site).toFixed(2)} km from research centre
+          </p>}
           {comparing && (
             <dl className="what-if-card-window">
               <div>
@@ -215,7 +227,7 @@ export default function PreliminaryComparison({
               <div>
                 <dt>Distance</dt>
                 <dd>
-                  {isSelected
+                  {area ? `${comparisonDistanceKm(area.centre, site).toFixed(2)} km from research centre` : isSelected
                     ? "Original site"
                     : `${comparisonDistanceKm(mission, site).toFixed(2)} km from original`}
                 </dd>
@@ -388,7 +400,6 @@ export default function PreliminaryComparison({
                     </dd>
                   </div>
                 )}
-                <WaterIceFactor result={result} />
               </>
             )}
             <div>
@@ -412,9 +423,6 @@ export default function PreliminaryComparison({
               )}
               {limits?.max_relief_m != null && (
                 <dd>Maximum relief {limits.max_relief_m} m</dd>
-              )}
-              {result?.factors.I?.explanation && (
-                <dd>{result.factors.I.explanation}</dd>
               )}
             </div>
           </dl>
@@ -488,7 +496,7 @@ export default function PreliminaryComparison({
         <div>
           <span className="eyebrow">PRELIMINARY ASSESSMENT</span>
           <p>
-            Compare up to two sites within {comparisonRadiusKm} km using the
+            Compare up to two sites within {radiusKm} km of the research centre using the
             original mission window, or use What IF to test a different site or
             touchdown.
           </p>
@@ -515,7 +523,7 @@ export default function PreliminaryComparison({
           <button className="button subtle" onClick={onSearch}>
             Back to Search
           </button>
-          {hasUnfinished && !state?.busy && (
+          {hasUnfinished && !state?.busy && (!area || hasRecommendation || state?.error) && (
             <button className="button primary" onClick={onEvaluate}>
               {state?.error || Object.keys(state?.failures ?? {}).length
                 ? "Retry unfinished assessments"
@@ -531,6 +539,29 @@ export default function PreliminaryComparison({
           )}
         </div>
       </div>
+      {area && (
+        <div className="research-centre-summary glass">
+          <strong>Research area centre</strong>
+          <span>{area.centre.name}</span>
+          <span>{area.centre.latitude.toFixed(4)}°, {area.centre.longitude.toFixed(4)}°</span>
+          <span>{area.radiusKm} km search radius</span>
+        </div>
+      )}
+      {areaResult && (
+        <p className="info" role="status">
+          {areaResult.sampled - areaResult.counts.unavailable} evaluated · {areaResult.sampled} sampled ·{" "}
+          {areaResult.counts.limits} exceeded limits · {areaResult.counts.missing} lacked required evidence ·{" "}
+          {areaResult.counts.unavailable} could not be evaluated
+          {areaResult.counts.focus_missing > 0 && ` · ${areaResult.counts.focus_missing} lacked a mapped shadow target`}
+        </p>
+      )}
+      {areaResult && !hasRecommendation && <p>No qualifying landing point found in this research area.</p>}
+      {areaResult?.reasons?.length ? (
+        <details className="panel">
+          <summary>Why candidates were excluded</summary>
+          <ul>{areaResult.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+        </details>
+      ) : null}
       {state?.busy && (
         <p role="status" className="info">
           {state.progress || "Preparing the comparison…"} Cards update as each
@@ -547,7 +578,7 @@ export default function PreliminaryComparison({
           {notice}
         </p>
       )}
-      <div className="what-if-workspace" ref={workspace} tabIndex={-1}>
+      <div hidden={!hasRecommendation} className="what-if-workspace" ref={workspace} tabIndex={-1}>
         {comparing ? (
           <div className="what-if-compare-heading">
             <div>
@@ -601,6 +632,7 @@ export default function PreliminaryComparison({
           <PlanBComparison
             key={JSON.stringify([mission, priority, equipment])}
             original={selected}
+            area={area}
             priority={priority}
             equipment={equipment}
             alternativePicker={alternativePicker}

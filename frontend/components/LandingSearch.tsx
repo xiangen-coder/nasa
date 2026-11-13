@@ -24,6 +24,8 @@ export default function LandingSearch({
   onClearance,
   priority,
   onPriority,
+  radiusKm,
+  onRadius,
   busy,
   onSubmit,
 }: {
@@ -44,12 +46,38 @@ export default function LandingSearch({
   onClearance: (value: number) => void;
   priority: string;
   onPriority: (value: string) => void;
+  radiusKm: number;
+  onRadius: (value: number) => void;
   busy: boolean;
   onSubmit: () => void;
 }) {
   const atlas = useRef<LandingAtlasHandle>(null);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
+  const [shadow, setShadow] = useState<{ key: string; fraction: number | null; coverage: number }>();
+  const { latitude, longitude } = selected;
+  const validArea = Number.isFinite(latitude) && Math.abs(latitude) <= 90 &&
+    Number.isFinite(longitude) && Math.abs(longitude) <= 180 &&
+    radiusKm >= 0.25 && radiusKm <= 20;
+  const shadowKey = JSON.stringify([latitude, longitude, radiusKm]);
+  useEffect(() => {
+    if (priority !== "I" || !validArea) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const query = new URLSearchParams({
+          latitude: String(latitude), longitude: String(longitude), radius_m: String(Math.round(radiusKm * 1000)),
+        });
+        const response = await fetch(`/api/research/research-area-shadow?${query}`, { signal: controller.signal });
+        if (!response.ok) throw Error("Shadow data unavailable");
+        const data = await response.json();
+        if (!controller.signal.aborted) setShadow({ key: shadowKey, fraction: data.shadow_fraction, coverage: data.coverage_fraction });
+      } catch {
+        if (!controller.signal.aborted) setShadow({ key: shadowKey, fraction: null, coverage: 0 });
+      }
+    }, 300);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [latitude, longitude, radiusKm, priority, shadowKey, validArea]);
   const missionPoints = missionSites.flatMap((site) =>
     site.latitude == null || site.longitude == null ? [] : [{ ...site, latitude: site.latitude, longitude: site.longitude }],
   );
@@ -133,28 +161,16 @@ export default function LandingSearch({
               onChange={(e) => onEndTime(e.target.value)}
             />
           </label>
-          <label className="search-field priority-field">
-            Assessment focus
-            <select
-              value={priority}
-              onChange={(e) => onPriority(e.target.value)}
-            >
-              <option value="overall">Overall consideration</option>
-              <option value="T">Terrain safety</option>
-              <option value="S">Sunlight availability</option>
-              <option value="C">Earth communication</option>
-            </select>
-          </label>
         </div>
         <div className="search-group-title">
-          <span>Landing location</span>
+          <span>Research area</span>
           <button type="button" className="search-map-link" onClick={() => atlas.current?.focusGlobe()}>
             <MapPin size={13} /> Choose on map <ArrowUpRight size={13} />
           </button>
         </div>
         <div className="search-fields coordinate-fields">
           <label className="search-field location-field">
-            Location name
+            Centre name
             <select value={custom ? "custom" : String(reference)} onChange={(event) => {
               const value = event.target.value;
               onSelected(value === "custom"
@@ -229,6 +245,27 @@ export default function LandingSearch({
               }
             />
           </label>
+          <label className="search-field">
+            Search radius (km)
+            <input type="number" required min="0.25" max="20" step="0.001"
+              value={Number.isFinite(radiusKm) ? radiusKm : ""}
+              onChange={(event) => onRadius(event.target.value === "" ? NaN : Number(event.target.value))} />
+          </label>
+          <label className="search-field priority-field">
+            Research focus
+            <select
+              value={priority}
+              onChange={(e) => onPriority(e.target.value)}
+            >
+              <option value="overall">Overall consideration</option>
+              <option value="T">Terrain safety</option>
+              <option value="S">Sunlight availability</option>
+              <option value="C">Earth communication</option>
+              <option value="I">Water-ice potential</option>
+            </select>
+          </label>
+        </div>
+        <div className="research-search-actions">
           <button type="submit" className="search-go" disabled={busy}>
             {busy ? (
               <>
@@ -236,10 +273,21 @@ export default function LandingSearch({
               </>
             ) : (
               <>
-                Go <ArrowUpRight size={19} />
+                Find landing point <ArrowUpRight size={19} />
               </>
             )}
           </button>
+          {priority === "I" && (
+            <p className="research-shadow-note" role="status">
+              {!validArea ? "Enter a valid research area" :
+              shadow?.key !== shadowKey ? "Checking mapped permanent shadow…" :
+                shadow.fraction == null ? "Mapped permanent shadow unavailable" :
+                `${(shadow.fraction * 100).toFixed(1)}% mapped permanent shadow within ${radiusKm} km`}
+              {shadow?.key === shadowKey && shadow.fraction != null && shadow.coverage < 0.9999 && (
+                <small>Share of mapped ground · {(100 * shadow.coverage).toFixed(2)}% of the circle mapped</small>
+              )}
+            </p>
+          )}
         </div>
         {missionSite && "classification" in missionSite && (
           <p>
@@ -248,7 +296,7 @@ export default function LandingSearch({
             <a href={missionSite.source_url} target="_blank" rel="noreferrer">Mission source</a>
           </p>
         )}
-        <LandingAtlas ref={atlas} selected={selected} onSelect={onSelected} />
+        <LandingAtlas ref={atlas} selected={selected} radiusKm={radiusKm} onSelect={onSelected} />
         <div className="search-form-footer">
           <details className="search-advanced">
             <summary>

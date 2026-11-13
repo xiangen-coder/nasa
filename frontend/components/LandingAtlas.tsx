@@ -13,10 +13,11 @@ function validPoint(point: unknown): point is Site {
 
 export type LandingAtlasHandle = { focusGlobe: () => void };
 
-export default function LandingAtlas({ ref, selected, onSelect }: {
+export default function LandingAtlas({ ref, selected, onSelect, radiusKm }: {
   ref: Ref<LandingAtlasHandle>;
   selected: Site;
   onSelect: (point: Site) => void;
+  radiusKm?: number;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const section = useRef<HTMLElement>(null);
@@ -27,8 +28,9 @@ export default function LandingAtlas({ ref, selected, onSelect }: {
     frame.current?.contentWindow?.postMessage({
       type: "lunar-atlas:set-selection",
       point: validPoint(point) ? point : null,
+      radiusKm,
     }, window.location.origin);
-  }, [name, latitude, longitude]);
+  }, [name, latitude, longitude, radiusKm]);
 
   useImperativeHandle(ref, () => ({
     focusGlobe() {
@@ -53,7 +55,7 @@ export default function LandingAtlas({ ref, selected, onSelect }: {
   }, [syncSelection, onSelect]);
 
   return (
-    <section ref={section} className="landing-atlas-picker" aria-label="Choose a landing point on the Moon" tabIndex={-1}>
+    <section ref={section} className="landing-atlas-picker" aria-label="Choose the research centre on the Moon" tabIndex={-1}>
       <iframe
         ref={frame}
         className="landing-atlas"
@@ -62,7 +64,7 @@ export default function LandingAtlas({ ref, selected, onSelect }: {
         loading="lazy"
         onLoad={syncSelection}
       />
-      <p>Click or tap the Moon to update the coordinates above.</p>
+      <p>Click or tap the Moon to set the research centre.{radiusKm != null && Number.isFinite(radiusKm) && ` The cyan ring marks the ${radiusKm} km search radius.`}</p>
       <a href="https://trek.nasa.gov/moon/" target="_blank" rel="noreferrer">Open NASA Moon Trek</a>
     </section>
   );

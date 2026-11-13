@@ -205,12 +205,26 @@ def shortlist(request:ReliabilityRequest):
     return alternatives(request,screened(request.mission,request.limits,request.vehicle))
 
 
+class PlanBSiteRequest(ResearchRequest):
+    search_radius_m: int = Field(default=20000, ge=250, le=20000)
+    shadow_focus: bool = False
+
+
 @router.post('/plan-b-sites')
-def plan_b_sites(request:ResearchRequest):
+def plan_b_sites(request:PlanBSiteRequest):
     """Apply the existing Apollo terrain shortlist at the Compare page radius."""
+    radius = request.search_radius_m
+    shadow_focus = request.shadow_focus
     request=ReliabilityRequest(mission=request.mission, limits=request.limits)
     baseline=screened(request.mission,request.limits,request.vehicle)
-    result=alternatives(request,baseline,search_radius_m=20_000)
+    result=alternatives(request,baseline,search_radius_m=radius)
+    if shadow_focus and result["candidates"]:
+        from .water_evidence import research_shadow
+
+        locations = [request.mission.model_copy(update=row["location"]) for row in result["candidates"]]
+        shadow = research_shadow(request.mission.latitude, request.mission.longitude, radius, locations)
+        for candidate, distance in zip(result["candidates"], shadow["distances_m"]):
+            candidate["shadow_distance_m"] = distance
     for candidate in result['candidates']:
         candidate['bounds']=candidate['assessment']['bounds']
         candidate['screening_radius_m']=candidate['assessment']['screening_radius_m']

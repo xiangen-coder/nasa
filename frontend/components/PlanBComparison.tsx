@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { comparisonDistanceKm, comparisonRadiusKm } from "./ComparisonPicker";
 import type { Research } from "./LandingResearch";
-import WaterIceFactor from "./WaterIceFactor";
+import type { ResearchArea } from "../lib/research-area";
 import type { ResearchPriority } from "./SearchConsole";
 import type { SolarSettings } from "./mission-lab/scenario-science";
 import {
@@ -208,7 +208,6 @@ function OptionDetails({
               </dd>
             )}
           </div>
-          <WaterIceFactor result={result} />
         </dl>
       </details>
     </>
@@ -217,6 +216,7 @@ function OptionDetails({
 
 export default function PlanBComparison({
   original,
+  area,
   priority,
   equipment,
   alternativePicker,
@@ -226,6 +226,7 @@ export default function PlanBComparison({
   hidden,
 }: {
   original?: Research;
+  area?: ResearchArea;
   priority: ResearchPriority;
   equipment: SolarSettings;
   alternativePicker: ReactNode;
@@ -283,6 +284,7 @@ export default function PlanBComparison({
     try {
       await findPlanB({
         original,
+        area,
         mode,
         dates,
         equipment,
@@ -387,7 +389,7 @@ export default function PlanBComparison({
       </details>
       {!original ? (
         <p>
-          Evaluate Pre-Result 1 to use its mission settings for a backup search.
+          Evaluate a landing point to use its mission settings for a backup search.
         </p>
       ) : (
         <>
@@ -396,13 +398,13 @@ export default function PlanBComparison({
               <strong>
                 {mode === "delay"
                   ? "Same location"
-                  : `Within ${comparisonRadiusKm} km`}
+                  : `Within ${area?.radiusKm ?? comparisonRadiusKm} km`}
               </strong>
               {" · "}
               {mode === "relocate"
                 ? `Same touchdown: ${utc(original.mission.start)}`
                 : `${range === "custom" ? custom || "Custom window" : range === "month" ? "Next month" : "Next year"} · ${time ? `${time} UTC` : utc(original.mission.start).slice(11)}`}
-              <small>Search centre: {original.mission.name}</small>
+              <small>{mode === "delay" ? "Landing point" : "Research centre"}: {mode === "delay" ? original.mission.name : area?.centre.name ?? original.mission.name}</small>
             </div>
             {!editing && status !== "running" && (
               <button

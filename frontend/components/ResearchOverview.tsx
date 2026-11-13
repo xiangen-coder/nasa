@@ -32,6 +32,7 @@ import {
 } from "./ComparisonPicker";
 
 const focusLabels: Record<ResearchPriority, string> = {
+  I: "Water-ice potential",
   overall: "Overall consideration",
   T: "Terrain safety",
   S: "Sunlight availability",
@@ -52,6 +53,7 @@ function openResultSection(id: string) {
 export default function ResearchOverview({
   result,
   comparisonOrigin,
+  comparisonRadiusKm,
   onNavigate,
   onOpenReport,
   onAddComparison,
@@ -65,6 +67,7 @@ export default function ResearchOverview({
 }: {
   result: Research | null;
   comparisonOrigin: Site;
+  comparisonRadiusKm?: number;
   onNavigate: (view: number) => void;
   onOpenReport: () => void;
   onAddComparison: (site: Site) => void;
@@ -582,7 +585,7 @@ export default function ResearchOverview({
                 )}
                 {result.factors.T?.quality === "preliminary Kaguya screening" && <p>{terrain?.source?.quality}</p>}
                 {result.factors.T?.score == null &&
-                  inComparisonArea(comparisonOrigin, terrainReference) &&
+                  inComparisonArea(comparisonOrigin, terrainReference, comparisonRadiusKm) &&
                   siteKey(result.mission) !== siteKey(terrainReference) && (
                     <button
                       className="text-button"

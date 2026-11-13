@@ -13,13 +13,15 @@ import PreferencesControls, {type Preferences} from "../components/Preferences";
 import ResearchOverview from "../components/ResearchOverview";
 import { PortableEducation, PortableJourney } from "../components/PortableLunar";
 import PreliminaryComparison from "../components/PreliminaryComparison";
-import ComparisonPicker, { comparisonAreaMessage, inComparisonArea, siteKey } from "../components/ComparisonPicker";
+import ComparisonPicker, { inComparisonArea, siteKey } from "../components/ComparisonPicker";
+import type { ResearchArea, ResearchAreaResult } from "../lib/research-area";
 import type { SearchRecord } from "../lib/search-record";
 import { referenceSites } from "../lib/reference-sites";
 const Account = dynamic(() => import("../components/Account"));
 const MissionLab = dynamic(() => import("../components/mission-lab/MissionLab"));
 
 import TerrainAssessment from "../components/TerrainAssessment";
+import MapEvidence from "../components/MapEvidence";
 import ResearchComparisonReport from "../components/ResearchComparisonReport";
 import { defaultSolar } from "../components/mission-lab/scenario-science";
 import {AlternativeCards} from "../components/AssessmentOverview";
@@ -500,6 +502,17 @@ export default function Page() {
     return () => controller.abort();
   }, []);
   const [preferences,setPreferences] = useState<Preferences>({animate:true,scale:1,detailed:true});
+  const [radiusKm, setRadiusKm] = useState(20);
+  const [areaSearch, setAreaSearch] = useState<{
+    area: ResearchArea;
+    result?: ResearchAreaResult;
+    busy: boolean;
+    error: string;
+  }>();
+  const [areaAssessments, setAreaAssessments] = useState<Research[]>([]);
+  const [areaFailures, setAreaFailures] = useState<Record<string, string>>({});
+  const [areaAssessing, setAreaAssessing] = useState(false);
+  const areaRequest = useRef<AbortController | null>(null);
   const [researchPriority,setResearchPriority] = useState<ResearchPriority>("overall");
   const [researchBusy,setResearchBusy] = useState(false);
   const [researchResult,setResearchResult] = useState<Research|null>(null);
@@ -615,6 +628,15 @@ export default function Page() {
     setIndex(0);
   }, [selected, start, end, startTime, endTime, interval, clearance]);
   useEffect(() => {
+    areaRequest.current?.abort();
+    setAreaSearch(undefined);
+    setAreaAssessments([]);
+    setAreaFailures({});
+    setAreaAssessing(false);
+    setResearchResult(null);
+  }, [selected, start, end, startTime, endTime, interval, clearance, radiusKm, researchPriority]);
+  useEffect(() => () => areaRequest.current?.abort(), []);
+  useEffect(() => {
     comparisonGeneration.current++;
     setComparison(null);
   }, [weights, checked]);
@@ -641,24 +663,99 @@ export default function Page() {
     setEnd(finish.slice(0,10)); setEndTime(finish.slice(11,16));
     setIntervalMinutes(m.interval_minutes); setClearance(m.clearance_deg);
   };
+  const activeArea = areaSearch && areaSearch.area.centre.name === selected.name && sameMission(areaSearch.area.centre, mission()) &&
+    areaSearch.area.radiusKm === radiusKm && areaSearch.area.focus === researchPriority
+    ? areaSearch : undefined;
+  const recommendation = activeArea?.result?.results[0];
+  const comparisonOrigin = activeArea?.area.centre ?? selected;
+  const comparisonBaseline = recommendation?.mission ?? mission();
+  const comparisonRadius = activeArea?.area.radiusKm ?? radiusKm;
   const searchRecord: SearchRecord = {
-    version: 1, mission: mission(), priority: researchPriority,
-    alternatives: chosenAlternatives.filter(s => siteKey(s) !== siteKey(selected) && inComparisonArea(selected, s)),
+    version: 1, mission: mission(), priority: researchPriority, radiusKm,
+    alternatives: chosenAlternatives.filter(s =>
+      siteKey(s) !== siteKey(comparisonBaseline) && inComparisonArea(comparisonOrigin, s, comparisonRadius)),
   };
-  const assessComparison = (alternatives: Site[]) => {
-    const actions = researchActions.current;
-    if (!actions) return;
-    if (alternatives.length) void actions.compare(alternatives);
-    else void actions.evaluate();
+
+  async function searchResearchArea() {
+    areaRequest.current?.abort();
+    researchActions.current?.cancel();
+    const controller = new AbortController();
+    areaRequest.current = controller;
+    const area: ResearchArea = {
+      centre: mission(), radiusKm, focus: researchPriority, limits: researchActions.current?.getLimits(),
+    };
+    setAreaSearch({ area, busy: true, error: "" });
+    setAreaAssessments([]);
+    setAreaFailures({});
+    setAreaAssessing(false);
+    setChosenAlternatives([]);
+    setWhatIfComparison(null);
+    setComparisonNotice("");
+    setResearchResult(null);
+    setView(11);
+    try {
+      const response = await fetch("/api/research/research-area", {
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
+        body: JSON.stringify({ mission: area.centre, limits: area.limits, radius_m: Math.round(area.radiusKm * 1000), focus: area.focus }),
+      });
+      if (!response.ok) throw Error("Could not search this research area. Please try again.");
+      const result: ResearchAreaResult = await response.json();
+      if (controller.signal.aborted) return;
+      setAreaSearch({ area, result, busy: false, error: "" });
+      setChosenAlternatives(result.results.slice(1).map(({ mission }) => mission));
+      setResearchResult(result.results[0] ?? null);
+    } catch (error) {
+      if (!controller.signal.aborted) setAreaSearch({ area, busy: false, error: (error as Error).message });
+    }
+  }
+
+  const assessComparison = async (alternatives: Site[]) => {
+    if (!activeArea) {
+      await researchActions.current?.compare(alternatives);
+      return;
+    }
+    if (!recommendation || areaAssessing) return;
+    const controller = new AbortController();
+    areaRequest.current = controller;
+    setAreaAssessing(true);
+    setAreaFailures({});
+    try {
+      for (const point of alternatives) {
+        if ([...activeArea.result!.results, ...areaAssessments].some(result => siteKey(result.mission) === siteKey(point))) continue;
+        try {
+          const response = await fetch("/api/research/evaluate", {
+            method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
+            body: JSON.stringify({
+              mission: { ...activeArea.area.centre, name: point.name, latitude: point.latitude, longitude: point.longitude },
+              limits: activeArea.area.limits,
+            }),
+          });
+          if (!response.ok) throw Error("Assessment unavailable");
+          const assessment: Research = await response.json();
+          if (!controller.signal.aborted) setAreaAssessments(previous => [...previous, assessment]);
+        } catch (error) {
+          if (!controller.signal.aborted) setAreaFailures(previous => ({ ...previous, [`${point.latitude},${point.longitude}`]: (error as Error).message }));
+        }
+      }
+    } finally {
+      if (areaRequest.current === controller) setAreaAssessing(false);
+    }
   };
+
+  function cancelComparison() {
+    areaRequest.current?.abort();
+    setAreaAssessing(false);
+    setAreaSearch(previous => previous?.busy ? { ...previous, busy: false, error: "Research area search cancelled." } : previous);
+    researchActions.current?.cancel();
+  }
   const addComparisonSite = ({ name, latitude, longitude }: Site) => {
     const point = { name, latitude, longitude };
     const key = siteKey(point);
     const alternatives = searchRecord.alternatives;
-    if ([selected, ...alternatives].some(site => siteKey(site) === key)) {
+    if ([comparisonBaseline, ...alternatives].some(site => siteKey(site) === key)) {
       setComparisonNotice(`${point.name} is already in the comparison cards.`);
-    } else if (!inComparisonArea(selected, point)) {
-      setComparisonNotice(comparisonAreaMessage);
+    } else if (!inComparisonArea(comparisonOrigin, point, comparisonRadius)) {
+      setComparisonNotice(`Choose a point within ${comparisonRadius} km of the research centre.`);
     } else if (alternatives.length >= 2) {
       setComparisonNotice("Remove a comparison point below before adding another.");
     } else {
@@ -797,9 +894,17 @@ export default function Page() {
     analysis?.mode === "terrain_screened"
       ? "Terrain-screened geometry"
       : "Reference-sphere geometry";
-  const comparisonMission = mission();
-  const comparisonLimits = researchComparison?.results.find((result) => sameMission(result.mission, comparisonMission))?.limits;
-  const whatIfContext = JSON.stringify([comparisonMission, comparisonLimits, researchEquipment]);
+  const comparisonMission = comparisonBaseline;
+  const comparisonState: ResearchComparison | null = activeArea ? {
+    results: [...(activeArea.result?.results ?? []), ...areaAssessments],
+    candidates: searchRecord.alternatives,
+    busy: activeArea.busy || areaAssessing,
+    progress: activeArea.busy ? "Searching the research area…" : "Evaluating comparison points…",
+    error: activeArea.error,
+    failures: areaFailures,
+  } : researchComparison;
+  const comparisonLimits = comparisonState?.results.find((result) => sameMission(result.mission, comparisonMission))?.limits;
+  const whatIfContext = JSON.stringify([comparisonMission, comparisonLimits, activeArea?.area, researchEquipment]);
   const comparisonScenarios = whatIfComparison?.context === whatIfContext ? whatIfComparison.scenarios : [];
   function openComparisonReport() {
     if (researchResult) setReportSite(missionKey(researchResult.mission));
@@ -828,29 +933,29 @@ export default function Page() {
           {view!==7&&view!==8&&view!==11&&view!==13&&!education&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["Find your next horizon.","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div>{showResultTools&&<button type="button" className="button primary new-search" onClick={openSearchForm}>New search</button>}</div></>}
           {view===7&&<section className="search-layout revised-search" aria-label="Search for a lunar landing site">
             <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration"><div className="hero-copy"><span className="eyebrow">A NEW PERSPECTIVE ON THE MOON</span><h1>Find your place<br/>on the <em>Moon.</em></h1><p>Every mission starts with a possibility. Explore lunar locations through real sunlight, communication and terrain data.</p><div className="hero-hairline"/><span className="hero-footnote">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}>Explore the Moon <ArrowRight size={15}/></button></div><CinematicHero animate={preferences.animate}/></section>
-            <LandingSearch selected={selected} missionSites={missionSites} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} busy={researchBusy} onSubmit={()=>{assessComparison(searchRecord.alternatives);setView(11);}}/>
+            <LandingSearch selected={selected} missionSites={missionSites} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} radiusKm={radiusKm} onRadius={setRadiusKm} busy={researchBusy || !!activeArea?.busy} onSubmit={searchResearchArea}/>
             <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(13)}>Account & saved searches</button><button className="button subtle" onClick={()=>setView(12)}>Mission lab</button></div>
           </section>}
-          {view===11&&<PreliminaryComparison mission={mission()} state={researchComparison} alternatives={searchRecord.alternatives} priority={researchPriority} equipment={researchEquipment} notice={comparisonNotice} onEvaluate={()=>assessComparison(searchRecord.alternatives)}
+          {view===11&&<PreliminaryComparison mission={comparisonMission} state={comparisonState} area={activeArea?.area} areaResult={activeArea?.result} radiusKm={comparisonRadius} alternatives={searchRecord.alternatives} priority={researchPriority} equipment={researchEquipment} notice={comparisonNotice} onEvaluate={()=>activeArea && !recommendation ? void searchResearchArea() : void assessComparison(searchRecord.alternatives)}
             scenarios={comparisonScenarios}
             onScenariosChange={(scenarios) => setWhatIfComparison({ context: whatIfContext, scenarios })}
             onRemoveSite={(site) => {
               setComparisonNotice("");
               setChosenAlternatives((points) => points.filter((point) => siteKey(point) !== siteKey(site)));
             }}
-            alternativePicker={<ComparisonPicker mission={mission()} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={researchBusy}/>}
+            alternativePicker={<ComparisonPicker mission={activeArea?.area.centre ?? mission()} radiusKm={comparisonRadius} baseline={comparisonBaseline} limits={activeArea?.area.limits} chosen={chosenAlternatives} onChange={sites=>{setComparisonNotice("");setChosenAlternatives(sites);}} onAdd={addComparisonSite} busy={comparisonState?.busy ?? false}/>}
             onInspect={r=>{
               if (researchComparison?.results.some((result) => sameMission(result.mission, r.mission))) {
                 researchActions.current?.inspect(r);
               }
               setResearchResult(r);
               setView(8);
-            }} onSearch={()=>setView(7)} onCancel={()=>researchActions.current?.cancel()}/>}
-          {view===11&&<ResearchComparisonReport key={missionKey(comparisonMission)} mission={comparisonMission} alternatives={searchRecord.alternatives} comparison={researchComparison} scenarios={comparisonScenarios} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} equipment={researchEquipment}/>}
-          {view===13&&<Account record={searchRecord} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority as ResearchPriority);setView(7);}}/>}
+            }} onSearch={()=>setView(7)} onCancel={cancelComparison}/>}
+          {view===11&&<ResearchComparisonReport key={missionKey(comparisonMission)} mission={comparisonMission} alternatives={searchRecord.alternatives} comparison={comparisonState} scenarios={comparisonScenarios} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} equipment={researchEquipment}/>}
+          {view===13&&<Account record={searchRecord} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority);setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
           {education&&<PortableEducation animate={preferences.animate}/>}
           {labVisited&&<div hidden={!labOpen}><MissionLab mode="professional" classroomNav={null} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
-          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={selected} onNavigate={setView} onOpenReport={openComparisonReport} onAddComparison={addComparisonSite} busy={researchBusy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={researchPriority} animate={preferences.animate} assessmentError={researchComparison?.error}/>}
+          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={comparisonOrigin} comparisonRadiusKm={comparisonRadius} onNavigate={setView} onOpenReport={openComparisonReport} onAddComparison={addComparisonSite} busy={researchBusy || !!activeArea?.busy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={researchPriority} animate={preferences.animate} assessmentError={comparisonState?.error}/>}
           <div hidden={![0,1,3].includes(view)}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>
@@ -1387,6 +1492,7 @@ export default function Page() {
                 )}
               </section>
             )}
+            {view === 0 && <MapEvidence location={selected} onSelect={setSelected} onAssess={()=>setView(7)}/>}
             {view === 2 && <TerrainAssessment location={selected} onSelect={setSelected}/> }
             {view === 3 && (
               <section className="panel analysis-panel">
@@ -1573,7 +1679,7 @@ export default function Page() {
                 {observatoryMode === "journey" && <PortableJourney target={selected} animate={preferences.animate} />}
               </>
             )}
-            <LandingResearch showPanel={view===0||view===3} onComparisonChange={setResearchComparison} onResultChange={setResearchResult} actionRef={researchActions} priority={researchPriority} onBusyChange={setResearchBusy} mission={mission()} sites={sites} onAddComparison={addComparisonSite} onSelect={site => { setSelected(site); setView(7); }} />
+            <LandingResearch showPanel={view===0||view===3} onComparisonChange={setResearchComparison} onResultChange={activeArea ? undefined : setResearchResult} actionRef={researchActions} priority={researchPriority} onBusyChange={setResearchBusy} mission={mission()} sites={sites} onAddComparison={addComparisonSite} onSelect={site => { setSelected(site); setView(7); }} />
             <div hidden={view !== 5 || observatoryMode !== "system"}>{astronomyVisited && <AstronomySimulation active={view === 5 && observatoryMode === "system"} />}</div>
             {view===3&&comparison&&<AlternativeCards comparison={comparison} onInspect={r=>{setSelected({name:r.mission.name,latitude:r.mission.latitude,longitude:r.mission.longitude});setView(0);}}/>}
             {view===9&&<section className="about-grid"><article className="about-intro glass"><span className="eyebrow">EXPLORATION, INFORMED BY EVIDENCE</span><h2>A place to ask<br/>better questions.</h2><p>LUNAR is a NASA Space Apps 2026 research demonstrator for investigating lunar landing locations, mission windows and backup possibilities.</p><p>The cinematic spacecraft is an illustration. Its motion and scales are artistic. The observatory retrieves actual Sun–Earth–Moon vectors separately.</p><button className="button primary" onClick={()=>setView(7)}>Start exploring <ArrowRight size={15}/></button></article><article className="about-method glass"><h3>Real data. Transparent limits.</h3><p>NASA Horizons and the existing SPICE workflow provide astronomical geometry. Regional LOLA, LROC and historical Diviner products support available terrain and temperature evidence. Missing factors remain unavailable.</p><h3>A score is not a promise.</h3><p>The five-factor NASA research score and reference-sphere visibility comparison are distinct models. Neither establishes landing safety, a fuel-feasible diversion or a probability of success.</p><h3>Terrain and spacecraft evidence</h3><p>The regional 20 m DEM screens finite horizons. The 5 m footprint product has limited coverage. Apollo LM uncertainty and backup searches retain their published limitations.</p><div className="reference-links"><a href="https://github.com/xiangen-coder/nasa/blob/public-preview/docs/WIDE_TERRAIN.md" target="_blank" rel="noreferrer">Terrain methods & coverage</a><a href="https://ssd-api.jpl.nasa.gov/doc/horizons.html" target="_blank" rel="noreferrer">JPL Horizons</a></div><button className="text-button" onClick={()=>setView(8)}>Review assessment & provenance <ArrowRight size={14}/></button></article></section>}

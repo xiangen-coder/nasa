@@ -2,14 +2,15 @@ import type { Mission, Site } from "../app/types";
 import type { Research } from "../components/LandingResearch";
 import type { ResearchPriority } from "../components/SearchConsole";
 import { solarEnergy, validSolar, type SolarSettings } from "../components/mission-lab/scenario-science";
-import { inComparisonArea, siteKey } from "../components/ComparisonPicker";
+import { comparisonRadiusKm, inComparisonArea, siteKey } from "../components/ComparisonPicker";
+import type { ResearchArea } from "./research-area";
 
 const day = 86_400_000;
 const ephemerisEnd = Date.UTC(2053, 0, 1) - 1000;
 export type PlanBMode = "delay" | "relocate" | "both";
 export type PlanBWindow = "month" | "year" | "custom";
 export type TerrainBounds = Partial<Record<"slope_mean_deg" | "slope_max_deg" | "roughness_m" | "relief_m", number>>;
-export type PlanBSite = { location: Site; bounds?: TerrainBounds; screening_radius_m?: number };
+export type PlanBSite = { location: Site; bounds?: TerrainBounds; screening_radius_m?: number; shadow_distance_m?: number | null };
 export type PlanBShortlist = {
   candidates: PlanBSite[];
   exploration_candidates?: PlanBSite[];
@@ -145,6 +146,7 @@ export function rankOptions(options: PlanBOption[], priority: ResearchPriority, 
   };
   return [...options].sort((a, b) =>
     (mode === "relocate" ? 0 : Date.parse(a.result.mission.start) - Date.parse(b.result.mission.start)) ||
+    (priority === "I" && mode !== "delay" ? (a.shadow_distance_m ?? Infinity) - (b.shadow_distance_m ?? Infinity) : 0) ||
     score(b.result) - score(a.result));
 }
 
@@ -198,9 +200,10 @@ export const initialProgress: PlanBProgress = {
 };
 
 export async function findPlanB({
-  original, mode, dates, equipment, priority, signal, update,
+  original, area, mode, dates, equipment, priority, signal, update,
 }: {
   original: Research;
+  area?: ResearchArea;
   mode: PlanBMode;
   dates: ReturnType<typeof searchDates>;
   equipment: SolarSettings;
@@ -220,17 +223,26 @@ export async function findPlanB({
   };
 
   if (mode !== "delay") {
-    report("Screening terrain within 20 km…");
-    progress.shortlist = await planBRequest<PlanBShortlist>("/api/reliability/plan-b-sites", { mission, limits }, signal, () => true);
+    const centre = area?.centre ?? mission;
+    const radiusKm = area?.radiusKm ?? comparisonRadiusKm;
+    report(`Screening terrain within ${radiusKm} km…`);
+    progress.shortlist = await planBRequest<PlanBShortlist>("/api/reliability/plan-b-sites",
+      { mission: centre, limits, search_radius_m: Math.round(radiusKm * 1000), shadow_focus: priority === "I" }, signal, () => true);
     locations = progress.shortlist.candidates.filter(({ location }, index, candidates) =>
-      siteKey(location) !== siteKey(mission) && inComparisonArea(mission, location) &&
+      siteKey(location) !== siteKey(mission) && inComparisonArea(centre, location, radiusKm) &&
       candidates.findIndex((candidate) => siteKey(candidate.location) === siteKey(location)) === index);
+    if (priority === "I") {
+      for (const site of locations.filter((site) => site.shadow_distance_m == null)) {
+        exploration.set(site, ["No mapped shadow target was found in the research area."]);
+      }
+      locations = locations.filter((site) => site.shadow_distance_m != null);
+    }
     for (const site of progress.shortlist.exploration_candidates ?? []) {
-      if (siteKey(site.location) !== siteKey(mission) && inComparisonArea(mission, site.location))
+      if (siteKey(site.location) !== siteKey(mission) && inComparisonArea(centre, site.location, radiusKm))
         exploration.set(site, ["Available terrain supports comparison. Footprint and uncertainty evidence is incomplete."]);
     }
     for (const site of progress.shortlist.comparison_candidates ?? []) {
-      if (siteKey(site.location) !== siteKey(mission) && inComparisonArea(mission, site.location))
+      if (siteKey(site.location) !== siteKey(mission) && inComparisonArea(centre, site.location, radiusKm))
         exploration.set(site, ["Terrain evidence is incomplete for this nearby comparison point."]);
     }
   }

@@ -13,6 +13,7 @@ let polarMode = false;
 let polarImage;
 const southPole = { name: 'Lunar south pole', lat: -90, lon: 0, type: 'Geographic pole', info: 'Longitude is undefined at the pole.' };
 let landingPoint = null;
+let searchRadiusKm = 0;
 let renderer, fallbackImage, elevation, features = [], missions = [], marks = [], frame = 0, noticeTimer, view;
 const majorNames=new Set(['Tycho','Copernicus','Plato','Clavius','Aristarchus','Kepler','Grimaldi','Theophilus','Ptolemaeus','Orientale','Tsiolkovskiy','Montes Apenninus','Rupes Recta','Vallis Alpes','Bailly','Langrenus','Gassendi','Posidonius','Humboldt','Petavius','Schickard','Schiller','Archimedes','Eratosthenes','Atlas','Hercules','Endymion','Wargentin','Pico','Mons Piton','Reiner Gamma','Hyginus','Triesnecker','Linné','Mare Moscoviense']);
 const isSea=feature=>/^(Mare|Oceanus|Sinus|Lacus|Palus)\b/.test(feature.name);
@@ -141,6 +142,26 @@ function drawLabels() {
 }
 function drawLandingPoint() {
   if (!landingPoint) return;
+  if (searchRadiusKm > 0) {
+    const latitude = landingPoint.latitude * DEG;
+    const distance = searchRadiusKm / 1737.4;
+    const longitude = landingPoint.longitude * DEG;
+    const boundary = Array.from({ length: 121 }, (_, index) => {
+      const bearing = index * Math.PI / 60;
+      const lat = Math.asin(clamp(Math.sin(latitude)*Math.cos(distance) +
+        Math.cos(latitude)*Math.sin(distance)*Math.cos(bearing), -1, 1));
+      const lon = longitude + Math.atan2(Math.sin(bearing)*Math.sin(distance)*Math.cos(latitude),
+        Math.cos(distance)-Math.sin(latitude)*Math.sin(lat));
+      if (Math.abs(landingPoint.latitude) === 90) {
+        return [Math.sign(latitude)*(90-distance/DEG), wrap(landingPoint.longitude + index*3)];
+      }
+      return [lat/DEG, wrap(lon/DEG)];
+    });
+    ctx.save();
+    ctx.setLineDash([4, 3]);
+    drawPath(boundary, '#64dfff', 1.8);
+    ctx.restore();
+  }
   const position = project(landingPoint.latitude, landingPoint.longitude);
   if (!position) return;
   const [x, y] = position;
@@ -239,6 +260,8 @@ window.addEventListener('message', (event) => {
     return;
   }
   if (event.data?.type !== 'lunar-atlas:set-selection') return;
+  const radius = event.data.radiusKm;
+  searchRadiusKm = typeof radius === 'number' && radius >= 0.25 && radius <= 20 ? radius : 0;
   const point = event.data.point;
   if (point === null) setLandingPoint(null);
   else if (typeof point?.name === 'string' && point.name.length <= 100 &&

@@ -7,8 +7,6 @@ export const siteKey = (s: Site) =>
   `${s.latitude.toFixed(6)},${(Math.abs(s.latitude) === 90 ? 0 : s.longitude === 180 ? -180 : s.longitude).toFixed(6)}`;
 
 export const comparisonRadiusKm = 20;
-export const comparisonAreaMessage = `Choose a comparison point within ${comparisonRadiusKm} km of the first landing point.`;
-
 export function comparisonDistanceKm(first: Site, candidate: Site) {
   const radians = Math.PI / 180;
   const latitude = first.latitude * radians;
@@ -19,8 +17,8 @@ export function comparisonDistanceKm(first: Site, candidate: Site) {
   return 2 * 1737.4 * Math.asin(Math.sqrt(Math.min(1, haversine)));
 }
 
-export function inComparisonArea(first: Site, candidate: Site) {
-  return comparisonDistanceKm(first, candidate) <= comparisonRadiusKm + 1e-6;
+export function inComparisonArea(first: Site, candidate: Site, radiusKm = comparisonRadiusKm) {
+  return comparisonDistanceKm(first, candidate) <= radiusKm + 1e-6;
 }
 type Candidate = {
   location: Site;
@@ -53,12 +51,18 @@ export default function ComparisonPicker({
   onChange,
   onAdd,
   busy,
+  radiusKm = comparisonRadiusKm,
+  baseline = mission,
+  limits,
 }: {
   mission: Mission;
   chosen: Site[];
   onChange: (sites: Site[]) => void;
   onAdd: (site: Site) => void;
   busy: boolean;
+  radiusKm?: number;
+  baseline?: Site;
+  limits?: Record<string, number>;
 }) {
   const [suggestions, setSuggestions] = useState<{
     key: string;
@@ -69,9 +73,9 @@ export default function ComparisonPicker({
   const [lat, setLat] = useState("");
   const [lon, setLon] = useState("");
   const [error, setError] = useState("");
-  const key = siteKey(mission);
-  const selected = chosen.filter((s) => siteKey(s) !== key && inComparisonArea(mission, s));
-  const searchKey = JSON.stringify(mission);
+  const key = siteKey(baseline);
+  const selected = chosen.filter((s) => siteKey(s) !== key && inComparisonArea(mission, s, radiusKm));
+  const searchKey = JSON.stringify([mission, radiusKm, limits]);
   const screened = suggestions?.key === searchKey ? suggestions.data : undefined;
   const suggestedKeys = new Set([
     ...(screened?.candidates ?? []),
@@ -80,13 +84,13 @@ export default function ComparisonPicker({
     ...(screened?.inspection_candidates ?? []),
   ].map((candidate) => siteKey(candidate.location)));
   const canAdd = (site: Site) =>
-    !busy && selected.length < 2 && inComparisonArea(mission, site) &&
-    ![mission, ...selected].some((s) => siteKey(s) === siteKey(site));
+    !busy && selected.length < 2 && inComparisonArea(mission, site, radiusKm) &&
+    ![baseline, ...selected].some((s) => siteKey(s) === siteKey(site));
   function add(site: Site) {
-    if (!inComparisonArea(mission, site)) return setError(comparisonAreaMessage);
+    if (!inComparisonArea(mission, site, radiusKm)) return setError(`Choose a point within ${radiusKm} km of the research centre.`);
     if (selected.length >= 2)
       return setError("Choose at most two alternatives.");
-    if ([mission, ...selected].some((s) => siteKey(s) === siteKey(site)))
+    if ([baseline, ...selected].some((s) => siteKey(s) === siteKey(site)))
       return setError("That point is already selected.");
     setError("");
     onAdd(site);
@@ -119,7 +123,7 @@ export default function ComparisonPicker({
       const r = await fetch("/api/reliability/plan-b-sites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mission }),
+        body: JSON.stringify({ mission, limits, search_radius_m: Math.round(radiusKm * 1000) }),
       });
       if (!r.ok)
         throw new Error("Terrain suggestions are unavailable for this search.");
@@ -140,14 +144,14 @@ export default function ComparisonPicker({
       open
     >
       <summary>Choose alternative sites</summary>
-      <p>{mission.name} is the centre of the {comparisonRadiusKm} km search. Added points use the original mission window.</p>
+      <p>{mission.name} is the centre of the {radiusKm} km search. Added points use the original mission window.</p>
       <div className="account-actions">
         <button
           className="button subtle"
           disabled={busy || loading}
           onClick={() => void suggest()}
         >
-          {loading ? "Screening nearby terrain…" : "Suggest points within 20 km"}
+          {loading ? "Screening nearby terrain…" : `Suggest points within ${radiusKm} km`}
         </button>
       </div>
       {screened && (

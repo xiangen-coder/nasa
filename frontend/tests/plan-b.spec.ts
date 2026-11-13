@@ -39,11 +39,22 @@ async function openCompare(page: Page) {
     const { mission } = route.request().postDataJSON();
     await route.fulfill({ json: evidence(mission, 70, true) });
   });
+  await page.route("**/api/research/research-area", async (route) => {
+    const { mission, radius_m } = route.request().postDataJSON();
+    expect(radius_m).toBe(5000);
+    await route.fulfill({ json: {
+      results: [evidence(mission, 70, true)], sampled: 17,
+      counts: { evaluated: 1, limits: 0, missing: 16, unavailable: 0, focus_missing: 0 }, reasons: [],
+    } });
+  });
   await page.goto("/#search", { waitUntil: "domcontentloaded" });
   const configure = page.locator("#landing-search-form");
   await configure.getByLabel("Start date", { exact: true }).fill(start.slice(0, 10));
   await configure.getByLabel("End date", { exact: true }).fill(end.slice(0, 10));
-  await configure.getByRole("button", { name: "Go", exact: true }).click();
+  await configure.getByLabel("Search radius (km)").fill("5");
+  await expect(configure.getByText(/cyan ring marks the 5 km search radius/)).toBeVisible();
+  await configure.getByRole("button", { name: "Find landing point", exact: true }).click();
+  await expect(page.locator(".research-centre-summary")).toContainText("5 km search radius");
   const plan = page.getByRole("article", { name: "What IF" });
   await expect(plan.getByRole("button", { name: "Run What IF" })).toBeVisible();
   return plan;
@@ -73,7 +84,7 @@ test("shows the assessed site's summary, methods, Lunar Journey and Water/Ice Ev
     } } });
   });
   await openCompare(page);
-  await page.getByRole("article", { name: /Pre-result 1:/ }).getByRole("button", { name: "More details" }).click();
+  await page.getByRole("article", { name: /Recommended landing point:/ }).getByRole("button", { name: "More details" }).click();
   const summary = page.locator("#result-summary");
   await expect(summary).toContainText("70.00 / 100");
   await expect(summary).toContainText("80% of nominal weight");
@@ -113,15 +124,12 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
     await route.fulfill({ json: { status: "evaluated", result: evidence(body.mission, candidates.length) } });
   });
   const plan = await openCompare(page);
-  const original = page.getByRole("article", { name: /Pre-result 1:/ });
+  const original = page.getByRole("article", { name: /Recommended landing point:/ });
   const criteria = original.getByRole("region", { name: "Criteria at a glance" });
-  await expect(criteria.getByRole("meter", { name: "Water ice potential" })).toHaveAttribute("value", "0");
+  await expect(criteria.getByRole("meter", { name: "Water ice potential" })).toHaveCount(0);
   await expect(criteria.getByRole("meter", { name: "Temperature" })).toHaveCount(0);
   await expect(criteria.getByText("Unavailable")).toBeVisible();
   await original.getByText("Environment & limits", { exact: true }).click();
-  await expect(original.getByText("0.0% within 100 m · mapped permanent shadow")).toBeVisible();
-  await expect(original.getByText("Water ice presence and abundance are unconfirmed.")).toBeVisible();
-  await expect(original.getByText("0.0 / 100 · 5% nominal weight")).toBeVisible();
   const originalText = await original.innerText();
   await expect(plan.getByRole("radio", { name: "Change date" })).toBeChecked();
   await plan.getByRole("button", { name: "Run What IF" }).click();
@@ -134,7 +142,6 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
   await plan.getByRole("button", { name: /Details for.*2026-10-02/ }).click();
   await expect(plan.getByText("Scores are incomparable because evidence coverage differs.").first()).toBeVisible();
   await plan.getByText("Mission, terrain and ice details", { exact: true }).first().click();
-  await expect(plan.getByText("Water ice potential", { exact: true }).first()).toBeVisible();
   await plan.getByRole("button", { name: /^Details for/ }).first().click();
   expect(await original.innerText()).toBe(originalText);
   await page.setViewportSize({ width: 390, height: 850 });
@@ -144,11 +151,12 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
   expect(mobile!.x + mobile!.width).toBeLessThanOrEqual(390);
 });
 
-test("location and combined searches keep the baseline and enforce the 20 km limit", async ({ page }) => {
+test("location and combined searches keep the baseline and enforce the selected radius", async ({ page }) => {
   const candidates: Mission[] = [];
   const longName = "Near B · " + "SouthPolarRidge".repeat(8);
   await page.route("**/api/reliability/plan-b-sites", async (route) => {
-    const { mission } = route.request().postDataJSON();
+    const { mission, search_radius_m } = route.request().postDataJSON();
+    expect(search_radius_m).toBe(5000);
     await route.fulfill({ json: { searched: 3, overlap_excluded: 0, outside_or_missing: 0,
       failed_limits: 0, passing_terrain_candidates: 3,
       candidates: [
@@ -173,7 +181,7 @@ test("location and combined searches keep the baseline and enforce the 20 km lim
   expect(candidates.every((mission) => Date.parse(mission.start) === Date.parse(start))).toBeTruthy();
   await plan.getByText("Change both", { exact: true }).click();
   await expect(plan.getByText("Choose alternative sites")).toBeHidden();
-  await expect(plan).toContainText("Search centre: Shackleton vicinity");
+  await expect(plan).toContainText("Research centre: Shackleton vicinity");
   await plan.getByLabel("Search window").selectOption("custom");
   await plan.getByLabel("Search end date (UTC)").fill("2028-12-01");
   await plan.getByLabel("Alternate UTC touchdown time").fill("12:30");
@@ -183,7 +191,7 @@ test("location and combined searches keep the baseline and enforce the 20 km lim
   expect(candidates.some((mission) => mission.start.startsWith("2028-12-01"))).toBeTruthy();
   expect(candidates.some((mission) => mission.name === "Far")).toBeFalsy();
   expectMissionSettings(candidates);
-  const original = page.getByRole("article", { name: /Pre-result 1:/ });
+  const original = page.getByRole("article", { name: /Recommended landing point:/ });
   const originalBox = await original.boundingBox();
   const planBox = await plan.boundingBox();
   expect(planBox!.x).toBeGreaterThanOrEqual(originalBox!.x + originalBox!.width);
@@ -199,6 +207,8 @@ test("location and combined searches keep the baseline and enforce the 20 km lim
   await plan.getByRole("button", { name: "Compare selected (3)" }).click();
   const cards = page.getByRole("region", { name: "Comparison cards" });
   await expect(cards.getByRole("article")).toHaveCount(3);
+  await expect(original).toBeVisible();
+  await expect(page.locator(".research-centre-summary")).toContainText("5 km search radius");
   await page.getByRole("checkbox", { name: "Show differences only" }).check();
   await expect(cards.getByRole("meter", { name: "Water ice potential" })).toHaveCount(0);
   await page.getByRole("button", { name: "Back to options" }).click();
@@ -237,11 +247,11 @@ test("suggests comparison points around the first selected site when terrain is 
   await plan.getByText("Change location", { exact: true }).click();
   await expect(plan.getByLabel("Reference point")).toHaveCount(0);
   await plan.getByText("Custom coordinates and terrain suggestions", { exact: true }).click();
-  await plan.getByRole("button", { name: "Suggest points within 20 km" }).click();
+  await plan.getByRole("button", { name: "Suggest points within 5 km" }).click();
   const suggested = plan.getByRole("region", { name: "Nearby comparison points" });
   await expect(suggested).toContainText("Terrain evidence is incomplete");
   await suggested.getByRole("button", { name: "Add for comparison" }).click();
-  const added = page.getByRole("article", { name: "Pre-result 2: Nearby comparison point" });
+  const added = page.getByRole("article", { name: "Alternative 1: Nearby comparison point" });
   await expect(added).toBeVisible();
   await suggested.getByRole("button", { name: "Remove from Compare" }).click();
   await expect(added).toHaveCount(0);
@@ -267,12 +277,12 @@ test("missing evidence blocks recommendations, and cancellation marks a search i
   await forecasts.getByRole("checkbox", { name: /Select.*2026-10-02/ }).check();
   await forecasts.getByRole("button", { name: "Compare selected (2)", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Compare selected plans" })).toBeVisible();
-  const pinned = page.getByRole("article", { name: /Pre-result 2:/ });
+  const pinned = page.getByRole("article", { name: /Alternative 1:/ });
   await expect(pinned).toContainText("WHAT IF FORECAST");
-  await expect(pinned).toContainText("0.0 / 100 · 5% nominal weight");
+  await expect(pinned).toContainText("Mapped hazard fraction is unavailable.");
   await expect(pinned).toContainText("2026-10-02 00:00:00 UTC");
   await expect(page.locator(".pre-result-grid > article").last()).toHaveAttribute("aria-label", "What IF");
-  await expect(page.getByRole("article", { name: /Pre-result 1:/ })).toContainText("2026-10-01 00:00:00 UTC");
+  await expect(page.getByRole("article", { name: /Recommended landing point:/ })).toContainText("2026-10-01 00:00:00 UTC");
   await expect(pinned.getByRole("button", { name: "Remove from Compare" })).toBeVisible();
   const table = page.getByRole("table", { name: "Side-by-side research comparison" });
   await expect(table.getByRole("columnheader", { name: /Shackleton vicinity · 2026-10-02/ })).toBeVisible();

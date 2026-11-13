@@ -167,14 +167,14 @@ test("Configure offers three references and carries a custom map point back", as
   ] }));
   await page.goto("/#search");
   const form = page.locator("#landing-search-form");
-  const locations = form.getByRole("combobox", { name: "Location name" });
+  const locations = form.getByRole("combobox", { name: "Centre name" });
   await expect(locations.locator("option")).toHaveText(["Shackleton vicinity", "de Gerlache vicinity", "Connecting Ridge DEM centre",
     "Apollo 11 · Mare Tranquillitatis", "Artemis IV · Lunar south pole", "Custom location"]);
   await expect(locations.locator('option[value="artemis-iv"]')).toHaveJSProperty("disabled", true);
   await locations.selectOption({ label: "Apollo 11 · Mare Tranquillitatis" });
   await expect(form.getByLabel("Longitude", { exact: true })).toHaveValue("23.473");
   await expect(form.getByRole("link", { name: "Mission source" })).toBeVisible();
-  await expect(form.getByRole("combobox", { name: "Assessment focus" })).toHaveValue("overall");
+  await expect(form.getByRole("combobox", { name: "Research focus" })).toHaveValue("overall");
   await locations.selectOption({ label: "Connecting Ridge DEM centre" });
   await expect(form.getByRole("spinbutton", { name: "Longitude" })).toHaveValue("-137.489552922");
   const atlas = page.frameLocator('iframe[title="Lunar Atlas 3D globe and 2D map"]');
@@ -191,9 +191,18 @@ test("Configure offers three references and carries a custom map point back", as
   await expect(form.getByLabel("Custom location name")).toHaveValue("Custom location");
   await expect(form.getByRole("spinbutton", { name: "Longitude" })).not.toHaveValue("-137.489552922");
   const longitude = Number(await form.getByRole("spinbutton", { name: "Longitude" }).inputValue());
-  await page.route("**/api/research/evaluate", (route) => route.abort());
-  const request = page.waitForRequest((item) => item.url().endsWith("/api/research/evaluate"));
-  await form.getByRole("button", { name: "Go", exact: true }).click();
-  expect((await request).postDataJSON().mission).toMatchObject({ name: "Custom location", longitude });
-  await expect(page.getByRole("article", { name: "Pre-result 1: Custom location" })).toBeVisible();
+  await page.route("**/api/research/research-area-shadow?*", (route) => route.fulfill({
+    json: { shadow_fraction: 0.125, coverage_fraction: 0.75 },
+  }));
+  await form.getByRole("combobox", { name: "Research focus" }).selectOption("I");
+  await expect(form.getByText("12.5% mapped permanent shadow within 20 km")).toBeVisible();
+  await expect(form.getByText(/75.00% of the circle mapped/)).toBeVisible();
+  await page.route("**/api/research/research-area", (route) => route.fulfill({ json: {
+    results: [], sampled: 17, counts: { evaluated: 0, limits: 0, missing: 17, unavailable: 0, focus_missing: 0 }, reasons: [],
+  } }));
+  const request = page.waitForRequest((item) => item.url().endsWith("/api/research/research-area"));
+  await form.getByRole("button", { name: "Find landing point", exact: true }).click();
+  expect((await request).postDataJSON()).toMatchObject({ mission: { name: "Custom location", longitude }, radius_m: 20000, focus: "I" });
+  await expect(page.locator(".research-centre-summary")).toContainText("20 km search radius");
+  await expect(page.getByText("No qualifying landing point found in this research area.")).toBeVisible();
 });

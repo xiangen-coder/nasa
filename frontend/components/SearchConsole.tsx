@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import type { Site } from "../app/types";
 
-export type ResearchPriority = "overall" | "T" | "S" | "C";
+export type ResearchPriority = "overall" | "T" | "S" | "C" | "I";
 type Props = {
   selected: Site; onSelect: (site: Site) => void;
   start: string; end: string; startTime: string; endTime: string;

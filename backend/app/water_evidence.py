@@ -36,11 +36,11 @@ def polar_catalog():
         return {}
 
 
-def open_layer(layer, latitude):
+def open_layer(layer, latitude, *, wide=False):
     hemisphere = "north" if latitude >= 0 else "south"
     key = f"{layer}_{hemisphere}"
     catalog = polar_catalog()
-    product = catalog.get(f"{key}_wide") if layer == "shadow" and 65 <= abs(latitude) < 85 else None
+    product = catalog.get(f"{key}_wide") if layer == "shadow" and (wide or 65 <= abs(latitude) < 85) else None
     product = product or catalog.get(key)
     if product:
         path = product_path(DATA, product)
@@ -112,6 +112,82 @@ def footprint(dataset, product, x, y, radius_m):
         "minimum": float(values[valid].min()),
         "maximum": float(values[valid].max()),
     }
+
+
+def research_shadow(latitude, longitude, radius_m, candidates=()):
+    """Measure a geodesic circle and distances to shadow pixels inside it."""
+    empty = {"coverage_fraction": 0, "shadow_fraction": None, "distances_m": [None] * len(candidates)}
+    if abs(latitude) < 64:
+        return empty
+    try:
+        dataset, product = open_layer("shadow", latitude)
+        if dataset is None:
+            return empty
+        with dataset:
+            forward = Transformer.from_crs(GEO, dataset.crs, always_xy=True)
+            inverse = Transformer.from_crs(dataset.crs, GEO, always_xy=True)
+            x, y = forward.transform(longitude, latitude)
+            row, col = dataset.index(x, y)
+            scale = 1 + (x*x + y*y) / (4 * RADIUS**2)
+            extent = int(np.ceil(radius_m * scale * 1.02 / min(dataset.res))) + 2
+            window = Window(col-extent, row-extent, 2*extent+1, 2*extent+1)
+            values = read_window(dataset, product, window)
+            cx, cy = dataset.xy(row, col)
+            offsets = np.arange(-extent, extent+1)
+            xs, ys = np.meshgrid(cx + offsets*dataset.res[0], cy - offsets*dataset.res[1])
+            lon, lat = inverse.transform(xs, ys)
+            delta_lat = np.radians(lat-latitude)
+            delta_lon = np.radians(lon-longitude)
+            hav = np.sin(delta_lat/2)**2 + np.cos(np.radians(latitude))*np.cos(np.radians(lat))*np.sin(delta_lon/2)**2
+            included = hav <= np.sin(radius_m/(2*RADIUS))**2
+            in_coverage = included & (np.abs(lat) >= 65)
+            missing = in_coverage & ~np.isfinite(values)
+            if missing.any() and min(dataset.res) < 240:
+                wider, wider_product = open_layer("shadow", latitude, wide=True)
+                if wider is not None:
+                    with wider:
+                        if min(wider.res) > min(dataset.res):
+                            transform = Transformer.from_crs(GEO, wider.crs, always_xy=True)
+                            wx, wy = transform.transform(lon[missing], lat[missing])
+                            cols, rows = (~wider.transform) * (wx, wy)
+                            rows, cols = np.floor(rows).astype(int), np.floor(cols).astype(int)
+                            top, left = rows.min(), cols.min()
+                            coarse = read_window(wider, wider_product, Window(
+                                left, top, cols.max()-left+1, rows.max()-top+1,
+                            ))
+                            values[missing] = coarse[rows-top, cols-left]
+            valid = in_coverage & np.isfinite(values)
+            if not valid.any():
+                return empty
+            weights = (1 + (xs**2 + ys**2)/(4*RADIUS**2))**-2
+            shaded = valid & (values == 1)
+            distances = []
+            slon, slat = lon[shaded], lat[shaded]
+            for candidate in candidates:
+                if not slon.size:
+                    distances.append(None)
+                    continue
+                _, _, distances_to_pixels = rasters.GEOD.inv(
+                    np.full_like(slon, candidate.longitude), np.full_like(slat, candidate.latitude), slon, slat,
+                )
+                distances.append(float(np.min(distances_to_pixels)))
+            return {
+                "coverage_fraction": float(weights[valid].sum()/weights[included].sum()),
+                "shadow_fraction": float(weights[shaded].sum()/weights[valid].sum()),
+                "distances_m": distances,
+            }
+    except (OSError, ValueError, KeyError, rasterio.errors.RasterioError):
+        return empty
+
+
+@router.get("/research-area-shadow")
+def research_area_shadow(
+    latitude: float = Query(ge=-90, le=90),
+    longitude: float = Query(ge=-180, le=180),
+    radius_m: int = Query(ge=250, le=20000),
+):
+    result = research_shadow(latitude, longitude, radius_m)
+    return {key: value for key, value in result.items() if key != "distances_m"}
 
 
 @router.get("/water-evidence")

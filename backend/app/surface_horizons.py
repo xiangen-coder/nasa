@@ -59,7 +59,7 @@ def parse_observer(payload, times, target, location, height):
     source = re.search(r'Target body name:.*?\{source:\s*([^}]+)',head)
     return result, {'orientation':pole.group(1).strip() if pole else 'Unknown', 'ephemeris':source.group(1).strip() if source else 'Unknown'}
 
-def surface_observations(mission, height=0):
+def surface_observations(mission, height=0, *, deadline=None):
     times = epochs(mission)
     # Bounded epoch batches include the final endpoint, even for partial intervals.
     identity = {'version':'surface-1','latitude':mission.latitude,'longitude':mission.longitude,
@@ -80,7 +80,7 @@ def surface_observations(mission, height=0):
     try:
         series=[{'time':t.isoformat()} for t in times]
         sources={}
-        deadline=time.monotonic()+110
+        deadline=min(deadline or float("inf"), time.monotonic()+110)
         with httpx.Client(timeout=httpx.Timeout(50,connect=10),follow_redirects=False) as client:
             for body,target in [('sun','10'),('earth','399')]:
                 values=[]

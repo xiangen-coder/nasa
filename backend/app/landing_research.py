@@ -43,6 +43,11 @@ class ResearchRequest(BaseModel):
     mission: Mission
     limits: Limits=Field(default_factory=Limits)
 
+
+class ResearchAreaRequest(ResearchRequest):
+    radius_m: int = Field(ge=250, le=20000)
+    focus: Literal["overall", "T", "S", "C", "I"] = "overall"
+
 def clamp(x): return max(0.,min(100.,float(x)))
 
 def score_factors(terrain,geometry,thermal,hazards,ice,limits):
@@ -116,15 +121,17 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
     available=sum(v['weight'] for v in factors.values() if v['score'] is not None)
     missing=[k for k,v in factors.items() if v['score'] is None]
     provisional=bool(regional or missing or not hazards.get('available') or geometry.get('mode')!='terrain_screened' or thermal.get('available') or ice.get('source',{}).get('interpretation') in ('psr_fraction', 'psr_pixel'))
+    # A thermal or terrain measurement alone does not support a mission score.
+    has_visibility = factors['S']['score'] is not None and factors['C']['score'] is not None
     for f in factors.values():
-        f['effective_weight']=f['weight']/available if available and f['score'] is not None else 0
-        if f['score'] is not None: f['contribution']=f['score']*f['effective_weight']
-    return {'factors':factors,'score':sum(f['contribution'] or 0 for f in factors.values()) if available else None,
+        f['effective_weight']=f['weight']/available if has_visibility and f['score'] is not None else 0
+        if has_visibility and f['score'] is not None: f['contribution']=f['score']*f['effective_weight']
+    return {'factors':factors,'score':sum(f['contribution'] or 0 for f in factors.values()) if has_visibility else None,
             'available_weight':available,'missing':missing,'provisional':provisional,'constraints_failed':failures,'warnings':warnings,
             'safety_status':'fails_configured_limits' if failures else 'not_established',
             'formula':'0.35T + 0.25S + 0.20C + 0.15H + 0.05I; available weights renormalized for provisional scores only.'}
 
-def research(request, *, plan_b=False):
+def research(request, *, plan_b=False, deadline=None):
     mission=request.mission;limits=request.limits
     t=rasters.local_terrain(mission,limits.radius_m,allow_regional=True)
     observer_height = rasters.site_elevation(mission, t)
@@ -152,7 +159,9 @@ def research(request, *, plan_b=False):
     if plan_b and (not screening['available'] or broad_horizon):
         return {'status':'missing', 'reasons':[screening.get('reason') or 'A higher-resolution local terrain skyline is required.']}
     try:
-        geometry=surface_observations(mission,observer_height['value'] if observer_height.get('available') else 0)
+        height = observer_height['value'] if observer_height.get('available') else 0
+        geometry = (surface_observations(mission, height) if deadline is None
+                    else surface_observations(mission, height, deadline=deadline))
         for row in geometry['series']:
             profile=screening['profile']
             for body in ['sun','earth']:
@@ -196,12 +205,79 @@ def evaluate(request:ResearchRequest):
 @router.post('/plan-b')
 def evaluate_plan_b(request:ResearchRequest):
     check_research_intervals(request)
-    result=research(request,plan_b=True)
+    return plan_b_outcome(research(request, plan_b=True))
+
+
+def plan_b_outcome(result):
     if 'status' in result:
         return result
     if not result['geometry']['available']:
         return {'status':'unavailable', 'reasons':[result['geometry']['reason']]}
     return {'status':'evaluated', 'result':result}
+
+
+@router.post('/research-area')
+def find_research_area(request: ResearchAreaRequest):
+    from .water_evidence import research_shadow
+
+    check_research_intervals(request)
+    centre = request.mission
+    candidates = [centre]
+    for fraction in (0.45, 0.95):
+        for bearing in range(0, 360, 45):
+            lon, lat, _ = rasters.GEOD.fwd(centre.longitude, centre.latitude, bearing, request.radius_m*fraction)
+            if rasters.GEOD.inv(centre.longitude, centre.latitude, lon, lat)[2] <= request.radius_m:
+                candidates.append(centre.model_copy(update={
+                    "latitude": lat, "longitude": lon, "name": f"Candidate {len(candidates)}",
+                }))
+
+    counts = dict(evaluated=0, limits=0, missing=0, unavailable=0, focus_missing=0)
+    qualified = []
+    reasons = set()
+    deadline = time.monotonic() + 110
+    for candidate in candidates:
+        if time.monotonic() >= deadline:
+            counts["unavailable"] += 1
+            reasons.add("The search time limit was reached before all points could be evaluated.")
+            continue
+        assessment = research(
+            ResearchRequest(mission=candidate, limits=request.limits),
+            plan_b=True,
+            deadline=min(deadline, time.monotonic() + 25),
+        )
+        outcome = plan_b_outcome(assessment)
+        status = outcome["status"]
+        counts[status] += 1
+        reasons.update(outcome.get("reasons", ()))
+        if status == "evaluated":
+            qualified.append((candidate, outcome["result"]))
+
+    distances = [None]*len(qualified)
+    if request.focus == "I" and qualified:
+        distances = research_shadow(
+            centre.latitude, centre.longitude, request.radius_m, [site for site, _ in qualified],
+        )["distances_m"]
+        counts["focus_missing"] = sum(distance is None for distance in distances)
+    ranked = [(result, distance) for (_, result), distance in zip(qualified, distances)
+              if request.focus != "I" or distance is not None]
+
+    def ranking(item):
+        result, distance = item
+        overall = result["score"] if result["score"] is not None else -1
+        if request.focus == "I":
+            return -distance, overall
+        if request.focus == "overall":
+            return overall, overall
+        factor = result["factors"][request.focus]["score"]
+        return (factor if factor is not None else -1), overall
+
+    ranked.sort(key=ranking, reverse=True)
+    return {
+        "counts": counts,
+        "sampled": len(candidates),
+        "results": [result for result, _ in ranked[:3]],
+        "reasons": sorted(reasons),
+    }
 
 @router.get('/terrain')
 def terrain(latitude:float=Query(ge=-90,le=90),longitude:float=Query(ge=-180,le=180),radius_m:int=Query(default=100,ge=25,le=500)):
