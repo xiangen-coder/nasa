@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Research } from "./LandingResearch";
+import { quickMapSiteUrl } from "../lib/quickmap";
 
 const num = (value: number, unit: string) =>
   value.toLocaleString("en-GB", { maximumFractionDigits: 2 }) + unit;
@@ -107,11 +108,11 @@ export default function ResearchTerrainDetails({
           Inspect PSR imagery
         </button>
         <a
-          href="https://quickmap.lroc.im-ldi.com/"
+          href={quickMapSiteUrl(result.mission)}
           target="_blank"
           rel="noreferrer"
         >
-          Open LROC QuickMap
+          View site in LROC QuickMap
         </a>
       </div>
       {imagery && !imageError && (
@@ -131,8 +132,7 @@ export default function ResearchTerrainDetails({
       )}
       {imageError && (
         <p className="info">
-          LROC preview unavailable. Use QuickMap and enter the coordinates shown
-          in the result.
+          LROC preview unavailable. Open the selected site in QuickMap to inspect available imagery.
         </p>
       )}
     </>

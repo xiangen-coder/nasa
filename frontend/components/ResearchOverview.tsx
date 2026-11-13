@@ -24,6 +24,7 @@ import EnergyOnlyCharts from "./mission-lab/EnergyOnlyCharts";
 import EquipmentControls from "./mission-lab/EquipmentControls";
 import { solarEnergy, type SolarSettings } from "./mission-lab/scenario-science";
 import type { Site } from "../app/types";
+import { quickMapSiteUrl } from "../lib/quickmap";
 import {
   inComparisonArea,
   siteKey,
@@ -122,12 +123,22 @@ export default function ResearchOverview({
           <span className="eyebrow">LANDING ASSESSMENT</span>
           <h1>{result?.mission.name || "Mission results"}</h1>
           {result && (
-            <p>
-              {Math.abs(result.mission.latitude).toFixed(4)}°{" "}
-              {result.mission.latitude < 0 ? "S" : "N"} ·{" "}
-              {Math.abs(result.mission.longitude).toFixed(4)}°{" "}
-              {result.mission.longitude < 0 ? "W" : "E"}
-            </p>
+            <>
+              <p>
+                {Math.abs(result.mission.latitude).toFixed(4)}°{" "}
+                {result.mission.latitude < 0 ? "S" : "N"} ·{" "}
+                {Math.abs(result.mission.longitude).toFixed(4)}°{" "}
+                {result.mission.longitude < 0 ? "W" : "E"}
+              </p>
+              <a
+                className="button subtle"
+                href={quickMapSiteUrl(result.mission)}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View site in LROC QuickMap <ArrowUpRight size={14} aria-hidden="true" />
+              </a>
+            </>
           )}
         </div>
         <button
