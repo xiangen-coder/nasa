@@ -551,6 +551,7 @@ export default function PreliminaryComparison({
           <span>[{area.centre.name}]</span>
           <span>({area.centre.latitude.toFixed(4)}°, {area.centre.longitude.toFixed(4)}°)</span>
           <span>{area.radiusKm} km search radius</span>
+          <span>Mission {utc(area.centre.start)} → {utc(area.centre.end)}</span>
         </div>
       )}
       {areaResult && (
