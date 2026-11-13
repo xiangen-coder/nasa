@@ -119,6 +119,7 @@
 .research-centre-summary {
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
   align-items: baseline;
   gap: 6px 12px;
   border: 1px solid var(--line);
