@@ -1,5 +1,5 @@
 "use client";
-import { ArrowUpRight, ClipboardList, Eye, Layers, Mountain, Route, Scale, Sun, Thermometer, Zap } from "lucide-react";
+import { ArrowUpRight, ClipboardList, Eye, Layers, Mountain, Route, Save, Sun, Thermometer, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   Line,
@@ -52,8 +52,8 @@ const sections = [
   ["Energy", "Energy", Zap],
   ["Terrain", "Terrain", Mountain],
   ["Environment", "Environment", Thermometer],
-  ["Comparison", "Comparison", Scale],
   ["Methods", "Methods, sources & limitations", Layers],
+  ["Save", "Save", Save],
 ] as const;
 
 function SectionHeading({ index, subtitle }: { index: number; subtitle?: string }) {
@@ -81,7 +81,7 @@ export default function ResearchOverview({
   comparisonOrigin,
   comparisonRadiusKm,
   onNavigate,
-  onOpenReport,
+  onSaveMission,
   onAddComparison,
   onNewSearch,
   equipment,
@@ -95,7 +95,7 @@ export default function ResearchOverview({
   comparisonOrigin: Site;
   comparisonRadiusKm?: number;
   onNavigate: (view: number) => void;
-  onOpenReport: () => void;
+  onSaveMission: (mission: Research['mission']) => void;
   onAddComparison: (site: Site) => void;
   onNewSearch: () => void;
   equipment: SolarSettings;
@@ -685,26 +685,8 @@ export default function ResearchOverview({
             </div>
             <WaterEvidence location={result.mission} />
           </section>
-          <section
-            id="result-comparison"
-            tabIndex={-1}
-            className="result-section"
-          >
-            <SectionHeading index={6} />
-            <div className="account-actions">
-              <button
-                className="button subtle"
-                onClick={() => onAddComparison(result.mission)}
-              >
-                Show this point in comparison
-              </button>
-              <button className="button primary" onClick={onOpenReport}>
-                Open mission report
-              </button>
-            </div>
-          </section>
           <section id="result-methods" tabIndex={-1} className="result-section">
-            <SectionHeading index={7} />
+            <SectionHeading index={6} />
             <div className="research-result-columns">
               <div>
                 <p>
@@ -772,6 +754,17 @@ export default function ResearchOverview({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </section>
+          <section id="result-save" tabIndex={-1} className="result-section">
+            <SectionHeading index={7} />
+            <div className="account-actions">
+              <button className="button subtle" onClick={() => onNavigate(11)}>
+                Back to comparison
+              </button>
+              <button className="button primary" onClick={() => onSaveMission(result.mission)}>
+                Save mission
+              </button>
             </div>
           </section>
         </>

@@ -530,7 +530,8 @@ export default function Page() {
     if (labOpen) setLabVisited(true);
   }, [labOpen]);
   const researchActions=useRef<ResearchActions|null>(null);
-  const setView=(next:number)=>{if(!viewPaths[next]||next===6)return;setViewState(next);if(location.hash!==`#${viewPaths[next]}`)location.hash=viewPaths[next];window.scrollTo({top:0,behavior:"instant"});};
+  const [missionToSave, setMissionToSave] = useState<SearchRecord | null>(null);
+  const setView=(next:number)=>{if(!viewPaths[next]||next===6)return;if(next!==13)setMissionToSave(null);setViewState(next);if(location.hash!==`#${viewPaths[next]}`)location.hash=viewPaths[next];window.scrollTo({top:0,behavior:"instant"});};
   const pendingSearchFocus = useRef(false);
   function openSearchForm() {
     pendingSearchFocus.current = true;
@@ -950,10 +951,13 @@ export default function Page() {
               setView(8);
             }} onSearch={()=>setView(7)} onCancel={cancelComparison}/>}
           {view===11&&<ResearchComparisonReport key={missionKey(comparisonMission)} mission={comparisonMission} alternatives={searchRecord.alternatives} comparison={comparisonState} scenarios={comparisonScenarios} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} equipment={researchEquipment}/>}
-          {view===13&&<Account record={searchRecord} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority);setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
+          {view===13&&<Account record={missionToSave ?? searchRecord} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority);setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
           {education&&<PortableEducation animate={preferences.animate}/>}
           {labVisited&&<div hidden={!labOpen}><MissionLab mode="professional" classroomNav={null} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
-          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={comparisonOrigin} comparisonRadiusKm={comparisonRadius} onNavigate={setView} onOpenReport={openComparisonReport} onAddComparison={addComparisonSite} busy={researchBusy || !!activeArea?.busy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={researchPriority} animate={preferences.animate} assessmentError={comparisonState?.error}/>}
+          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={comparisonOrigin} comparisonRadiusKm={comparisonRadius} onNavigate={setView} onSaveMission={(mission) => {
+            setMissionToSave({ ...searchRecord, mission, alternatives: [] });
+            setView(13);
+          }} onAddComparison={addComparisonSite} busy={researchBusy || !!activeArea?.busy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={researchPriority} animate={preferences.animate} assessmentError={comparisonState?.error}/>}
           <div hidden={![0,1,3].includes(view)}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>
