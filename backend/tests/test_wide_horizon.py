@@ -19,7 +19,12 @@ def test_bundled_moonwide_evidence(monkeypatch):
     site = Location(latitude=-74.4726, longitude=145.7015)
     assert round(r.temperature_range(site)['minimum_k'], 1) == 72.2
     assert not r.ice_evidence(site, 100)['available']
-    assert not r.local_terrain(site, 100, allow_regional=True)['available']
+    terrain = r.local_terrain(site, 100, allow_regional=True)
+    assert terrain['available'] and terrain['preliminary_only']
+    assert terrain['resolution_m'] == 10 and terrain['coverage'] == 1
+    assert not r.local_terrain(site, 100)['available']
+    assert not r.local_terrain(Location(latitude=-74.52, longitude=145.7015), 100,
+                               allow_regional=True)['available']
 
 def test_wide_horizon_covers_site_without_local_dem(tmp_path,monkeypatch):
  p=tmp_path/'wide.tif'

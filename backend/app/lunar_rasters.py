@@ -26,7 +26,8 @@ SOURCES['horizon_dem']='https://pgda.gsfc.nasa.gov/products/90'
 SOURCES['global_dem']='https://ode.rsl.wustl.edu/mercury/pagehelp/Content/Missions_Instruments/Lunar%20Reconnaissance%20Orbiter%20%28LRO%29/LOLA/GDR/GDRDEM.htm'
 SOURCES['temperature_min_global'] = SOURCES['temperature_min']
 SOURCES['temperature_max_global'] = SOURCES['temperature_max']
-ELEVATION_PRODUCTS = ('lola', 'horizon_dem', 'global_dem')
+SOURCES['kaguya_dem'] = 'https://darts.isas.jaxa.jp/en/datasets/sln-l-tc-5-sldem2013-v1.0'
+ELEVATION_PRODUCTS = ('lola', 'horizon_dem', 'global_dem', 'kaguya_dem')
 RASTER_ERRORS = (OSError, ValueError, KeyError, rasterio.errors.RasterioError)
 POLAR_HORIZON_URL = 'https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_20MPP_ADJ.TIF'
 POLAR_SHADOW_URL = 'https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ.TIF'
@@ -180,7 +181,7 @@ def registry():
         try:
             bundled = json.loads(preview.read_text())['products']
             for kind in ('ice', 'global_dem', 'temperature_min', 'temperature_max',
-                         'temperature_min_global', 'temperature_max_global'):
+                         'temperature_min_global', 'temperature_max_global', 'kaguya_dem'):
                 product = bundled.get(kind)
                 local = products.get(kind)
                 same_temperature_source = (
@@ -350,6 +351,11 @@ def local_terrain(location, radius_m=100, *, allow_regional=False):
             regional = {'available': False, 'reason': 'NASA LOLA elevation could not supply a complete terrain neighbourhood.'}
     if regional['available']:
         return {**regional, 'coverage_type': 'regional', 'footprint_reason': footprint['reason']}
+    if 'kaguya_dem' in registry()[1]:
+        kaguya = _terrain_window('kaguya_dem', location, radius_m)
+        if kaguya['available']:
+            return {**kaguya, 'coverage_type': 'regional', 'footprint_reason': footprint['reason'],
+                    'preliminary_only': True}
     return {**footprint, 'reason': f"{footprint['reason']} Regional window: {regional['reason']}"}
 
 

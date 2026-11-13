@@ -317,6 +317,22 @@
       "resolution_m": 15161.4,
       "observation_period": "2009-07-05 to 2015-04-01",
       "quality": "Historical 0.5-degree grid (about 15 km at the equator). A regional temperature range, not a forecast or footprint measurement."
+    },
+    "kaguya_dem": {
+      "name": "ISAS/JAXA Kaguya SLDEM2013 (local LOLA alignment)",
+      "path": "kaguya_s74e145_local.tif",
+      "units": "m",
+      "frame": "MOON_ME_DE421",
+      "reference": "radius_minus_1737400m",
+      "resolution_m": 10,
+      "source_url": "https://data.darts.isas.jaxa.jp/pub/pds3/sln-l-tc-5-sldem2013-v1.0/lon145/data/DTM_MAP_01_S74E145S75E146SC.img",
+      "label_url": "https://data.darts.isas.jaxa.jp/pub/pds3/sln-l-tc-5-sldem2013-v1.0/lon145/data/DTM_MAP_01_S74E145S75E146SC.lbl",
+      "documentation": "https://darts.isas.jaxa.jp/en/datasets/sln-l-tc-5-sldem2013-v1.0",
+      "alignment_reference": "https://pgda.gsfc.nasa.gov/products/90",
+      "source_sha256": "8d33b887d92adbeb99bfbb9b2f76adb5332cab4146b767ff528990314885fe98",
+      "sha256": "a2a8d8abf68dcf09f369142089085bbda01e09846099f26d46509ecf05dafd74",
+      "processing": "Local 2 km crop aligned to adjusted 60 m LOLA. Applied -25 m x and +10 m y in the south polar projection and -1.81 m in height. Bilinearly resampled to a local 10 m grid.",
+      "quality": "Preliminary terrain screening. Agreement with 60 m LOLA does not independently validate footprint slopes or small hazards."
     }
   },
   "missing": {}

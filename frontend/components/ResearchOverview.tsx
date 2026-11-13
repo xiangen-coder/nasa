@@ -578,8 +578,9 @@ export default function ResearchOverview({
                     : result.factors.T?.explanation || terrain?.reason}
                 </p>
                 {terrain?.source?.source_url && (
-                  <a href={terrain.source.source_url}>Elevation dataset</a>
+                  <a href={terrain.source.source_url}>{terrain.source.name || "Elevation dataset"}</a>
                 )}
+                {result.factors.T?.quality === "preliminary Kaguya screening" && <p>{terrain?.source?.quality}</p>}
                 {result.factors.T?.score == null &&
                   inComparisonArea(comparisonOrigin, terrainReference) &&
                   siteKey(result.mission) !== siteKey(terrainReference) && (

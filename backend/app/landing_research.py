@@ -64,6 +64,9 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
             if regional:
                 factors['T']['quality']='regional DEM screening'
                 factors['T']['explanation']+=f" Regional screening uses {t['resolution_m']:g} m pixels; finer hazards and footprint slopes are unresolved."
+            if t.get('preliminary_only'):
+                factors['T']['quality'] = 'preliminary Kaguya screening'
+                factors['T']['explanation'] += ' ' + t['source']['quality']
         else:
             reason = f"The terrain raster has {t['resolution_m']:g} m pixels. The configured limit is {limits.max_resolution_m:g} m."
             factors['T']['explanation'] = reason
@@ -133,6 +136,8 @@ def research(request, *, plan_b=False):
         missing=[]
         if topography['factors']['T']['score'] is None:
             missing.append(topography['factors']['T']['explanation'])
+        elif t.get('preliminary_only'):
+            missing.append('Kaguya supports preliminary terrain screening. Plan B requires independently verified footprint terrain.')
         if not hazards['available']:
             missing.append('Mapped hazard fraction is unavailable.')
         if not thermal['available']:
@@ -207,7 +212,7 @@ def terrain(latitude:float=Query(ge=-90,le=90),longitude:float=Query(ge=-180,le=
     return {'location':location.model_dump(),'radius_m':radius_m,'terrain':local,'regional_elevation':elevation,
             'coordinate_note':'Diagnostic offsets follow projected raster axes, centred on the nearest pixel; grid up is not necessarily geographic north.',
             'limitations':['Elevation is metres above the 1737400 m lunar reference sphere in MOON_ME/DE421.',
-                'Slope, relief and detrended roughness use the native-resolution neighbourhood; the displayed grid is subsampled.',
+                'Slope, relief and detrended roughness use the assessment raster grid; the displayed grid is subsampled.',
                 'Regional slope and roughness screen the wider neighbourhood. Footprint-scale and subpixel hazards require finer data.']}
 
 @router.get('/datasets')
