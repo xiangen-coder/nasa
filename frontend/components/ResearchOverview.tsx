@@ -179,42 +179,35 @@ export default function ResearchOverview({
       )}
       <div ref={content} className="result-content">
       <header className="research-results-heading">
-        <div>
-          <span className="eyebrow">LANDING ASSESSMENT</span>
-          <h1>{result?.mission.name || "Mission results"}</h1>
-          {result && (
-            <>
-              <p>
-                {Math.abs(result.mission.latitude).toFixed(4)}°{" "}
-                {result.mission.latitude < 0 ? "S" : "N"} ·{" "}
-                {Math.abs(result.mission.longitude).toFixed(4)}°{" "}
-                {result.mission.longitude < 0 ? "W" : "E"}
-              </p>
-              <a
-                className="button subtle"
-                href={quickMapSiteUrl(result.mission)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View site in LROC QuickMap <ArrowUpRight size={14} aria-hidden="true" />
-              </a>
-            </>
-          )}
+        <div className="result-title-row">
+          <div>
+            <span className="eyebrow">LANDING ASSESSMENT</span>
+            <h1>{result?.mission.name || "Mission results"}</h1>
+          </div>
+          <button type="button" className="button primary new-search" onClick={onNewSearch}>
+            New search
+          </button>
         </div>
-        <button
-          type="button"
-          className="button primary new-search"
-          onClick={onNewSearch}
-        >
-          New search
-        </button>
+        {result && (
+          <div className="result-title-row result-title-details">
+            <p>
+              <span>
+                {Math.abs(result.mission.latitude).toFixed(4)}° {result.mission.latitude < 0 ? "S" : "N"} ·{" "}
+                {Math.abs(result.mission.longitude).toFixed(4)}° {result.mission.longitude < 0 ? "W" : "E"}
+              </span>
+              <span>{utc(result.mission.start)} → {utc(result.mission.end)}</span>
+            </p>
+            <a className="button subtle" href={quickMapSiteUrl(result.mission)} target="_blank" rel="noreferrer">
+              View site in LROC QuickMap <ArrowUpRight size={14} aria-hidden="true" />
+            </a>
+          </div>
+        )}
       </header>
       {result ? (
         <>
           <section id="result-summary" tabIndex={-1} className="result-section">
             <SectionHeading index={0} />
             <p>
-              {utc(result.mission.start)} → {utc(result.mission.end)} UTC ·{" "}
               {result.mission.interval_minutes}-minute samples ·{" "}
               {result.geometry.mode === "terrain_screened"
                 ? "Terrain screened"
@@ -233,15 +226,36 @@ export default function ResearchOverview({
                   result.score != null && result.provisional ? "Provisional" : undefined,
                 ],
                 [
-                  "Scoring evidence",
-                  `${(result.available_weight * 100).toFixed(0)}% of nominal weight`,
-                  result.missing.length > 0
-                    ? `Missing ${result.missing.map((key) => factorLabels[key] ?? key).join(", ")}`
-                    : undefined,
+                  "Sunlight availability",
+                  value(result.factors.S?.score, "%"),
+                  result.geometry.sunlight_hours != null
+                    ? `${value(result.geometry.sunlight_hours, " h")} of sunlight during the mission window.`
+                    : "Share of the mission window with the Sun above the applicable horizon.",
                 ],
                 [
-                  "Landing safety",
-                  result.constraints_failed.length ? "Configured limits exceeded" : "Not established",
+                  "Earth visibility",
+                  value(result.factors.C?.score, "%"),
+                  "Share with direct Earth geometry above the configured clearance.",
+                ],
+                [
+                  "Simultaneous visibility",
+                  value(metrics?.simultaneous_pct, "%"),
+                  "Share with both sunlight and Earth visibility.",
+                ],
+                [
+                  "Longest darkness",
+                  value(metrics?.longest_darkness_hours, " h"),
+                  "Longest continuous interval without direct sunlight.",
+                ],
+                [
+                  "Longest Earth outage",
+                  value(metrics?.longest_blackout_hours, " h"),
+                  "Longest continuous interval below the Earth visibility threshold.",
+                ],
+                [
+                  "Estimated solar energy",
+                  value(energy?.total_kwh, " kWh"),
+                  "Panel output over the mission window using the assumptions in Energy.",
                 ],
                 terrain?.radius_m != null
                   ? ["Terrain sampling radius", value(terrain.radius_m, " m")]
@@ -277,42 +291,21 @@ export default function ResearchOverview({
                       [temperature.source?.name, temperature.source?.observation_period, temperature.source?.quality].filter(Boolean).join(" · ")]
                   : null,
                 [
-                  "Sunlight availability",
-                  value(result.factors.S?.score, "%"),
-                  result.geometry.sunlight_hours != null
-                    ? `${value(result.geometry.sunlight_hours, " h")} of sunlight during the mission window.`
-                    : "Share of the mission window with the Sun above the applicable horizon.",
+                  "Scoring evidence",
+                  `${(result.available_weight * 100).toFixed(0)}% of nominal weight`,
+                  result.missing.length > 0
+                    ? `Missing ${result.missing.map((key) => factorLabels[key] ?? key).join(", ")}`
+                    : undefined,
                 ],
                 [
-                  "Earth visibility",
-                  value(result.factors.C?.score, "%"),
-                  "Share with direct Earth geometry above the configured clearance.",
-                ],
-                [
-                  "Simultaneous visibility",
-                  value(metrics?.simultaneous_pct, "%"),
-                  "Share with both sunlight and Earth visibility.",
-                ],
-                [
-                  "Longest darkness",
-                  value(metrics?.longest_darkness_hours, " h"),
-                  "Longest continuous interval without direct sunlight.",
-                ],
-                [
-                  "Longest Earth outage",
-                  value(metrics?.longest_blackout_hours, " h"),
-                  "Longest continuous interval below the Earth visibility threshold.",
-                ],
-                [
-                  "Estimated solar energy",
-                  value(energy?.total_kwh, " kWh"),
-                  "Panel output over the mission window using the assumptions in Energy.",
+                  "Landing safety",
+                  result.constraints_failed.length ? "Configured limits exceeded" : "Not established",
                 ],
               ].map((metric) => {
                 if (!metric) return null;
                 const [label, reading, explanation] = metric;
                 return (
-                  <article key={label} className={label === "Estimated solar energy" ? "result-summary-energy" : undefined}>
+                  <article key={label}>
                     <h3>{label}</h3>
                     <strong>{reading}</strong>
                     {explanation && <p>{explanation}</p>}

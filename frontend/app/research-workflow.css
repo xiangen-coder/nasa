@@ -653,9 +653,20 @@
   gap: 10px;
   margin-top: 10px;
 }
-.result-terrain-evidence > :only-child,
-.result-summary-energy { grid-column: 1 / -1; }
+.result-terrain-evidence > :only-child { grid-column: 1 / -1; }
 .result-lroc-inspection .astro-camera-controls { margin-top: 8px; }
 @media (max-width: 700px) {
   .result-terrain-evidence { grid-template-columns: minmax(0, 1fr); }
 }
+
+.research-results-heading { display: grid; gap: 9px; }
+.result-title-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.result-title-row > div { min-width: 0; }
+.result-title-details { align-items: center; flex-wrap: wrap; }
+.result-title-details p { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; }
+.result-title-details .button { margin-inline-start: auto; flex: none; }
