@@ -107,6 +107,7 @@ export default function PreliminaryComparison({
   ];
   const selected = state?.results.find((r) => sameMission(r.mission, mission));
   const hasResults = !area || !!areaResult?.results.length;
+  const searchingArea = !!area && !areaResult && !!state?.busy;
   const hasRecommendation = hasResults && areaResult?.recommended !== false;
   const assessments = cards.map(
     ({ site, scenario }) =>
@@ -545,8 +546,8 @@ export default function PreliminaryComparison({
       {area && (
         <div className="research-centre-summary glass">
           <strong>Research area centre</strong>
-          <span>{area.centre.name}</span>
-          <span>{area.centre.latitude.toFixed(4)}°, {area.centre.longitude.toFixed(4)}°</span>
+          <span>[{area.centre.name}]</span>
+          <span>({area.centre.latitude.toFixed(4)}°, {area.centre.longitude.toFixed(4)}°)</span>
           <span>{area.radiusKm} km search radius</span>
         </div>
       )}
@@ -568,7 +569,7 @@ export default function PreliminaryComparison({
       {state?.busy && (
         <p role="status" className="info">
           {state.progress || "Preparing the comparison…"}{" "}
-          {area && !areaResult ? "Pre-Result cards will appear when the search returns." : "Cards update as assessments finish."}
+          Cards update as assessments finish.
         </p>
       )}
       {state?.error && (
@@ -580,6 +581,20 @@ export default function PreliminaryComparison({
         <p className="info" role="status">
           {notice}
         </p>
+      )}
+      {searchingArea && (
+        <div className="pre-result-grid what-if-browsing pre-result-loading">
+          <article className="pre-result-card glass" aria-labelledby="pending-pre-result">
+            <header className="pre-result-heading">
+              <h2 id="pending-pre-result">Pre-Result 1</h2>
+            </header>
+            <p role="status"><span className="pre-result-spinner" aria-hidden="true" />Searching the research area…</p>
+          </article>
+          <article className="pre-result-card glass plan-b-card" aria-labelledby="pending-what-if">
+            <h2 id="pending-what-if">What IF</h2>
+            <p>Available once the initial assessment is ready.</p>
+          </article>
+        </div>
       )}
       <div hidden={!hasResults} className="what-if-workspace" ref={workspace} tabIndex={-1}>
         {comparing ? (
@@ -745,9 +760,11 @@ export default function PreliminaryComparison({
           </>
         )}
       </div>
-      <p className="preliminary-disclosure">
-        Provisional research scores. See More details for evidence and coverage.
-      </p>
+      {hasResults && (
+        <p className="preliminary-disclosure">
+          Provisional research scores. See More details for evidence and coverage.
+        </p>
+      )}
     </section>
   );
 }
