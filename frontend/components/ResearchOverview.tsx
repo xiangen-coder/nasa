@@ -179,29 +179,29 @@ export default function ResearchOverview({
       )}
       <div ref={content} className="result-content">
       <header className="research-results-heading">
-        <div className="result-title-row">
-          <div>
-            <span className="eyebrow">LANDING ASSESSMENT</span>
-            <h1>{result?.mission.name || "Mission results"}</h1>
-          </div>
-          <button type="button" className="button primary new-search" onClick={onNewSearch}>
-            New search
-          </button>
-        </div>
-        {result && (
-          <div className="result-title-row result-title-details">
-            <p>
+        <div className="result-title-copy">
+          <span className="eyebrow">LANDING ASSESSMENT</span>
+          <h1>{result?.mission.name || "Mission results"}</h1>
+          {result && (
+            <p className="result-title-details">
               <span>
                 {Math.abs(result.mission.latitude).toFixed(4)}° {result.mission.latitude < 0 ? "S" : "N"} ·{" "}
                 {Math.abs(result.mission.longitude).toFixed(4)}° {result.mission.longitude < 0 ? "W" : "E"}
               </span>
               <span>{utc(result.mission.start)} → {utc(result.mission.end)}</span>
             </p>
+          )}
+        </div>
+        <div className="result-title-actions">
+          <button type="button" className="button primary new-search" onClick={onNewSearch}>
+            New search
+          </button>
+          {result && (
             <a className="button subtle" href={quickMapSiteUrl(result.mission)} target="_blank" rel="noreferrer">
               View site in LROC QuickMap <ArrowUpRight size={14} aria-hidden="true" />
             </a>
-          </div>
-        )}
+          )}
+        </div>
       </header>
       {result ? (
         <>
