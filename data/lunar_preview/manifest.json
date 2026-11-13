@@ -33,19 +33,19 @@
       "observation_period": "2009-07-05 to 2019-02-17",
       "documentation": "https://www.diviner.ucla.edu/data",
       "quality": "Historical summer bolometric brightness-temperature composite; not a mission forecast.",
-      "path": "temperature_min.tif",
-      "sha256": "d94e02a64f19e801d7c05b6afef034c211f8995812598625b7a5d1894753b8fa",
+      "path": "temperature_min_polar.tif",
+      "sha256": "f7f4b11d47722808661cd933c152e90a0cf578b00a1cd9a3a5b5a2117be19882",
       "source_sha256": "793d4a83c111b8a603f7b726ce5f7efae02e21e19f2589595922b348286d7721",
       "source_url": "https://luna1.diviner.ucla.edu/~jpierre/diviner/level4_polar/additional_maps/polar_south_80_summer_min-float.tif",
       "resolution_m": 240.03595736281088,
       "retrieved_at": "2026-11-05T07:43:30.907664+00:00",
       "status": "processed",
-      "coverage_note": "Native-resolution subset for public demo; outside coverage is unavailable. Run prepare_lunar_research.py for full source products.",
+      "coverage_note": "Full native south polar product, nominally 80\u00b0S to the pole. Native gaps remain unavailable.",
       "projected_bounds_m": [
-        -60000,
-        -60000,
-        60000,
-        60000
+        -304005.54,
+        -304005.54,
+        304005.54,
+        304005.54
       ]
     },
     "temperature_max": {
@@ -56,19 +56,19 @@
       "observation_period": "2009-07-05 to 2019-02-17",
       "documentation": "https://www.diviner.ucla.edu/data",
       "quality": "Historical summer bolometric brightness-temperature composite; not a mission forecast.",
-      "path": "temperature_max.tif",
-      "sha256": "153e27ed751c671d10229ead7ff537a510784bb3813bfba38981c46dc8091cd0",
+      "path": "temperature_max_polar.tif",
+      "sha256": "af0d286a2d37a2aa0d4a3168875b62d6a1ba70b9cd4b2552d9e94930c2a48585",
       "source_sha256": "ba4a1b6275402d6b0c1000ceb0208ad63d37665afaeb902ab6f108c67c0a0c67",
       "source_url": "https://luna1.diviner.ucla.edu/~jpierre/diviner/level4_polar/additional_maps/polar_south_80_summer_max-float.tif",
       "resolution_m": 240.03595736281088,
       "retrieved_at": "2026-11-05T07:43:33.461820+00:00",
       "status": "processed",
-      "coverage_note": "Native-resolution subset for public demo; outside coverage is unavailable. Run prepare_lunar_research.py for full source products.",
+      "coverage_note": "Full native south polar product, nominally 80\u00b0S to the pole. Native gaps remain unavailable.",
       "projected_bounds_m": [
-        -60000,
-        -60000,
-        60000,
-        60000
+        -304005.54,
+        -304005.54,
+        304005.54,
+        304005.54
       ]
     },
     "height_uncertainty": {

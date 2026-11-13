@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from functools import lru_cache
 from io import BufferedIOBase, SEEK_CUR, SEEK_END, SEEK_SET
 from threading import BoundedSemaphore
@@ -26,6 +27,7 @@ SOURCES['global_dem']='https://ode.rsl.wustl.edu/mercury/pagehelp/Content/Missio
 ELEVATION_PRODUCTS = ('lola', 'horizon_dem', 'global_dem')
 RASTER_ERRORS = (OSError, ValueError, KeyError, rasterio.errors.RasterioError)
 POLAR_HORIZON_URL = 'https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LDEM_80S_20MPP_ADJ.TIF'
+POLAR_SHADOW_URL = 'https://pgda.gsfc.nasa.gov/data/LOLA_20mpp/LPSR_80S_20MPP_ADJ.TIF'
 HORIZON_RANGE_M = 20_000
 # A site this close to the source's 80° S boundary cannot fit a complete window.
 POLAR_HORIZON_LIMIT = -80 - np.degrees(HORIZON_RANGE_M / RADIUS)
@@ -35,11 +37,11 @@ _polar_horizon_slots = BoundedSemaphore(2)
 class _ElevationRangeReader(BufferedIOBase):
     """Seekable view of the public COG that refuses full or mismatched responses."""
 
-    size = 2_696_082_051
-    chunk_size = 1_048_576
-
-    def __init__(self, client):
+    def __init__(self, client, url, size, chunk_size=1_048_576):
         self.client = client
+        self.url = url
+        self.size = size
+        self.chunk_size = chunk_size
         self.position = 0
         self.deadline = monotonic() + 45
         self.chunk = lru_cache(maxsize=48)(self._fetch_chunk)
@@ -67,7 +69,7 @@ class _ElevationRangeReader(BufferedIOBase):
             raise OSError('NASA elevation window timed out.')
         try:
             # A distinct URL per byte range prevents shared caches returning another range.
-            with self.client.stream('GET', POLAR_HORIZON_URL, params={'block': start},
+            with self.client.stream('GET', self.url, params={'block': start},
                                     headers={'Range': f'bytes={start}-{end}'},
                                     timeout=min(remaining, 8)) as response:
                 if (response.status_code != 206
@@ -119,6 +121,44 @@ class _ElevationRangeReader(BufferedIOBase):
             for _ in pool.map(self.chunk, sorted(chunks)):
                 pass
 
+
+@contextmanager
+def _remote_polar_raster(url, size, chunk_size=1_048_576):
+    if not _polar_horizon_slots.acquire(timeout=1):
+        raise ValueError('NASA raster requests are busy. Try again shortly.')
+    try:
+        with httpx.Client() as client:
+            reader = _ElevationRangeReader(client, url, size, chunk_size)
+            with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR'), rasterio.open(
+                    'lola-polar.tif', opener=reader.open) as ds:
+                crs = CRS(ds.crs)
+                if (crs.to_json_dict().get('id') != {'authority': 'IAU', 'code': 30135}
+                        or abs(crs.ellipsoid.semi_major_metre - RADIUS) > 1
+                        or abs(crs.ellipsoid.semi_minor_metre - RADIUS) > 1
+                        or ds.res != (20, 20) or ds.count != 1):
+                    raise ValueError('Unexpected NASA polar raster projection or spacing.')
+                yield ds, reader
+    finally:
+        _polar_horizon_slots.release()
+
+
+def _remote_polar_enabled(location):
+    return os.getenv('LUNAR_REMOTE_HORIZON') == '1' and location.latitude <= -80
+
+
+POLAR_ELEVATION_SOURCE = {
+    'name': 'NASA adjusted LOLA south-pole 20 m DEM',
+    'source_url': POLAR_HORIZON_URL, 'documentation': SOURCES['horizon_dem'],
+    'resolution_m': 20, 'units': 'm', 'frame': 'MOON_ME_DE421',
+    'reference': 'radius_minus_1737400m',
+}
+POLAR_SHADOW_SOURCE = {
+    'name': 'NASA adjusted LOLA south-pole 20 m permanent-shadow mask',
+    'source_url': POLAR_SHADOW_URL, 'documentation': SOURCES['horizon_dem'],
+    'resolution_m': 20, 'units': 'fraction', 'frame': 'MOON_ME_DE421',
+    'interpretation': 'psr_fraction',
+}
+
 def registry():
     preview=ROOT/'data/lunar_preview/manifest.json'
     default=ROOT/'data/lunar/manifest.json'
@@ -132,9 +172,16 @@ def registry():
     if not override and path == default:
         try:
             bundled = json.loads(preview.read_text())['products']
-            for kind in ('ice', 'global_dem'):
-                if kind not in products and kind in bundled:
-                    product = bundled[kind]
+            for kind in ('ice', 'global_dem', 'temperature_min', 'temperature_max'):
+                product = bundled.get(kind)
+                local = products.get(kind)
+                same_temperature_source = (
+                    kind.startswith('temperature') and local and product
+                    and product.get('source_sha256')
+                    and product['source_sha256'] == local.get('source_sha256')
+                    and (preview.parent / product['path']).is_file()
+                )
+                if product and (local is None or same_temperature_source):
                     products[kind] = {**product, 'path': (Path('..') / 'lunar_preview' / product['path']).as_posix()}
         except (OSError,ValueError,KeyError):
             pass
@@ -211,28 +258,46 @@ def ice_evidence(location, radius_m):
     try:
         ds, meta = opened('ice')
         with ds:
-            if (meta.get('interpretation') != 'psr_fraction' or not ds.crs.is_projected
-                    or ds.transform.b or ds.transform.d or min(ds.res) < 1):
-                raise ValueError('A projected PSR fraction product is required.')
-            x, y = Transformer.from_crs(GEO, ds.crs, always_xy=True).transform(
-                location.longitude, location.latitude)
-            row, col = ds.index(x, y)
-            extent = int(np.ceil(radius_m / min(ds.res))) + 1
-            if not (0 <= row < ds.height and 0 <= col < ds.width):
-                raise ValueError('Outside mapped PSR coverage.')
-            window = Window(col-extent, row-extent, 2*extent+1, 2*extent+1)
-            values = ds.read(1, window=window, boundless=True, masked=True)
-            centre_x, centre_y = ds.xy(row, col)
-            offsets = np.arange(-extent, extent+1)
-            circle = ((centre_x + offsets[None, :] * ds.res[0] - x)**2 +
-                      (centre_y - offsets[:, None] * ds.res[1] - y)**2 <= radius_m**2)
-            samples = values[circle]
-            if not samples.size or np.ma.getmaskarray(samples).any() or not np.isin(samples, [0, 1]).all():
-                raise ValueError('The neighbourhood has incomplete PSR coverage.')
-            return {'available': True, 'value': float(samples.mean()), 'source': meta,
-                    'radius_m': radius_m, 'samples': int(samples.size), 'kind': 'mapped permanent shadow fraction'}
+            return _ice_window(ds, meta, location, radius_m)
     except RASTER_ERRORS as exc:
-        return {'available': False, 'value': None, 'reason': str(exc), 'source_url': SOURCES['horizon_dem']}
+        reason = str(exc)
+    if _remote_polar_enabled(location):
+        try:
+            return _polar_ice(location.latitude, location.longitude, radius_m)
+        except RASTER_ERRORS:
+            reason = 'NASA permanent-shadow data could not supply a complete neighbourhood.'
+    return {'available': False, 'value': None, 'reason': reason, 'source_url': SOURCES['horizon_dem']}
+
+
+def _ice_window(ds, meta, location, radius_m):
+    if (meta.get('interpretation') != 'psr_fraction' or not ds.crs.is_projected
+            or ds.transform.b or ds.transform.d or min(ds.res) < 1):
+        raise ValueError('A projected PSR fraction product is required.')
+    x, y = Transformer.from_crs(GEO, ds.crs, always_xy=True).transform(
+        location.longitude, location.latitude)
+    row, col = ds.index(x, y)
+    extent = int(np.ceil(radius_m / min(ds.res))) + 1
+    if not (extent <= row < ds.height - extent and extent <= col < ds.width - extent):
+        raise ValueError('Outside complete mapped PSR coverage.')
+    window = Window(col-extent, row-extent, 2*extent+1, 2*extent+1)
+    values = ds.read(1, window=window, masked=True)
+    centre_x, centre_y = ds.xy(row, col)
+    offsets = np.arange(-extent, extent+1)
+    circle = ((centre_x + offsets[None, :] * ds.res[0] - x)**2 +
+              (centre_y - offsets[:, None] * ds.res[1] - y)**2 <= radius_m**2)
+    samples = values[circle]
+    if not samples.size or np.ma.getmaskarray(samples).any() or not np.isin(samples, [0, 1]).all():
+        raise ValueError('The neighbourhood has incomplete PSR coverage.')
+    return {'available': True, 'value': float(samples.mean()), 'source': meta,
+            'radius_m': radius_m, 'samples': int(samples.size), 'kind': 'mapped permanent shadow fraction'}
+
+
+@lru_cache(maxsize=128)
+def _polar_ice(latitude, longitude, radius_m):
+    from .models import Location
+
+    with _remote_polar_raster(POLAR_SHADOW_URL, 154_221_202, 65_536) as (ds, _):
+        return _ice_window(ds, POLAR_SHADOW_SOURCE, Location(latitude=latitude, longitude=longitude), radius_m)
 
 
 def local_terrain(location, radius_m=100, *, allow_regional=False):
@@ -240,45 +305,62 @@ def local_terrain(location, radius_m=100, *, allow_regional=False):
     if footprint['available'] or not allow_regional:
         return footprint
     regional = _terrain_window('horizon_dem', location, radius_m)
+    if not regional['available'] and _remote_polar_enabled(location):
+        try:
+            regional = _polar_terrain(location.latitude, location.longitude, radius_m)
+        except RASTER_ERRORS:
+            regional = {'available': False, 'reason': 'NASA LOLA elevation could not supply a complete terrain neighbourhood.'}
     if regional['available']:
         return {**regional, 'coverage_type': 'regional', 'footprint_reason': footprint['reason']}
     return {**footprint, 'reason': f"{footprint['reason']} Regional window: {regional['reason']}"}
+
+
+@lru_cache(maxsize=128)
+def _polar_terrain(latitude, longitude, radius_m):
+    from .models import Location
+
+    with _remote_polar_raster(POLAR_HORIZON_URL, 2_696_082_051) as (ds, _):
+        return _terrain_metrics(ds, POLAR_ELEVATION_SOURCE, Location(latitude=latitude, longitude=longitude), radius_m)
 
 
 def _terrain_window(kind, location, radius_m):
     try:
         ds,meta=opened(kind)
         with ds:
-            if not ds.crs.is_projected or ds.transform.b or ds.transform.d:
-                raise ValueError('Local slope calculation needs an unrotated projected metre raster.')
-            x,y=Transformer.from_crs(GEO,ds.crs,always_xy=True).transform(location.longitude,location.latitude)
-            if not np.isfinite((x, y)).all(): raise ValueError('Outside product coverage.')
-            row,col=ds.index(x,y)
-            resolution=max(ds.res)
-            if not 1<=resolution<=2000: raise ValueError('Unsupported DEM pixel spacing.')
-            n=int(np.ceil(radius_m/min(ds.res)))
-            if n>500: raise ValueError('Requested neighbourhood exceeds processing bound.')
-            if row-n<0 or col-n<0 or row+n>=ds.height or col+n>=ds.width: raise ValueError('Incomplete terrain neighbourhood coverage.')
-            z=ds.read(1,window=Window(col-n,row-n,2*n+1,2*n+1),masked=True).astype(float)*ds.scales[0]+ds.offsets[0]
-            yy,xx=np.mgrid[-n:n+1,-n:n+1];xx=xx*ds.res[0];yy=yy*ds.res[1]
-            circle=xx**2+yy**2<=radius_m**2
-            valid=circle & ~np.ma.getmaskarray(z) & np.isfinite(z.filled(np.nan))
-            coverage=float(valid.sum()/circle.sum())
-            if coverage<1 or valid.sum()<9: raise ValueError('Terrain neighbourhood has gaps or fewer than nine valid samples.')
-            # Reject nodata in the derivative stencil too; no gradients across gaps.
-            if np.ma.getmaskarray(z).any() or not np.isfinite(z).all(): raise ValueError('Slope stencil intersects missing data.')
-            dzdy,dzdx=np.gradient(np.asarray(z),ds.res[1],ds.res[0])
-            slopes=np.degrees(np.arctan(np.hypot(dzdx,dzdy)))[valid]
-            a=np.column_stack([xx[valid],yy[valid],np.ones(valid.sum())])
-            heights=np.asarray(z)[valid];residual=heights-a@np.linalg.lstsq(a,heights,rcond=None)[0]
-            # Small diagnostic grid; original native resolution is retained in calculations.
-            stride=max(1,int(np.ceil((2*n+1)/25)))
-            grid=[{'east_m':float(xx[i,j]),'north_m':float(-yy[i,j]),'elevation_m':float(z[i,j]),'slope_deg':float(np.degrees(np.arctan(np.hypot(dzdx[i,j],dzdy[i,j]))))} for i in range(0,2*n+1,stride) for j in range(0,2*n+1,stride) if circle[i,j]]
-            return {'available':True,'elevation_m':float(z[n,n]),'slope_p95_deg':float(np.percentile(slopes,95)),
-                    'slope_mean_deg':float(slopes.mean()),'slope_max_deg':float(slopes.max()),'roughness_m':float(np.sqrt(np.mean(residual**2))),
-                    'relief_m':float(np.ptp(heights)),'resolution_m':resolution,'radius_m':radius_m,'coverage':coverage,'samples':int(valid.sum()),'source':meta,'grid':grid}
+            return _terrain_metrics(ds, meta, location, radius_m)
     except (OSError,ValueError,KeyError,rasterio.errors.RasterioError) as exc:
         return {'available':False,'reason':str(exc),'grid':[]}
+
+def _terrain_metrics(ds, meta, location, radius_m):
+    if not ds.crs.is_projected or ds.transform.b or ds.transform.d:
+        raise ValueError('Local slope calculation needs an unrotated projected metre raster.')
+    x,y=Transformer.from_crs(GEO,ds.crs,always_xy=True).transform(location.longitude,location.latitude)
+    if not np.isfinite((x, y)).all(): raise ValueError('Outside product coverage.')
+    row,col=ds.index(x,y)
+    resolution=max(ds.res)
+    if not 1<=resolution<=2000: raise ValueError('Unsupported DEM pixel spacing.')
+    n=int(np.ceil(radius_m/min(ds.res)))
+    if n>500: raise ValueError('Requested neighbourhood exceeds processing bound.')
+    if row-n<0 or col-n<0 or row+n>=ds.height or col+n>=ds.width: raise ValueError('Incomplete terrain neighbourhood coverage.')
+    z=ds.read(1,window=Window(col-n,row-n,2*n+1,2*n+1),masked=True).astype(float)*ds.scales[0]+ds.offsets[0]
+    yy,xx=np.mgrid[-n:n+1,-n:n+1];xx=xx*ds.res[0];yy=yy*ds.res[1]
+    circle=xx**2+yy**2<=radius_m**2
+    valid=circle & ~np.ma.getmaskarray(z) & np.isfinite(z.filled(np.nan))
+    coverage=float(valid.sum()/circle.sum())
+    if coverage<1 or valid.sum()<9: raise ValueError('Terrain neighbourhood has gaps or fewer than nine valid samples.')
+    # Reject nodata in the derivative stencil too; no gradients across gaps.
+    if np.ma.getmaskarray(z).any() or not np.isfinite(z).all(): raise ValueError('Slope stencil intersects missing data.')
+    dzdy,dzdx=np.gradient(np.asarray(z),ds.res[1],ds.res[0])
+    slopes=np.degrees(np.arctan(np.hypot(dzdx,dzdy)))[valid]
+    a=np.column_stack([xx[valid],yy[valid],np.ones(valid.sum())])
+    heights=np.asarray(z)[valid];residual=heights-a@np.linalg.lstsq(a,heights,rcond=None)[0]
+    # Small diagnostic grid; original native resolution is retained in calculations.
+    stride=max(1,int(np.ceil((2*n+1)/25)))
+    grid=[{'east_m':float(xx[i,j]),'north_m':float(-yy[i,j]),'elevation_m':float(z[i,j]),'slope_deg':float(np.degrees(np.arctan(np.hypot(dzdx[i,j],dzdy[i,j]))))} for i in range(0,2*n+1,stride) for j in range(0,2*n+1,stride) if circle[i,j]]
+    return {'available':True,'elevation_m':float(z[n,n]),'slope_p95_deg':float(np.percentile(slopes,95)),
+            'slope_mean_deg':float(slopes.mean()),'slope_max_deg':float(slopes.max()),'roughness_m':float(np.sqrt(np.mean(residual**2))),
+            'relief_m':float(np.ptp(heights)),'resolution_m':resolution,'radius_m':radius_m,'coverage':coverage,'samples':int(valid.sum()),'source':meta,'grid':grid}
+
 
 def _sample_horizon_pixels(dataset, xs, ys, prefetch=None):
     """Read each raster block touched by the selected site's rays only once."""
@@ -337,32 +419,12 @@ def _horizon_profile(ds, meta, location, height, prefetch=None):
 def _polar_horizon(latitude, longitude):
     from .models import Location
 
-    if not _polar_horizon_slots.acquire(timeout=1):
-        raise ValueError('NASA elevation requests are busy. Try again shortly.')
-    try:
-        with httpx.Client() as client:
-            reader = _ElevationRangeReader(client)
-            with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR'), rasterio.open(
-                    'lola-horizon.tif', opener=reader.open) as ds:
-                crs = CRS(ds.crs)
-                if (crs.to_json_dict().get('id') != {'authority': 'IAU', 'code': 30135}
-                        or abs(crs.ellipsoid.semi_major_metre - RADIUS) > 1
-                        or abs(crs.ellipsoid.semi_minor_metre - RADIUS) > 1
-                        or ds.res != (20, 20) or ds.count != 1):
-                    raise ValueError('Unexpected NASA elevation projection or pixel spacing.')
-                location = Location(latitude=latitude, longitude=longitude)
-                height = pixel(ds, longitude, latitude)
-                source = {
-                    'name': 'NASA adjusted LOLA south-pole 20 m DEM',
-                    'source_url': POLAR_HORIZON_URL, 'documentation': SOURCES['horizon_dem'],
-                    'resolution_m': 20, 'units': 'm', 'frame': 'MOON_ME_DE421',
-                    'reference': 'radius_minus_1737400m',
-                }
-                result = _horizon_profile(ds, source, location, height, reader.prefetch)
-                return {**result, 'observer_height': {'available': True, 'value': height,
-                                                       'source': source, 'coverage_type': 'regional'}}
-    finally:
-        _polar_horizon_slots.release()
+    with _remote_polar_raster(POLAR_HORIZON_URL, 2_696_082_051) as (ds, reader):
+        location = Location(latitude=latitude, longitude=longitude)
+        height = pixel(ds, longitude, latitude)
+        result = _horizon_profile(ds, POLAR_ELEVATION_SOURCE, location, height, reader.prefetch)
+        return {**result, 'observer_height': {'available': True, 'value': height,
+                                              'source': POLAR_ELEVATION_SOURCE, 'coverage_type': 'regional'}}
 
 
 def horizon(location, height):
