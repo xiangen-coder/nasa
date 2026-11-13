@@ -107,12 +107,10 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
     available=sum(v['weight'] for v in factors.values() if v['score'] is not None)
     missing=[k for k,v in factors.items() if v['score'] is None]
     provisional=bool(regional or missing or not hazards.get('available') or geometry.get('mode')!='terrain_screened' or thermal.get('available') or ice.get('source',{}).get('interpretation')=='psr_fraction')
-    # A thermal or terrain measurement alone does not support a mission score.
-    has_visibility = factors['S']['score'] is not None and factors['C']['score'] is not None
     for f in factors.values():
-        f['effective_weight']=f['weight']/available if has_visibility and f['score'] is not None else 0
-        if has_visibility and f['score'] is not None: f['contribution']=f['score']*f['effective_weight']
-    return {'factors':factors,'score':sum(f['contribution'] or 0 for f in factors.values()) if has_visibility else None,
+        f['effective_weight']=f['weight']/available if available and f['score'] is not None else 0
+        if f['score'] is not None: f['contribution']=f['score']*f['effective_weight']
+    return {'factors':factors,'score':sum(f['contribution'] or 0 for f in factors.values()) if available else None,
             'available_weight':available,'missing':missing,'provisional':provisional,'constraints_failed':failures,'warnings':warnings,
             'safety_status':'fails_configured_limits' if failures else 'not_established',
             'formula':'0.35T + 0.25S + 0.20C + 0.15H + 0.05I; available weights renormalized for provisional scores only.'}
