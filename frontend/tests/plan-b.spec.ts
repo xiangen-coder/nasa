@@ -336,7 +336,8 @@ test("saved mission opens its completed result without a new analysis", async ({
   await expect(page.getByText("Mission saved to your account.")).toBeVisible();
   await expect(page).toHaveURL(/#result$/);
   expect(saves).toBe(1);
-  await page.goto("/#account");
+  await page.getByRole("button", { name: "Go to saved searches" }).click();
+  await expect(page).toHaveURL(/#account$/);
   await page.getByRole("button", { name: "Open result" }).click();
   await expect(page).toHaveURL(/#result$/);
   await expect(page.locator("#result-summary")).toContainText("70.00 / 100");

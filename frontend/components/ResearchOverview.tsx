@@ -768,6 +768,11 @@ export default function ResearchOverview({
               >
                 {missionSaveStatus?.status === "saving" ? "Saving mission…" : missionSaveStatus?.status === "saved" ? "Mission saved" : "Save mission"}
               </button>
+              {missionSaveStatus?.status === "saved" && (
+                <button className="button subtle" onClick={() => onNavigate(13)}>
+                  Go to saved searches
+                </button>
+              )}
             </div>
             {missionSaveStatus?.status === "saved" && <p role="status">Mission saved to your account.</p>}
             {missionSaveStatus?.status === "error" && <p className="error" role="alert">{missionSaveStatus.message}</p>}
