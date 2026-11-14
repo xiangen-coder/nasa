@@ -41,7 +41,7 @@ export default function AboutLunar({ onExplore, onResults }: { onExplore: () => 
 
       <div className="about-lunar-body">
         <section id="about-lunar-mission" tabIndex={-1} className="about-lunar-mission">
-          <h2>Complex lunar science. A clearer perspective.</h2>
+          <h2>Complex lunar science.<br className="about-lunar-mission-break" /> A clearer perspective.</h2>
           <p>We make lunar geometry easier to explore for mission planners, educators and the public.</p>
         </section>
 
@@ -58,7 +58,7 @@ export default function AboutLunar({ onExplore, onResults }: { onExplore: () => 
         </section>
 
         <section>
-          <h2>Compare the conditions that matter.</h2>
+          <h2>Compare the conditions that matter</h2>
           <ul className="about-lunar-features">
             {features.map(({ Icon, title, text }) => (
               <li key={title}>
@@ -103,14 +103,12 @@ export default function AboutLunar({ onExplore, onResults }: { onExplore: () => 
         <section className="about-lunar-team">
           <p className="eyebrow">From Sarawak. Exploring beyond.</p>
           <h2>Meet Road to 10000.</h2>
+          <div className="about-lunar-wordmark" aria-hidden="true">Road to<strong>10000</strong></div>
           <div className="about-lunar-team-main">
-            <div className="about-lunar-wordmark" aria-hidden="true">Road to<strong>10000</strong></div>
-            <div>
-              <p>We are first-year students at Universiti Teknologi PETRONAS in Perak, all from Sarawak.</p>
-              <p>Through LUNAR, we are exploring how clear design and scientific data can make lunar research more accessible.</p>
-            </div>
+            <p>We are first-year students at <strong>Universiti Teknologi PETRONAS</strong>, bringing together Electrical and Electronic Engineering (EEE), Mechanical Engineering (ME), and Computer Science (CS).</p>
+            <p>Our different backgrounds shape how we approach a shared question: how can complex lunar data become easier to explore and understand? Through LUNAR, we combine engineering thinking, computing and clear design to make lunar research more accessible.</p>
           </div>
-          <div className="about-lunar-team-meta"><span>Universiti Teknologi PETRONAS</span><span>Perak, Malaysia · Roots in Sarawak</span></div>
+          <p className="about-lunar-team-highlight">Different disciplines. All from Sarawak.</p>
         </section>
 
         <section className="about-lunar-cta">

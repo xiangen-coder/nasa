@@ -36,8 +36,8 @@
 .about-lunar .button.primary:hover { background: #eff6ff; }
 .about-lunar-body { padding-inline: clamp(1rem, 4vw, 3.8rem); }
 .about-lunar-body > section { border-top: 1px solid var(--about-line); padding-block: clamp(1rem, 2vw, 1.8rem); }
-.about-lunar-mission { display: grid; grid-template-columns: 2fr 1fr; align-items: center; gap: 1.4rem; scroll-margin-top: 8rem; }
-.about-lunar-mission p { border-left: 1px solid var(--about-line); padding-left: 1.4rem; }
+.about-lunar-mission { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; gap: clamp(1.4rem, 4vw, 2.5rem); scroll-margin-top: 8rem; }
+.about-lunar-mission p { border-left: 1px solid var(--about-line); padding-left: clamp(1.4rem, 4vw, 2.5rem); font-size: clamp(1rem, 1.45vw, 1.25rem); line-height: 1.55; }
 .about-lunar ul, .about-lunar ol { margin: 1rem 0 0; padding: 0; list-style: none; display: grid; gap: 1rem; }
 .about-lunar-challenges, .about-lunar-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .about-lunar-card { border: 1px solid var(--about-line); border-radius: 14px; background: #1b2b4266; }
@@ -55,13 +55,22 @@
 .about-lunar-evidence-copy p, .about-lunar-team-main p + p { margin-top: .65rem; }
 .about-lunar-evidence summary { color: var(--about-blue); cursor: pointer; margin-top: .75rem; }
 .about-lunar-evidence a { color: var(--about-blue); }
-.about-lunar-team { position: relative; background: radial-gradient(ellipse at 86% 100%, #31558176, transparent 53%); }
-.about-lunar-team-main { display: grid; grid-template-columns: minmax(0, 15rem) minmax(0, 34ch); align-items: center; gap: clamp(1rem, 4vw, 3rem); margin-block: 1rem; }
-.about-lunar-wordmark { position: relative; width: fit-content; padding: .4rem 1rem 1rem 0; font: italic clamp(1.8rem, 4vw, 3.3rem)/.9 Fraunces, Georgia, serif; }
+.about-lunar-body > .about-lunar-team { text-align: center; padding-block: clamp(1.75rem, 3vw, 3rem) 1.5rem; }
+.about-lunar-team h2 { color: #bdd8fa; font-family: inherit; font-weight: 600; font-size: clamp(1.55rem, 3vw, 2.55rem); }
+.about-lunar-team-main { max-width: 66ch; margin: 0 auto; line-height: 1.55; }
+.about-lunar-team-main p + p { margin-top: .85rem; }
+.about-lunar-wordmark {
+  position: relative; width: fit-content; margin: clamp(1.75rem, 4vw, 2.75rem) auto 1.6rem;
+  padding: .12em .25em .4em 0; font: italic clamp(2.25rem, 5vw, 4rem)/.9 Fraunces, Georgia, serif;
+}
 .about-lunar-wordmark strong { display: block; font-size: 1.45em; font-weight: 550; }
 .about-lunar-wordmark::after { content: ""; position: absolute; inset: 31% -9% 0 31%; border-bottom: 1px solid #b7dcff; border-right: 1px solid #b7dcff; border-radius: 50%; transform: rotate(-26deg); pointer-events: none; }
-.about-lunar-team-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .3rem 1rem; padding-top: .7rem; border-top: 1px solid var(--about-line); font-size: .86rem; }
-.about-lunar-cta { text-align: center; background: radial-gradient(ellipse at 50% 120%, #45658d7a, transparent 65%); }
+.about-lunar-team .about-lunar-team-highlight {
+  display: inline-block; margin-top: 1.15rem; padding: .4rem 1.25rem; border-radius: 999px;
+  background: #d5e8ff; color: #081424; font: italic 600 clamp(1rem, 2vw, 1.35rem)/1.35 Fraunces, Georgia, serif;
+}
+.about-lunar-body > .about-lunar-cta { text-align: center; border-top: 0; padding-block: 1rem 2rem; }
+.about-lunar-cta h2 { max-width: 27ch; margin-inline: auto; text-wrap: balance; }
 .about-lunar-cta .button { margin-top: 1rem; }
 @media (max-width: 880px) {
   .about-lunar-hero-copy { max-width: 72%; }
@@ -79,7 +88,8 @@
   .about-lunar h1 { text-wrap: initial; }
   .about-lunar-hero > small { top: .5rem; bottom: auto; }
   .about-lunar-mission, .about-lunar-challenges, .about-lunar-steps,
-  .about-lunar-body > .about-lunar-evidence, .about-lunar-team-main { grid-template-columns: minmax(0, 1fr); }
+  .about-lunar-body > .about-lunar-evidence { grid-template-columns: minmax(0, 1fr); }
+  .about-lunar-mission-break { display: none; }
   .about-lunar-mission p { border-left: 0; padding-left: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
