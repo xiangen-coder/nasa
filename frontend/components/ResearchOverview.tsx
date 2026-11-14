@@ -15,7 +15,7 @@ import type { ResearchPriority } from "./SearchConsole";
 import ResearchTerrainDetails from "./ResearchTerrainDetails";
 import WaterEvidence from "./WaterEvidence";
 import { PortableJourney } from "./PortableLunar";
-import { ResearchWindows } from "./ResearchComparisonReport";
+import ResearchComparisonReport, { ResearchWindows } from "./ResearchComparisonReport";
 import ResearchElevationChart, {
   ResearchVisibilityStatus,
   formatVisibilityTime as utc,
@@ -139,6 +139,24 @@ export default function ResearchOverview({
     number == null ? "Unavailable" : `${number.toFixed(1)}${unit}`;
   const [activeSection, setActiveSection] = useState("result-summary");
   const content = useRef<HTMLDivElement>(null);
+  const printReport = useRef<HTMLDivElement>(null);
+  const [preparingPdf, setPreparingPdf] = useState(false);
+
+  async function printAssessment() {
+    const report = printReport.current;
+    if (!report || preparingPdf) return;
+    setPreparingPdf(true);
+    const disclosures = Array.from(report.querySelectorAll<HTMLDetailsElement>("details:not([open])"));
+    disclosures.forEach((details) => { details.open = true; });
+    try {
+      await document.fonts.ready;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      window.print();
+    } finally {
+      disclosures.forEach((details) => { details.open = false; });
+      setPreparingPdf(false);
+    }
+  }
   useEffect(() => {
     const container = content.current;
     if (!result || !container) return;
@@ -800,13 +818,8 @@ export default function ResearchOverview({
               >
                 {missionSaveStatus?.status === "saving" ? "Saving mission…" : missionSaveStatus?.status === "saved" ? "Mission saved" : "Save mission"}
               </button>
-              <button className="button subtle" onClick={() => {
-                const closed = Array.from(content.current?.querySelectorAll<HTMLDetailsElement>("details:not([open])") ?? []);
-                closed.forEach((details) => { details.open = true; });
-                try { window.print(); }
-                finally { closed.forEach((details) => { details.open = false; }); }
-              }}>
-                Save as PDF <Download size={15} aria-hidden="true" />
+              <button className="button subtle" disabled={preparingPdf} onClick={() => void printAssessment()}>
+                {preparingPdf ? "Preparing PDF…" : "Save as PDF"} <Download size={15} aria-hidden="true" />
               </button>
               {missionSaveStatus?.status === "saved" && (
                 <button className="button subtle" onClick={() => onNavigate(13)}>
@@ -834,6 +847,21 @@ export default function ResearchOverview({
         </div>
       )}
       </div>
+      {result && (
+        <div className="assessment-print-report" ref={printReport} aria-hidden="true" inert>
+          <ResearchComparisonReport
+            singleMission
+            mission={result.mission}
+            alternatives={[]}
+            comparison={{ results: [result], candidates: [], busy: false, progress: "", error: "", failures: {} }}
+            scenarios={[]}
+            evidenceSite=""
+            onEvidenceSiteChange={() => {}}
+            onInspect={() => {}}
+            equipment={equipment}
+          />
+        </div>
+      )}
     </section>
   );
 }

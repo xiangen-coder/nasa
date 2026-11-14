@@ -79,7 +79,7 @@ const csvCell = (value: string) => {
   return `"${safe.replaceAll('"', '""')}"`;
 };
 
-export default function ResearchComparisonReport({ mission, alternatives, comparison, scenarios, evidenceSite, onEvidenceSiteChange, onInspect, equipment = defaultSolar }: {
+export default function ResearchComparisonReport({ mission, alternatives, comparison, scenarios, evidenceSite, onEvidenceSiteChange, onInspect, equipment = defaultSolar, singleMission = false }: {
   mission: Mission;
   alternatives: Site[];
   comparison: ResearchComparison | null;
@@ -88,6 +88,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
   onEvidenceSiteChange: (site: string) => void;
   onInspect: (result: Research) => void;
   equipment?: SolarSettings;
+  singleMission?: boolean;
 }) {
   const [preferred, setPreferred] = useState("");
   const [baselineKey, setBaselineKey] = useState("");
@@ -103,7 +104,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
       .map((scenario) => ({ mission: scenario.result.mission, assessment: scenario.result, failure: undefined, scenario })),
   ];
   const complete = entries.flatMap(({ assessment }) => assessment ? [assessment] : []);
-  if (!complete.length || entries.length < 2) return null;
+  if (!complete.length || (!singleMission && entries.length < 2)) return null;
   const choice = complete.find((r) => missionKey(r.mission) === preferred);
   const evidence = complete.find((r) => missionKey(r.mission) === evidenceSite) ?? complete[0];
   const label = (point: Mission) => entries.some((entry) => entry.scenario && sameMission(entry.mission, point))
@@ -124,7 +125,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
   const sharedLocation = entries.every(({ mission: point }) =>
     point.latitude === base.mission.latitude && point.longitude === base.mission.longitude);
   const mismatchedEvidence = complete.length > 1 && complete.some((r) => !comparableScores(complete[0], r));
-  const advice = incomplete
+  const advice = singleMission ? "Review mission visibility, terrain measurements and evidence coverage for this site." : incomplete
     ? "Some selected options are awaiting an assessment or have unavailable data."
     : mismatchedEvidence
       ? "Evidence coverage or methods differ. Compare the measured factors before interpreting provisional scores."
@@ -194,12 +195,12 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
     <section id="research-report" className="panel research-report comparison-report" aria-labelledby="research-report-title" tabIndex={-1}>
       <header className="comparison-report-header">
         <div>
-          <span className="eyebrow">Selected options · Research analysis</span>
-          <h2 id="research-report-title">{sharedLocation ? "Mission date comparison report" : sharedWindow ? "Location comparison report" : "Location and mission window comparison report"}</h2>
-          <p>Compare mission availability, terrain evidence and operational trade-offs.</p>
-          <p role="status">{complete.length} of {entries.length} selected assessments ready</p>
+          <span className="eyebrow">{singleMission ? "Lunar Landing Site Navigator" : "Selected options · Research analysis"}</span>
+          <h2 id="research-report-title">{singleMission ? "Landing site assessment report" : sharedLocation ? "Mission date comparison report" : sharedWindow ? "Location comparison report" : "Location and mission window comparison report"}</h2>
+          <p>{singleMission ? "Mission availability, terrain evidence and assessment methods." : "Compare mission availability, terrain evidence and operational trade-offs."}</p>
+          {!singleMission && <p role="status">{complete.length} of {entries.length} selected assessments ready</p>}
         </div>
-        <div className="account-actions research-export-controls">
+        {!singleMission && <div className="account-actions research-export-controls">
           <button className="button primary" onClick={() => {
             const closed = Array.from(document.querySelectorAll<HTMLDetailsElement>("#research-report details:not([open])"));
             closed.forEach((details) => { details.open = true; });
@@ -228,18 +229,18 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
           ...settings, ["Preferred point", choice ? label(choice.mission) : ""], ["Recommendation", advice],
         ].map((row) => row.map(csvCell).join(",")).join("\r\n"), "csv")}>Export comparison CSV</button>
           </details>
-        </div>
+        </div>}
       </header>
-      <p className="report-panel">{sharedWindow ? <>Shared mission window · {utc(base.mission.start)} → {utc(base.mission.end)}</>
+      <p className="report-panel">{sharedWindow ? <>{singleMission ? "Mission window" : "Shared mission window"} · {utc(base.mission.start)} → {utc(base.mission.end)}</>
         : "Mission windows differ. Dates and durations are shown for each option."}</p>
       <div className="report-option-grid">
         {entries.map(({ mission: point, assessment }, index) => (
           <article className={`report-option report-option-${index}`} key={missionKey(point)}>
-            <h3>{point.name}{index === baseIndex && " · Baseline"}</h3>
+            <h3>{point.name}{!singleMission && index === baseIndex && " · Baseline"}</h3>
             <p>{formatCoordinates(point.latitude, point.longitude)} · {format(duration(point), " h")}</p>
             {!sharedWindow && <p>{utc(point.start)} → {utc(point.end)}</p>}
             <p>{assessmentStatus(entries[index])}</p>
-            {assessment && <button className="text-button" onClick={() => onInspect(assessment)}>View full result ↗</button>}
+            {!singleMission && assessment && <button className="text-button" onClick={() => onInspect(assessment)}>View full result ↗</button>}
           </article>
         ))}
       </div>
@@ -290,7 +291,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
         <p>Historical temperatures describe previous observations. Permanent shadow can preserve ice, whose presence remains unconfirmed.</p>
       </section>
       <section className="report-panel">
-        <h3>Trade-offs by option</h3>
+        <h3>{singleMission ? "Mission trade-offs" : "Trade-offs by option"}</h3>
         <div className="report-option-grid">{entries.map(({ mission: point, assessment }, index) => (
           <article className={`report-option report-option-${index}`} key={missionKey(point)}>
             <h4>{label(point)}</h4>

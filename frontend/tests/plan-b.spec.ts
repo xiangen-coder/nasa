@@ -96,7 +96,13 @@ test("shows the assessed site's summary, methods, Lunar Journey and Water/Ice Ev
   await openCompare(page);
   await page.getByRole("article", { name: /Recommended landing point:/ }).getByRole("button", { name: "More details" }).click();
   await page.evaluate(() => {
-    window.print = () => document.body.setAttribute("data-test-print", "called");
+    window.print = () => {
+      const report = document.querySelector(".assessment-print-report");
+      if (report?.querySelector("#research-report-title")?.textContent === "Landing site assessment report" &&
+          report.querySelectorAll("details:not([open])").length === 0) {
+        document.body.setAttribute("data-test-print", "called");
+      }
+    };
   });
   await page.getByRole("button", { name: "Save as PDF" }).click();
   await expect(page.locator("body")).toHaveAttribute("data-test-print", "called");

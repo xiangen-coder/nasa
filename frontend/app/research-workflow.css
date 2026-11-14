@@ -456,7 +456,7 @@
   }
 
   body:has(#research-report) .lunar-app > :not(.main-shell),
-  body:has(#research-report) .lunar-app main > :not(#research-report),
+  body:has(#research-report) .lunar-app main > :not(#research-report, .research-results:has(.assessment-print-report)),
   #research-report .research-export-controls,
   #research-report .research-preferred {
     display: none !important;
@@ -843,4 +843,30 @@
 @media print {
   .result-score-table table { min-width: 0; }
   .result-factor-details summary { display: none; }
+}
+
+@media screen {
+  .assessment-print-report {
+    position: fixed;
+    top: 0;
+    left: -10000px;
+    width: 700px;
+    visibility: hidden;
+  }
+}
+@media print {
+  .research-results:has(.assessment-print-report) > :not(.assessment-print-report) {
+    display: none !important;
+  }
+  .research-results:has(.assessment-print-report) {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .assessment-print-report { page: research-report; }
+  .assessment-print-report .report-option-grid { grid-template-columns: 1fr; }
+  .assessment-print-report .report-option { break-inside: avoid; }
+  .assessment-print-report :is(h2, h3, h4, summary) { break-after: avoid; }
+  .assessment-print-report :is(tr, figure, .recharts-responsive-container) { break-inside: avoid; }
+  .assessment-print-report thead { display: table-header-group; }
 }
