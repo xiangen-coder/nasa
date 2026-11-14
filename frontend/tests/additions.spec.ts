@@ -92,7 +92,7 @@ test("observatory opens Lunar Journey and keeps the NASA simulation available", 
   await page.goto("/");
   await page.getByRole("button", { name: "More", exact: true }).click();
   await expect(nav(page, "Map explorer")).toHaveCount(0);
-  await expect(nav(page, "Mission planner")).toBeVisible();
+  await expect(nav(page, "Mission Planer")).toBeVisible();
   await expect(nav(page, "Lunar surface route")).toHaveCount(0);
   const modelAssets = ["earth.glb", "sun.glb", "moon-texture.jpg"].map((asset) =>
     page.waitForResponse((response) => response.url().endsWith("/models/" + asset)),
@@ -127,4 +127,14 @@ test("mission archive uses the site palette and keeps its trajectory controls", 
   const camera = archive.getByRole("button", { name: "Moon", exact: true });
   await camera.click();
   await expect(camera).toHaveAttribute("aria-pressed", "true");
+});
+
+
+test("Mission Planer replaces the old planner and Mission Lab routes", async ({ page }) => {
+  await page.goto("/#mission-lab");
+  await expect(page).toHaveURL(/#mission-planner$/);
+  await expect(page.getByRole("heading", { name: "Mission Planer." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Vehicle worksheet", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "More", exact: true }).click();
+  await expect(nav(page, "Mission Planer")).toHaveCount(1);
 });

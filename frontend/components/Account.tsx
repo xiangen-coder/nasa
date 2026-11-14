@@ -367,7 +367,7 @@ export default function Account({
       ))}
       {busy && <small role="status">Connecting to your account…</small>}
       <h2>Mission reports</h2>
-      <p>Reports saved from Mission Lab on this device.</p>
+      <p>Reports saved from Mission Planer on this device.</p>
       {powerReports.length === 0 && <p>No mission reports saved on this device yet.</p>}
       {powerReports.map(({ storageKey, source, name, savedAt }) => (
         <article key={storageKey} className="saved-search">

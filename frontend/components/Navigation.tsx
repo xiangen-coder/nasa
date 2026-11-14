@@ -11,7 +11,6 @@ import {
   X,
   UserRound,
   LogOut,
-  FlaskConical,
 } from "lucide-react";
 import { accountApi } from "../lib/account-api";
 import PreferencesControls, { type Preferences } from "./Preferences";
@@ -29,17 +28,16 @@ export const viewPaths = [
   "about",
   "settings",
   "pre-results",
-  "mission-lab",
+  "mission-planner",
   "account",
   "education",
   "mission-report",
-  "mission-planner",
+  "mission-lab",
 ];
 export const toolItems = [
   { view: 5, label: "3D observatory", icon: Orbit, detail: "Earth-to-Moon journey & NASA positions" },
-  { view: 16, label: "Mission planner", icon: Rocket, detail: "Vehicle worksheet & launch weather" },
+  { view: 12, label: "Mission Planer", icon: Rocket, detail: "Lander power simulation & mission reports" },
   { view: 4, label: "Lunar mission archive", icon: Archive, detail: "Historical missions & documented 3D paths" },
-  { view: 12, label: "Mission lab", icon: FlaskConical, detail: "Scenarios, equipment & classroom activities" },
 ];
 
 const educationLinks = [

@@ -100,9 +100,9 @@ export default function PowerMissionLab({ source, onResult, onConfigure, sourceE
     </label>;
   }
 
-  return <section className="power-lab" aria-label="Mission Lab">
+  return <section className="power-lab" aria-label="Mission Planer">
     <header className="power-lab-title">
-      <div><h1>Mission Lab.</h1><p>Can my lander keep operating through this mission window?</p></div>
+      <div><h1>Mission Planer.</h1><p>Can my lander keep operating through this mission window?</p></div>
       <div className="account-actions">
         <button className="button subtle" onClick={onResult}>Back to Result</button>
         {source && <button className="button subtle" onClick={() => save(false)}>Save draft</button>}
@@ -234,6 +234,6 @@ export default function PowerMissionLab({ source, onResult, onConfigure, sourceE
         </div>
         {notice && <p role="status">{notice}</p>}
       </section>
-    </> : <article className="power-lab-panel"><h2>Open a site assessment</h2><p>{sourceError || "Open Mission Lab from a completed Result to use its site and mission timeline."}</p><button className="button primary" onClick={onConfigure}>Configure a search</button></article>}
+    </> : <article className="power-lab-panel"><h2>Open a site assessment</h2><p>{sourceError || "Open Mission Planer from a completed Result to use its site and mission timeline."}</p><button className="button primary" onClick={onConfigure}>Configure a search</button></article>}
   </section>;
 }

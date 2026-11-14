@@ -820,7 +820,7 @@ export default function ResearchOverview({
               >
                 {missionSaveStatus?.status === "saving" ? "Saving result…" : missionSaveStatus?.status === "saved" ? "Result saved" : "Save result"}
               </button>
-              <button className="button subtle" onClick={() => onOpenMissionLab(result)}>Open in Mission Lab</button>
+              <button className="button subtle" onClick={() => onOpenMissionLab(result)}>Open in Mission Planer</button>
               <button className="button subtle" disabled={preparingPdf} onClick={() => void printAssessment()}>
                 {preparingPdf ? "Preparing PDF…" : "Save as PDF"} <Download size={15} aria-hidden="true" />
               </button>

@@ -22,7 +22,6 @@ import type { MissionSnapshot } from "../lib/saved-mission";
 import type { SearchRecord } from "../lib/search-record";
 import { referenceSites } from "../lib/reference-sites";
 const Account = dynamic(() => import("../components/Account"));
-const MissionLab = dynamic(() => import("../components/mission-lab/MissionLab"));
 
 import TerrainAssessment from "../components/TerrainAssessment";
 import ResearchComparisonReport from "../components/ResearchComparisonReport";
@@ -520,8 +519,6 @@ export default function Page() {
   const [chosenAlternatives, setChosenAlternatives] = useState<Site[]>([]);
   const [comparisonNotice, setComparisonNotice] = useState("");
   const education = view === 14;
-  const [labVisited, setLabVisited] = useState(false);
-  const labOpen = view === 16;
   const [labSource, setLabSource] = useState<LabSource | null>(null);
   const [labReportVersion, setLabReportVersion] = useState(0);
   const [openSavedLabReport, setOpenSavedLabReport] = useState(false);
@@ -535,13 +532,10 @@ export default function Page() {
         setLabSource({ ...validated, importedAt: typeof saved.importedAt === "string" ? saved.importedAt : validated.importedAt });
       }
     } catch {
-      setLabError("The last saved Mission Lab source could not be restored.");
+      setLabError("The last saved Mission Planer source could not be restored.");
     }
   }, []);
 
-  useEffect(() => {
-    if (labOpen) setLabVisited(true);
-  }, [labOpen]);
   const researchActions=useRef<ResearchActions|null>(null);
   const savingMission = useRef(false);
   const [missionSaveStatus, setMissionSaveStatus] = useState<{ assessment: Research; status: "saving" | "saved" | "error"; message?: string } | null>(null);
@@ -568,6 +562,9 @@ export default function Page() {
     if(n===0) {
       history.replaceState(history.state, "", "#search");
       setViewState(7);
+    } else if(n===16) {
+      history.replaceState(history.state, "", `#${viewPaths[12]}`);
+      setViewState(12);
     } else if(n===15) {
       history.replaceState(history.state, "", `#${viewPaths[11]}`);
       setViewState(11);
@@ -959,11 +956,11 @@ export default function Page() {
       {!education&&<NewsSidebar/>}
       <div className="main-shell">
         <div className="workspace-with-news"><main id="main-content">
-          {view!==7&&view!==8&&view!==9&&view!==11&&view!==12&&view!==13&&!education&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission lab","Account","Education","Mission report","Mission planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission lab.","Your account.","Lunar classroom.","Mission report.","Mission planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div></div></>}
+          {view!==7&&view!==8&&view!==9&&view!==11&&view!==12&&view!==13&&!education&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission Planer","Account","Education","Mission report","Mission Planer"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission Planer.","Your account.","Lunar classroom.","Mission report.","Mission Planer."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div></div></>}
           {view===7&&<section className="search-layout revised-search" aria-label="Search for a lunar landing site">
             <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration"><div className="hero-copy"><span className="eyebrow">A NEW PERSPECTIVE ON THE MOON</span><h1>Find your place<br/>on the <em>Moon.</em></h1><p>Every mission starts with a possibility. Explore lunar locations through real sunlight, communication and terrain data.</p><div className="hero-hairline"/><span className="hero-footnote">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}>Explore the Moon <ArrowRight size={15}/></button></div><CinematicHero animate={preferences.animate}/></section>
             <LandingSearch selected={selected} missionSites={missionSites} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} radiusKm={radiusKm} onRadius={setRadiusKm} busy={researchBusy || !!activeArea?.busy} onSubmit={searchResearchArea}/>
-            <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(12)}>Mission lab</button></div>
+            <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(12)}>Mission Planer</button></div>
           </section>}
           {view===11&&<PreliminaryComparison mission={comparisonMission} state={comparisonState} area={activeArea?.area} areaResult={activeArea?.result} radiusKm={comparisonRadius} alternatives={searchRecord.alternatives} priority={researchPriority} equipment={researchEquipment} notice={comparisonNotice} onEvaluate={()=>activeArea && !recommendation ? void searchResearchArea() : void assessComparison(searchRecord.alternatives)}
             scenarios={comparisonScenarios}
@@ -988,7 +985,6 @@ export default function Page() {
             } : undefined}
             onOpenResult={(record, snapshot) => { setReopenedMission({ record, snapshot }); setResearchEquipment(snapshot.equipment); setView(8); }} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority);setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
           {education&&<PortableEducation animate={preferences.animate}/>}
-          {labVisited&&<div hidden={!labOpen}><MissionLab mode="professional" classroomNav={null} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={openSearchForm} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
           {(view===12 || labSource)&&<div hidden={view!==12}><PowerMissionLab key={JSON.stringify([labSource?.key, labReportVersion])} openSavedReport={openSavedLabReport} source={labSource} sourceError={labError} onResult={()=>{
             if (labSource && displayedResult !== labSource.assessment) {
               setReopenedMission({
