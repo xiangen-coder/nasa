@@ -11,7 +11,7 @@ import ResearchSolarEstimate from "./ResearchSolarEstimate";
 import { defaultSolar, type SolarSettings } from "./mission-lab/scenario-science";
 
 const format = (value: number | null | undefined, unit = "") =>
-  value == null ? "Unavailable" : `${value.toFixed(1)}${unit}`;
+  value == null || !Number.isFinite(value) ? "Unavailable" : `${value.toFixed(1)}${unit}`;
 const utc = (value: string) => {
   const epoch = Date.parse(value);
   return Number.isFinite(epoch) ? new Date(epoch).toISOString().replace("T", " ").replace(/\.000Z$/, " UTC") : "Unavailable";
@@ -30,11 +30,11 @@ export function visibilityWindows(result: Research) {
   ] as const;
 }
 
-export function ResearchWindows({ result }: { result: Research }) {
+export function ResearchWindows({ result, showTotals = true }: { result: Research; showTotals?: boolean }) {
   if (!result.geometry.available) return <p>{result.geometry.reason ?? "Visibility windows unavailable."}</p>;
   return <div className="research-windows">{visibilityWindows(result).map(([label, windows]) => (
     <details key={label}>
-      <summary>{label} · {format(totalHours(windows), " h")}</summary>
+      <summary>{label}{showTotals && ` · ${format(totalHours(windows), " h")}`}</summary>
       {windows?.length ? (
         <ul>{windows.map((span) => <li key={span.start}>{utc(span.start)} to {utc(span.end)} · {format(span.hours, " h")}</li>)}</ul>
       ) : <p>{windows ? "No intervals in this mission window." : "Intervals unavailable."}</p>}
@@ -47,7 +47,7 @@ const measurements: { label: string; value: (r: Research) => string }[] = [
   { label: "Earth visibility", value: (r) => format(r.factors.C.score, "%") },
   { label: "Simultaneous visibility", value: (r) => format(totalHours(r.geometry.metrics?.operational_windows), " h") },
   { label: "Longest darkness", value: (r) => format(r.geometry.metrics?.longest_darkness_hours, " h") },
-  { label: "Longest Earth blackout", value: (r) => format(r.geometry.metrics?.longest_blackout_hours, " h") },
+  { label: "Longest Earth visibility gap", value: (r) => format(r.geometry.metrics?.longest_blackout_hours, " h") },
   { label: "Elevation above reference sphere", value: (r) => r.terrain.available
     ? format(r.terrain.elevation_m, r.terrain.coverage_type === "regional" ? " m · regional" : " m · footprint")
     : format(r.observer_height?.value, r.observer_height?.coverage_type === "global" ? " m · approximate global" : " m · regional") },
@@ -70,7 +70,7 @@ const measurements: { label: string; value: (r: Research) => string }[] = [
       ? `Broad terrain screening · ${r.horizon.source?.name ?? "LOLA"}`
       : r.geometry.available ? "Reference geometry only" : "Unavailable" },
   { label: "Research suitability score", value: (r) => format(r.score, r.provisional ? " / 100 · provisional" : " / 100") },
-  { label: "Missing factors", value: (r) => r.missing.map((key) => r.factors[key]?.name ?? key).join(", ") || "None" },
+  { label: "Missing factors", value: (r) => Array.isArray(r.missing) ? r.missing.map((key) => r.factors[key]?.name ?? key).join(", ") || "None" : "Unavailable" },
   { label: "Measured limits exceeded", value: (r) => r.constraints_failed.join(" ") || "None in available evidence" },
 ];
 
@@ -107,7 +107,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
   if (!complete.length || (!singleMission && entries.length < 2)) return null;
   const choice = complete.find((r) => missionKey(r.mission) === preferred);
   const evidence = complete.find((r) => missionKey(r.mission) === evidenceSite) ?? complete[0];
-  const label = (point: Mission) => entries.some((entry) => entry.scenario && sameMission(entry.mission, point))
+  const label = (point: Mission) => entries.some((entry) => entry.mission.name === point.name && !sameMission(entry.mission, point))
     ? `${point.name} · ${utc(point.start)}`
     : point.name;
   const assessmentStatus = (entry: (typeof entries)[number]) => {
@@ -144,53 +144,65 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
     const difference = value - reference;
     return (difference > 0 ? "+" : "") + format(difference, unit);
   };
-  const settings = [
-    ["Start (UTC)", utc(mission.start)],
-    ["End (UTC)", utc(mission.end)],
-    ["Duration", format((Date.parse(mission.end) - Date.parse(mission.start)) / 3600000, " h")],
-    ["Sampling", `${mission.interval_minutes} min`],
-    ["Earth clearance", `${mission.clearance_deg}°`],
-  ];
   const identityRows = [
     ["Coordinates (planetocentric, east-positive)", ...entries.map(({ mission }) => `${mission.latitude}°, ${mission.longitude}°`)],
     ["Touchdown (UTC)", ...entries.map(({ mission }) => utc(mission.start))],
     ["Mission end (UTC)", ...entries.map(({ mission }) => utc(mission.end))],
+    ["Sampling interval", ...entries.map(({ mission }) => `${mission.interval_minutes} min`)],
+    ["Earth clearance", ...entries.map(({ mission }) => `${mission.clearance_deg}°`)],
     ["Assessment status", ...entries.map(assessmentStatus)],
   ];
   const sunlightRow = ["Sunlight (mission total)", ...entries.map(({ assessment }) => format(sunlight(assessment), " h"))];
   const energyRow = ["Estimated solar energy", ...entries.map(({ mission: point }) => format(energy.get(missionKey(point)), " kWh"))];
-  const evidenceRow = ["Nominal evidence coverage", ...entries.map(({ assessment }) => format(assessment && assessment.available_weight * 100, "%"))];
+  const scenarioEnergyRow = ["What IF solar energy estimate at evaluation", ...entries.map(({ mission: point, scenario }) => {
+    const current = energy.get(missionKey(point));
+    return scenario?.energy != null && format(scenario.energy) !== format(current)
+      ? format(scenario.energy, " kWh") : "—";
+  })];
+  const hasScenarioEnergyDifference = scenarioEnergyRow.slice(1).some((cell) => cell !== "—");
+  const evidenceRow = ["Nominal evidence coverage", ...entries.map(({ assessment }) => format(assessment?.available_weight == null ? undefined : assessment.available_weight * 100, "%"))];
   const measurementRows = measurements.map(({ label, value }) => [
     label, ...entries.map((entry) => entry.assessment ? value(entry.assessment) : "Unavailable"),
   ]);
+  const warnings = entries.map(({ assessment, scenario, failure }) =>
+    [...new Set([...(failure ? [failure] : []), ...(scenario?.reasons ?? []),
+      ...(assessment?.warnings ?? [])])],
+  );
+  const sharedWarnings = warnings[0].filter((warning) => warnings.every((notes) => notes.includes(warning)));
+  const limitations = new Map<string, string[]>();
+  for (const [index, entry] of entries.entries()) {
+    for (const note of new Set(entry.assessment?.limitations ?? [])) {
+      if (!warnings[index].includes(note)) {
+        limitations.set(note, [...(limitations.get(note) ?? []), label(entry.mission)]);
+      }
+    }
+  }
   const grid = [
-    ...identityRows, sunlightRow, energyRow, evidenceRow, ...measurementRows,
-    ["Assessment notes", ...entries.map(({ assessment, scenario, failure }) =>
-      [...new Set([...(failure ? [failure] : []), ...(scenario?.reasons ?? []), ...(assessment?.warnings ?? [])])].join(" ") || "—",
-    )],
+    ...identityRows, sunlightRow, energyRow, ...(hasScenarioEnergyDifference ? [scenarioEnergyRow] : []), evidenceRow, ...measurementRows,
+    ["Assessment notes", ...warnings.map((notes) => notes.join(" ") || "—")],
+    ["Model limitations", ...entries.map(({assessment}) => [...new Set(assessment?.limitations ?? [])].join(" ") || "—")],
   ];
   const headers = ["Evidence", ...entries.map(({ mission }) => label(mission))];
-  function comparisonTable(rows: string[][], title: string) {
+  function comparisonTable(rows: string[][], title: string, showSunlight = false) {
     return <div className="table-scroll" tabIndex={0} role="region" aria-label={title}>
       <table aria-label={title}>
         <thead><tr><th scope="col">Metric</th>{entries.map(({ mission: point }, index) =>
           <th scope="col" className={`report-option-${index}`} key={missionKey(point)}>{label(point)}</th>)}</tr></thead>
         <tbody>{rows.map(([row, ...cells]) => (
-          <tr key={row}><th scope="row">{row}</th>{cells.map((cell, index) => <td key={index}>{cell}</td>)}</tr>
+          <tr key={row}><th scope="row">{row}</th>{cells.map((cell, index) => <td key={index} className={showSunlight ? "report-metric-value" : undefined}>
+            {cell}
+            {showSunlight && row === sunlightRow[0] && cell !== "Unavailable" && maxHours > 0 && (
+              <meter className="report-sunlight-meter" min={0} max={maxHours}
+                value={sunlight(entries[index].assessment) ?? 0} aria-label={`${label(entries[index].mission)} sunlight hours`} />
+            )}
+          </td>)}</tr>
         ))}</tbody>
       </table>
     </div>;
   }
-  const operationalRows = [sunlightRow, ...measurementRows.slice(1, 5), energyRow];
-  const terrainDescription = (r: Research) => r.terrain.available
-    ? `${r.terrain.coverage_type === "regional" ? "Regional" : "Local"} DEM · ${format(r.terrain.resolution_m, " m")} pixels.`
-    : "Local terrain measurements are unavailable.";
-  const terrainRows = [
-    ["DEM coverage", ...entries.map(({ assessment }) => assessment ? terrainDescription(assessment) : "Unavailable")],
-    ...measurementRows.slice(5, 14),
-    evidenceRow,
-  ];
-  const scoreRows = measurementRows.slice(14);
+  const operationalRows = [sunlightRow, ...measurementRows.slice(1, 5), energyRow, ...(hasScenarioEnergyDifference ? [scenarioEnergyRow] : [])];
+  const terrainRows = [...measurementRows.slice(5, 14), evidenceRow, measurementRows[15], measurementRows[16]];
+  const scoreRows = [measurementRows[14]];
   return (
     <section id="research-report" className="panel research-report comparison-report" aria-labelledby="research-report-title" tabIndex={-1}>
       <header className="comparison-report-header">
@@ -226,7 +238,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
         }, null, 2), "json")}>Export research JSON</button>
         <button className="button subtle" onClick={() => downloadReport([
           headers, ...grid, [], ["Comparison baseline", label(base.mission)],
-          ...settings, ["Preferred point", choice ? label(choice.mission) : ""], ["Recommendation", advice],
+          ["Preferred point", choice ? label(choice.mission) : ""], ["Recommendation", advice],
         ].map((row) => row.map(csvCell).join(",")).join("\r\n"), "csv")}>Export comparison CSV</button>
           </details>
         </div>}
@@ -251,19 +263,11 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
       </section>
       <section className="report-panel">
         <h3>Mission availability &amp; energy</h3>
-        <div className="report-analysis-grid">
-          {comparisonTable(operationalRows, "Side-by-side research comparison")}
-          <figure>
-            <figcaption>Sunlight over a common {format(maxHours, " h")} scale</figcaption>
-            {entries.map(({ mission: point, assessment }, index) => {
-              const hours = sunlight(assessment);
-              return <div key={missionKey(point)} className={`report-sun-bar report-option-${index}`}>
-                <div><strong>{label(point)}</strong><span>{format(hours, " h")}</span></div>
-                {hours != null && <meter min={0} max={maxHours} value={hours} aria-label={`${label(point)} sunlight hours`} />}
-              </div>;
-            })}
-          </figure>
-        </div>
+        {comparisonTable(operationalRows, "Side-by-side research comparison", true)}
+        {hasScenarioEnergyDifference && <p>The What IF estimate records the value at evaluation. The main energy row uses the report’s current equipment settings.</p>}
+        {maxHours > 0 && entries.some(({ assessment }) => sunlight(assessment) != null) && (
+          <p>Sunlight bars use a common 0–{format(maxHours, " h")} scale.</p>
+        )}
         <label className="research-preferred">Comparison baseline
           <select value={missionKey(base.mission)} onChange={(event) => setBaselineKey(event.target.value)}>
             {entries.map(({ mission: point }) => <option key={missionKey(point)} value={missionKey(point)}>{label(point)}</option>)}
@@ -279,35 +283,44 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
             {delta(energy.get(missionKey(entry.mission)), energy.get(missionKey(base.mission)), " kWh")} solar energy
           </> : "Differences require compatible duration, sampling and visibility evidence."}</li>
         ))}</ul>
-        <p>{equipment.area_m2} m² array · {equipment.efficiency_pct}% efficiency · {equipment.irradiance_wm2} W/m² · {equipment.loss_pct}% losses · {equipment.tracking ? "Sun tracking" : `Fixed panel, tilt ${equipment.tilt_deg}°, azimuth ${equipment.azimuth_deg}°`}</p>
+        {solar.some(([, value]) => value != null) && <details><summary>Energy estimate assumptions</summary><p>{equipment.area_m2} m² array · {equipment.efficiency_pct}% efficiency · {equipment.irradiance_wm2} W/m² · {equipment.loss_pct}% losses · {equipment.tracking ? "Sun tracking" : `Fixed panel, tilt ${equipment.tilt_deg}°, azimuth ${equipment.azimuth_deg}°`}</p></details>}
         <p>Dark intervals increase storage needs. Earth visibility measures line of sight. Radio contact also depends on equipment and ground stations.</p>
       </section>
       <section className="report-panel">
         <h3>Terrain &amp; environmental evidence</h3>
-        {comparisonTable(terrainRows, "Terrain and environmental evidence")}
-        {complete.some((r) => !r.terrain.available) && (
-          <p>Local terrain measurements are unavailable for {complete.filter((r) => !r.terrain.available).map((r) => label(r.mission)).join(", ")}.</p>
+        <div className="report-option-grid">
+          {entries.map(({ mission: point }, index) => (
+            <article className={`report-option report-option-${index}`} key={missionKey(point)}>
+              <h4>{label(point)}</h4>
+              <dl className="report-terrain-values">
+                {terrainRows.map(([metric, ...values]) => (
+                  <div key={metric}><dt>{metric}</dt><dd>{values[index]}</dd></div>
+                ))}
+              </dl>
+              {warnings[index].some((warning) => !sharedWarnings.includes(warning)) && (
+                <ul className="report-evidence-warning">
+                  {warnings[index].filter((warning) => !sharedWarnings.includes(warning))
+                    .map((warning) => <li key={warning}>{warning}</li>)}
+                </ul>
+              )}
+            </article>
+          ))}
+        </div>
+        {!!sharedWarnings.length && (
+          <aside className="report-shared-warning report-evidence-warning">
+            <strong>Warnings for all selected options</strong>
+            <ul>{sharedWarnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+          </aside>
         )}
+        <p>Nominal evidence coverage describes the inputs available for scoring. Landing safety requires separate verification.</p>
         <p>Historical temperatures describe previous observations. Permanent shadow can preserve ice, whose presence remains unconfirmed.</p>
-      </section>
-      <section className="report-panel">
-        <h3>{singleMission ? "Mission trade-offs" : "Trade-offs by option"}</h3>
-        <div className="report-option-grid">{entries.map(({ mission: point, assessment }, index) => (
-          <article className={`report-option report-option-${index}`} key={missionKey(point)}>
-            <h4>{label(point)}</h4>
-            <p>{assessment ? <>
-              {format(sunlight(assessment), " h")} sunlight · {format(assessment.geometry.metrics?.longest_blackout_hours, " h")} longest Earth outage.
-              {assessment.constraints_failed.length > 0 && <> {assessment.constraints_failed[0]}</>}
-            </> : "Assessment unavailable."}</p>
-          </article>
-        ))}</div>
       <label className="research-preferred">Preferred point for further study
         <select value={choice ? preferred : ""} onChange={(event) => setPreferred(event.target.value)}>
           <option value="">Select an assessed point</option>
           {complete.map((r) => <option key={missionKey(r.mission)} value={missionKey(r.mission)}>{label(r.mission)}</option>)}
         </select>
       </label>
-      {choice && <p><strong>{label(choice.mission)}</strong> selected for further study. {choice.constraints_failed.join(" ") || "Review the unresolved terrain and mission constraints before proceeding."}</p>}
+      {choice && <p><strong>{label(choice.mission)}</strong> selected for further study.</p>}
       </section>
       <section className="report-panel">
         <h3>Questions for further study</h3>
@@ -315,7 +328,6 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
           ...(!r.terrain.available ? ["Can local terrain measurements be obtained?"] : []),
           ...(!r.temperature.available ? ["Can historical temperature coverage be verified?"] : []),
           ...(!r.hazards?.available ? ["Can boulder and crater hazards be assessed?"] : []),
-          ...r.constraints_failed,
         ].map((question) => <li key={missionKey(r.mission) + question}><strong>{label(r.mission)}</strong> · {question}</li>))}</ul>
       </section>
       <details className="report-panel" open>
@@ -331,11 +343,11 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
         )}
         <h4>Sun and Earth elevation over time</h4>
         <ResearchElevationChart key={missionKey(evidence.mission)} result={evidence} />
-        <ResearchSolarEstimate result={evidence} equipment={equipment} />
+        <ResearchSolarEstimate result={evidence} equipment={equipment} reportDetail />
       </section>
       </details>
       <details className="report-panel">
-          <summary>Score breakdown &amp; evidence coverage</summary>
+          <summary>Score breakdown</summary>
           {comparisonTable(scoreRows, "Score and assessment evidence")}
           <p>Missing factors redistribute their weight across the available evidence. Both visibility factors are required for an overall score.</p>
           {complete.map((assessment) => (
@@ -354,7 +366,6 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
       </details>
       <details className="report-panel">
       <summary>Sources, sampling &amp; model limitations</summary>
-      <dl className="research-report-settings">{settings.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
       {complete.map((r) => (
         <article className="research-report-site" key={missionKey(r.mission)}>
           <h3>{label(r.mission)}</h3>
@@ -362,21 +373,22 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
           {r !== evidence && (
             <div className="research-print-only">
               <ResearchElevationChart result={r} />
-              <ResearchSolarEstimate result={r} equipment={equipment} />
+              <ResearchSolarEstimate result={r} equipment={equipment} reportDetail />
             </div>
           )}
-          <ResearchWindows result={r} />
+          <ResearchWindows result={r} showTotals={false} />
           <p>{r.horizon.method ?? r.horizon.reason}</p>
           <ul>{Object.entries(r.geometry.sources ?? {}).map(([body, source]) => (
             <li key={body}>{body} · {source.ephemeris} · {source.orientation}</li>
           ))}{[r.terrain.source, r.horizon.source, r.temperature.source, r.hazards?.source, r.ice?.source].map((source, index) => source?.source_url && (
             <li key={index}><a href={source.source_url}>{source.name ?? "Dataset source"}</a>{source.resolution_m ? ` · ${format(source.resolution_m, " m")}` : ""}{source.observation_period ? ` · ${source.observation_period}` : ""}</li>
           ))}</ul>
-          {r.warnings.length > 0 && <ul>{r.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>}
         </article>
       ))}
       <p><a href="https://ssd-api.jpl.nasa.gov/doc/horizons.html">JPL Horizons surface observer data</a></p>
-      <ul>{[...new Set(complete.flatMap(({ limitations }) => limitations))].map((limit) => <li key={limit}>{limit}</li>)}</ul>
+      <ul>{[...limitations].map(([limit, sites]) => (
+        <li key={limit}>{sites.length < entries.length && <strong>{sites.join(", ")} · </strong>}{limit}</li>
+      ))}</ul>
       </details>
     </section>
   );

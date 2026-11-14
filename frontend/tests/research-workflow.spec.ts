@@ -17,7 +17,10 @@ test("adding three research sites shares the mission settings and exports their 
     }]));
     await route.fulfill({ json: {
       mission, factors, score: 100, provisional: true, available_weight: 0.45,
-      missing: ["T", "H", "I"], warnings: [], limitations: ["Fixture for UI regression testing"],
+      missing: ["T", "H", "I"], warnings: [
+        "Boulder and crater mapping is incomplete.",
+        ...(mission.name === "Shackleton backup B" ? ["Local terrain coverage ends near this site."] : []),
+      ], limitations: ["Fixture for UI regression testing"],
       constraints_failed: [], safety_status: "not_established",
       terrain: { available: false, grid: [] }, horizon: { available: false, reason: "Fixture has no DEM" },
       temperature: { available: false },
@@ -62,15 +65,22 @@ test("adding three research sites shares the mission settings and exports their 
       interval_minutes: 60, clearance_deg: 0,
     });
   }
-  await expect(table.getByRole("row", { name: /Longest Earth blackout/ }).getByRole("cell", { name: "0.0 h" })).toHaveCount(3);
+  await expect(table.getByRole("row", { name: /Longest Earth visibility gap/ }).getByRole("cell", { name: "0.0 h" })).toHaveCount(3);
   const evidence = page.getByRole("region", { name: /Mission evidence/ });
   await expect(evidence).toContainText("Shackleton vicinity");
   await evidence.getByLabel("Site to inspect").selectOption({ label: "Shackleton backup B" });
   await expect(evidence).toContainText("Shackleton backup B");
-  await expect(evidence.getByRole("region", { name: "Estimated solar generation" })).toContainText("29.4 kWh");
+  await expect(evidence.getByRole("region", { name: "Estimated solar generation" })).toContainText("Average power");
   await page.getByLabel("Preferred point for further study").selectOption({ label: "Shackleton backup A" });
   await page.getByLabel("Comparison baseline").selectOption({ label: "Shackleton backup A" });
   const report = page.locator("#research-report");
+  await expect(report.getByText("Boulder and crater mapping is incomplete.", { exact: true })).toHaveCount(1);
+  const terrainCards = report.locator(".report-terrain-values");
+  await expect(terrainCards).toHaveCount(3);
+  await expect(terrainCards.first()).toContainText("45.0%");
+  await expect(terrainCards.first()).toContainText("Terrain safety, Temperature, Water ice potential");
+  await expect(report.locator(".report-option").filter({ has: page.getByRole("heading", { name: "Shackleton backup B", exact: true, level: 4 }) }))
+    .toContainText("Local terrain coverage ends near this site.");
   await expect(report.getByRole("heading", { name: "Shackleton backup A · Baseline" })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 850 });
   await expect.poll(() => table.evaluate((element) => {
@@ -82,7 +92,11 @@ test("adding three research sites shares the mission settings and exports their 
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export research JSON" }).click();
   expect((await download).suggestedFilename()).toBe("lunar-research-report.json");
+  const csvDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export comparison CSV" }).click();
+  expect((await csvDownload).suggestedFilename()).toBe("lunar-research-report.csv");
   await page.emulateMedia({ media: "print" });
+  await expect(terrainCards.last()).toBeVisible();
   await expect(table).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main navigation" })).toBeHidden();
   await page.emulateMedia({ media: "screen" });

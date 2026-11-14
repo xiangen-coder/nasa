@@ -716,24 +716,13 @@
 .report-option h3, .report-option h4, .report-option .text-button,
 .comparison-report th[class^="report-option-"] { color: var(--option-accent); }
 .report-evidence-warning { color: #f8d993; }
-.report-analysis-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-  gap: 16px;
-}
 .comparison-report .table-scroll { max-width: 100%; overflow-x: auto; }
 .comparison-report table { width: 100%; overflow-wrap: anywhere; }
 .comparison-report thead { background: #23334d; }
-.report-sun-bar { margin-block: 10px; }
-.report-sun-bar div { display: flex; justify-content: space-between; gap: 8px; }
-.report-sun-bar meter { width: 100%; height: 14px; }
-.report-sun-bar meter::-webkit-meter-optimum-value { background: var(--option-accent); }
-.report-sun-bar meter::-moz-meter-bar { background: var(--option-accent); }
 .comparison-report summary { cursor: pointer; }
 .comparison-report .research-export-controls details { position: relative; }
 .comparison-report .research-export-controls details > button { display: flex; margin-block: 5px; }
 .comparison-report :focus-visible { outline: 2px solid #a0d4ff; outline-offset: 2px; }
-@media (max-width: 1000px) { .report-analysis-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) {
   .comparison-report table { min-width: 480px; }
   .report-option-grid { grid-template-columns: minmax(0, 1fr); }
@@ -746,7 +735,6 @@
   #research-report .report-option :is(h3, h4), #research-report th, #research-report .report-evidence-warning {
     color: #111;
   }
-  #research-report .report-analysis-grid { display: block; }
   #research-report table { min-width: 0; }
   #research-report .report-option button { display: none; }
 }
@@ -869,4 +857,40 @@
   .assessment-print-report :is(h2, h3, h4, summary) { break-after: avoid; }
   .assessment-print-report :is(tr, figure, .recharts-responsive-container) { break-inside: avoid; }
   .assessment-print-report thead { display: table-header-group; }
+}
+
+.comparison-report .report-metric-value,
+.report-terrain-values dd { font-variant-numeric: tabular-nums; }
+.report-terrain-values > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  align-items: baseline;
+  gap: 0.65rem;
+  padding-block: 0.28rem;
+  border-bottom: 1px solid #8193ad33;
+}
+.report-terrain-values dd {
+  margin: 0;
+  max-width: 19ch;
+  text-align: right;
+  font-weight: 600;
+}
+.report-sunlight-meter {
+  display: block;
+  width: 100%;
+  height: 0.6rem;
+  accent-color: #70e9ef;
+}
+.report-sunlight-meter::-webkit-meter-optimum-value { background: #70e9ef; }
+.report-sunlight-meter::-moz-meter-bar { background: #70e9ef; }
+.report-shared-warning {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #d4a74a80;
+  border-radius: 10px;
+}
+.report-shared-warning ul { margin-bottom: 0; }
+@media print {
+  #research-report .report-terrain-values dd { color: #111; }
+  #research-report .report-option { break-inside: avoid; }
 }

@@ -13,7 +13,6 @@ import {
   comparableVisibility,
   missionKey,
   sameMission,
-  solarEstimate,
   type PlanBForecast,
 } from "../lib/plan-b";
 import PlanBComparison from "./PlanBComparison";
@@ -25,8 +24,6 @@ const criteria = [
   ["H", "Temperature"],
 ] as const;
 const key = (s: Site) => `${s.latitude},${s.longitude}`;
-const withUnit = (value: number | undefined, unit: string) =>
-  value == null ? "Unavailable" : `${value.toFixed(1)} ${unit}`;
 const utc = (time: string) =>
   Number.isFinite(Date.parse(time))
     ? new Date(time).toISOString().slice(0, 19).replace("T", " ") + " UTC"
@@ -646,99 +643,6 @@ export default function PreliminaryComparison({
             }}
           />
         </div>
-        {comparing && (
-          <>
-            <details className="panel what-if-comparison-details">
-              <summary>
-                Mission metrics: sunlight hours, outages &amp; energy
-              </summary>
-              <div className="table-scroll">
-                <table
-                  className="what-if-options"
-                  aria-label="Mission metrics for selected plans"
-                >
-                  <thead>
-                    <tr>
-                      <th scope="col">Plan</th>
-                      <th scope="col">Sunlight</th>
-                      <th scope="col">Longest Earth outage</th>
-                      <th scope="col">Estimated solar energy</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cards.map(({ site, scenario }, index) => {
-                      const result = assessments[index];
-                      let energy = scenario?.energy;
-                      if (energy == null && result) {
-                        try {
-                          energy = solarEstimate(result, equipment)?.total_kwh;
-                        } catch {
-                          // A missing estimate should not hide the other mission metrics.
-                        }
-                      }
-                      return (
-                        <tr key={missionKey(site)}>
-                          <th scope="row">
-                            {site.name}
-                            <small>{utc(site.start)}</small>
-                          </th>
-                          <td>
-                            {withUnit(result?.geometry.sunlight_hours, "h")}
-                          </td>
-                          <td>
-                            {withUnit(
-                              result?.geometry.metrics?.longest_blackout_hours,
-                              "h",
-                            )}
-                          </td>
-                          <td>{withUnit(energy, "kWh")}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </details>
-            <details className="panel what-if-comparison-details">
-              <summary>Terrain measurements, evidence &amp; warnings</summary>
-              {cards.map(({ site, scenario }, index) => {
-                const result = assessments[index];
-                const warnings = [
-                  ...new Set([
-                    ...(scenario?.reasons ?? []),
-                    ...(result?.constraints_failed ?? []),
-                    ...(result?.warnings ?? []),
-                  ]),
-                ];
-                return (
-                  <section key={missionKey(site)}>
-                    <h3>
-                      {site.name} · {utc(site.start)}
-                    </h3>
-                    <p>
-                      Maximum slope{" "}
-                      {withUnit(result?.terrain.slope_max_deg, "°")} · Roughness{" "}
-                      {withUnit(result?.terrain.roughness_m, "m")} · Relief{" "}
-                      {withUnit(result?.terrain.relief_m, "m")}
-                    </p>
-                    <p>
-                      {result
-                        ? `${(result.available_weight * 100).toFixed(0)}% nominal evidence · Missing: ${result.missing.join(", ") || "none"}`
-                        : "Assessment unavailable."}
-                    </p>
-                    {!!warnings.length && (
-                      <ul>
-                        {warnings.map((warning) => (
-                          <li key={warning}>{warning}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </section>
-                );
-              })}
-            </details>
-          </>
-        )}
       </div>
       {hasResults && (
         <p className="preliminary-disclosure">
