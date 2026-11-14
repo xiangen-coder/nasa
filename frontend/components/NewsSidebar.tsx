@@ -83,6 +83,7 @@ export default function NewsSidebar() {
           type="button"
           ref={launcher}
           className="news-launcher"
+          aria-label="Moon news"
           aria-expanded={panelOpen}
           aria-controls="lunar-news-popover"
           onClick={() => {
@@ -90,7 +91,7 @@ export default function NewsSidebar() {
             setOpen(null);
           }}
         >
-          <ShortcutArt label="Moon news" illustration="moon" />
+          <img src="/illustration/shortcut-moon.webp" alt="" width={64} height={64} />
         </button>
       </div>
       {panelOpen && (
