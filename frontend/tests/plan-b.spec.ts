@@ -96,6 +96,7 @@ test("shows the assessed site's summary, methods, Lunar Journey and Water/Ice Ev
   await expect(summary).toContainText("Missing Temperature");
   await expect(summary).toContainText("12.0 h of sunlight");
   await expect(page.getByRole("region", { name: "NASA landing research" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Open map for research thresholds/ })).toHaveCount(0);
   const factors = page.locator("#result-methods").getByRole("table", { name: "Research score factors" });
   await expect(factors.getByRole("row", { name: /Water ice evidence/ })).toContainText("5.0%");
   const journey = page.locator("#result-summary + #result-journey");
@@ -374,4 +375,12 @@ test("Change location reveals the initial ranked list two at a time", async ({ p
   await expect(choices.nth(1)).toBeDisabled();
   await expect(plan.getByRole("button", { name: "Compare selected (3)" })).toBeEnabled();
   expect(extraRequests).toEqual([]);
+});
+
+
+test("retired map explorer bookmarks open Configure", async ({ page }) => {
+  await page.goto("/#map-explorer");
+  await expect(page).toHaveURL(/#search$/);
+  await expect(page.getByRole("button", { name: "Find landing point", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Find your next horizon." })).toHaveCount(0);
 });

@@ -701,9 +701,6 @@ export default function ResearchOverview({
                     </p>
                   ),
                 )}
-                <button className="text-button" onClick={() => onNavigate(0)}>
-                  Open map for research thresholds and saved points <ArrowUpRight size={14} />
-                </button>
               </div>
               <aside aria-label="Assessment limitations">
                 <h3>Limitations</h3>
