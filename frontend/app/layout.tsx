@@ -1,3 +1,4 @@
+import "./lunar-ai.css";
 import type { Metadata } from "next";
 import "./globals.css";
 import "./canva.css";

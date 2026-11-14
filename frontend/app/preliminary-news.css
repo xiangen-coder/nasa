@@ -667,7 +667,3 @@
   border-radius: 12px;
 }
 .lunar-shortcut-placeholder:focus-visible > .lunar-shortcut-label { visibility: visible; }
-.lunar-app .lunar-ai-popover { max-height: min(34rem, calc(100dvh - 174px)); }
-.lunar-ai-popover form { display: grid; gap: 8px; }
-.lunar-ai-popover textarea { width: 100%; resize: vertical; }
-.lunar-ai-popover [role="log"] p { white-space: pre-wrap; overflow-wrap: anywhere; }

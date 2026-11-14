@@ -1,0 +1,95 @@
+.lunar-ai-companion,
+.lunar-ai-pill {
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 86;
+  color: #eaf0fa;
+  background: #111e32;
+  border: 1px solid #3b5065;
+  border-radius: 12px;
+  box-shadow: 0 22px 65px #0007;
+}
+.lunar-ai-companion {
+  width: min(340px, calc(100vw - 40px));
+  height: min(560px, calc(100dvh - 40px));
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.45;
+  color-scheme: dark;
+}
+.lunar-ai-companion :is(h2, h3, p) { margin: 0; }
+.lunar-ai-companion button, .lunar-ai-pill { cursor: pointer; }
+.lunar-ai-companion button:disabled { cursor: default; }
+.lunar-ai-companion :focus-visible, .lunar-ai-pill:focus-visible { outline: 2px solid #a7ece2; outline-offset: 2px; }
+.lunar-ai-header { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; padding: 16px 18px 12px; }
+.lunar-ai-orbit { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; color: #a7ece2; background: #233c48; }
+.lunar-ai-header h2 { font-family: inherit; line-height: 1.3; font-size: 15px; font-weight: 600; }
+.lunar-ai-header p { color: #a7b5ca; font-size: 11px; }
+.lunar-ai-header button, .lunar-ai-context button, .lunar-ai-composer button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: #a7b5ca;
+  background: transparent;
+}
+.lunar-ai-header button:hover, .lunar-ai-context button:hover { color: #a7ece2; background: #26394d; }
+.lunar-ai-context {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0 8px;
+  margin: 0 18px;
+  padding: 2px 6px 2px 10px;
+  background: #1b2a3d;
+  border: 1px solid #304258;
+  border-radius: 9px;
+  font-size: 11px;
+  color: #c3d3e6;
+}
+.lunar-ai-context > svg { color: #a7ece2; }
+.lunar-ai-context p { grid-column: 1 / -1; padding-bottom: 7px; }
+.lunar-ai-body { overflow-y: auto; overscroll-behavior: contain; padding: 17px 20px 12px; scrollbar-width: thin; }
+.lunar-ai-body .lunar-ai-eyebrow { text-transform: uppercase; letter-spacing: 0.13em; font-size: 9px; color: #bdd4df; }
+.lunar-ai-body h3 { font-family: inherit; font-size: 27px; font-weight: 600; line-height: 1.08; letter-spacing: -0.025em; margin-top: 8px; max-width: 12ch; }
+.lunar-ai-body .lunar-ai-welcome { color: #a7b5ca; margin-top: 9px; }
+.lunar-ai-suggestions { display: grid; gap: 7px; margin-top: 14px; }
+.lunar-ai-suggestions button {
+  display: flex; align-items: center; gap: 8px;
+  text-align: left; padding: 11px 9px; border: 1px solid #304258; border-radius: 10px;
+  color: #eaf0fa; background: #18283c; font-size: 12px;
+}
+.lunar-ai-suggestions button:hover { background: #20354a; border-color: #72a9a8; }
+.lunar-ai-suggestions svg { flex: none; color: #a7b5ca; }
+.lunar-ai-suggestions svg:last-child { margin-left: auto; }
+.lunar-ai-composer { margin: 0 16px; padding: 7px 8px; background: #0d192a; border: 1px solid #42576e; border-radius: 13px; }
+.lunar-ai-composer:focus-within { border-color: #a7ece2; }
+.lunar-ai-composer textarea { min-height: 42px; display: block; box-sizing: border-box; width: 100%; resize: none; border: 0; outline: none; padding: 3px; background: transparent; color: inherit; font: inherit; }
+.lunar-ai-composer textarea:focus-visible { outline: none; }
+.lunar-ai-composer textarea::placeholder, .lunar-ai-composer small { color: #a7b5ca; }
+.lunar-ai-composer div { display: flex; justify-content: space-between; align-items: center; }
+.lunar-ai-composer button:enabled { color: #101f2b; background: #a7ece2; }
+.lunar-ai-composer button:disabled { background: #223247; }
+.lunar-ai-footer { display: grid; justify-items: center; gap: 4px; padding: 10px 10px 12px; text-align: center; color: #a7b5ca; font-size: 10px; }
+.lunar-ai-footer button, .lunar-ai-retry { color: #f3c768; background: transparent; border: 0; padding: 4px; font-size: 12px; }
+.lunar-ai-message { margin-bottom: 10px; padding: 9px 10px; border-radius: 9px; background: #18283c; overflow-wrap: anywhere; }
+.lunar-ai-message strong:first-child { color: #a7ece2; }
+.lunar-ai-message p { margin-top: 4px; }
+.lunar-ai-user { background: #23394b; white-space: pre-wrap; }
+.lunar-ai-message pre { overflow: auto; }
+.lunar-ai-message a { color: #a7ece2; text-decoration: underline; }
+.lunar-ai-pill { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 13px; border-radius: 999px; bottom: calc(max(20px, env(safe-area-inset-bottom)) + 70px); }
+.lunar-ai-pill svg { color: #a7ece2; }
+@media (max-width: 600px) {
+  .lunar-ai-companion { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: min(340px, calc(100vw - 24px)); height: min(560px, calc(100dvh - 24px)); }
+  .lunar-ai-header button, .lunar-ai-context button, .lunar-ai-composer button { width: 40px; height: 40px; }
+  .lunar-ai-composer textarea { font-size: 16px; }
+}
+@media print { .lunar-ai-companion, .lunar-ai-pill { display: none; } }
+

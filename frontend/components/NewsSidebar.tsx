@@ -27,13 +27,12 @@ function ShortcutArt({ label, illustration }: { label: string; illustration: "uf
   );
 }
 
-export default function NewsSidebar({ showAiPet, aiContext }: { showAiPet: boolean; aiContext: string }) {
+export default function NewsSidebar({ showAiPet, aiContext, signedIn, onSignIn, planner }: { showAiPet: boolean; aiContext: string; signedIn: boolean; onSignIn: () => void; planner: boolean }) {
   const [feed, setFeed] = useState<Feed | null>(null),
     [loading, setLoading] = useState(false),
     [open, setOpen] = useState<Article | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
-  const aiLauncher = useRef<HTMLButtonElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!panelOpen) return;
@@ -79,8 +78,8 @@ export default function NewsSidebar({ showAiPet, aiContext }: { showAiPet: boole
   return (
     <>
       <div className="lunar-shortcuts">
-        {showAiPet && (
-          <button type="button" ref={aiLauncher} className="lunar-shortcut-placeholder"
+        {showAiPet && !aiOpen && (
+          <button type="button" className="lunar-shortcut-placeholder"
             aria-label="Ask Lunar AI" aria-expanded={aiOpen} aria-controls="lunar-ai-popover"
             onClick={() => { setPanelOpen(false); setOpen(null); setAiOpen((value) => !value); }}>
             <ShortcutArt label="Ask Lunar AI" illustration="ufo" />
@@ -103,10 +102,11 @@ export default function NewsSidebar({ showAiPet, aiContext }: { showAiPet: boole
         </button>
       </div>
       {showAiPet && aiOpen && (
-        <LunarAiPanel key={aiContext} context={aiContext} onClose={() => {
-          setAiOpen(false);
-          aiLauncher.current?.focus();
-        }} />
+        <LunarAiPanel key={aiContext} context={aiContext} signedIn={signedIn} onSignIn={onSignIn}
+          options={planner ? {
+            contextLabel: "Mission Planner + selected site",
+            contextHelp: "When you send a question, Gemini receives the recent conversation, site assessment, power inputs, and any completed simulation and variant summaries.",
+          } : undefined} />
       )}
       {panelOpen && (
         <aside
