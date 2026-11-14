@@ -1,6 +1,7 @@
 import pytest
 
 from app import landing_research as research
+from app import landing_reliability as reliability
 from app import water_evidence as water
 
 
@@ -23,7 +24,7 @@ def test_candidates_stay_in_circle_and_use_focus(monkeypatch, radius):
         assert research.rasters.GEOD.inv(
             request.mission.longitude, request.mission.latitude,
             mission.longitude, mission.latitude,
-        )[2] <= radius
+        )[2] <= radius + 1e-6
         if len(seen) == 1:
             return {"status": "limits", "reasons": ["Slope exceeded"]}
         return {"mission": mission, "score": 80, "geometry": {"available": True}}
@@ -33,7 +34,20 @@ def test_candidates_stay_in_circle_and_use_focus(monkeypatch, radius):
         "distances_m": list(reversed(range(len(args[-1])))),
     })
     result = research.find_research_area(request)
-    assert len(seen) == 17
+    assert len(seen) == (25 if radius == 500 else 49)
+    terrain_sites = []
+
+    def screen(site, *_):
+        terrain_sites.append((site.latitude, site.longitude))
+        return {"status": "insufficient_evidence", "constraints_failed": []}
+
+    monkeypatch.setattr(reliability, "screened", screen)
+    monkeypatch.setattr(reliability, "exploration_candidates", lambda *_: [])
+    reliability.alternatives(
+        reliability.ReliabilityRequest(mission=request.mission),
+        {"screening_radius_m": 0}, search_radius_m=radius,
+    )
+    assert set(terrain_sites) == {(site.latitude, site.longitude) for site in seen[1:]}
     assert any(site.longitude < 0 for site in seen)
     assert result["counts"]["limits"] == 1
     assert result["results"][0]["mission"] == seen[-1]
@@ -60,16 +74,16 @@ def test_unqualified_area_returns_preliminary_comparisons(monkeypatch):
         radius_m=20000,
     )
 
+    scores = iter(range(49))
+
     def evaluate(candidate, *, plan_b=False, **kwargs):
         if plan_b:
             return {"status": "missing", "reasons": ["Mapped hazard fraction is unavailable."]}
-        suffix = candidate.mission.name.removeprefix("Candidate ")
-        score = int(suffix) if suffix.isdigit() else 0
-        return {"mission": candidate.mission, "score": score}
+        return {"mission": candidate.mission, "score": next(scores)}
 
     monkeypatch.setattr(research, "research", evaluate)
     result = research.find_research_area(request)
     assert not result["recommended"]
-    assert result["counts"]["missing"] == 17
-    assert [point["score"] for point in result["results"]] == [16, 15, 14, 13, 12]
+    assert result["counts"]["missing"] == 49
+    assert [point["score"] for point in result["results"]] == [48, 47, 46, 45, 44]
     assert result["results"][0]["mission"] != request.mission

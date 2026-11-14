@@ -5,7 +5,7 @@ from fastapi import APIRouter,HTTPException
 
 from pydantic import BaseModel,Field,ConfigDict,model_validator
 
-from .landing_research import ResearchRequest,research,score_factors
+from .landing_research import ResearchRequest, candidate_radii, radial_candidate, research, score_factors
 
 from . import lunar_rasters as rasters
 
@@ -98,17 +98,13 @@ def alternatives(request,baseline,*,search_radius_m=None):
     rows=[];inspection=[];unverified=[];rejected=0;outside=0;overlap=0
 
     # Include nearby footprints in the wider Plan B search as well as distant rings.
-    radii=[maximum/3,maximum*2/3,maximum]
-    if search_radius_m is not None:
-        radii=sorted(set(radii+[radius for radius in (500,1000,2000) if radius<maximum]))
+    radii = candidate_radii(maximum, include_nearby=search_radius_m is not None)
     for radius in radii:
 
         for azimuth in range(0,360,45):
             if radius<2*baseline['screening_radius_m']:overlap+=1;continue
 
-            lon,lat,_=rasters.GEOD.fwd(request.mission.longitude,request.mission.latitude,azimuth,radius)
-
-            m=request.mission.model_copy(update={'longitude':lon,'latitude':lat,'name':f'Backup terrain candidate {azimuth}° / {radius:.0f} m'})
+            m = radial_candidate(request.mission, radius, azimuth, f'Backup terrain candidate {azimuth}° / {radius:.0f} m')
 
             a=screened(m,request.limits,v)
 

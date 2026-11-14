@@ -217,6 +217,18 @@ def plan_b_outcome(result):
     return {'status':'evaluated', 'result':result}
 
 
+def candidate_radii(maximum, *, include_nearby):
+    radii = {maximum / 3, maximum * 2 / 3, maximum}
+    if include_nearby:
+        radii.update(radius for radius in (500, 1000, 2000) if radius < maximum)
+    return sorted(radii)
+
+
+def radial_candidate(centre, radius, bearing, name):
+    lon, lat, _ = rasters.GEOD.fwd(centre.longitude, centre.latitude, bearing, radius)
+    return centre.model_copy(update={"latitude": lat, "longitude": lon, "name": name})
+
+
 @router.post('/research-area')
 def find_research_area(request: ResearchAreaRequest):
     from .water_evidence import research_shadow
@@ -224,13 +236,16 @@ def find_research_area(request: ResearchAreaRequest):
     check_research_intervals(request)
     centre = request.mission
     candidates = [centre]
-    for fraction in (0.45, 0.95):
-        for bearing in range(0, 360, 45):
-            lon, lat, _ = rasters.GEOD.fwd(centre.longitude, centre.latitude, bearing, request.radius_m*fraction)
-            if rasters.GEOD.inv(centre.longitude, centre.latitude, lon, lat)[2] <= request.radius_m:
-                candidates.append(centre.model_copy(update={
-                    "latitude": lat, "longitude": lon, "name": f"Candidate {len(candidates)}",
-                }))
+    # Visit all rings early so a timed-out search can still include distant sites.
+    radii = candidate_radii(request.radius_m, include_nearby=True)
+    for bearing in (0, 180, 90, 270, 45, 225, 135, 315):
+        for radius in radii:
+            candidate = radial_candidate(centre, radius, bearing, f"Candidate {bearing}° / {radius:.0f} m")
+            distance = rasters.GEOD.inv(
+                centre.longitude, centre.latitude, candidate.longitude, candidate.latitude,
+            )[2]
+            if distance <= request.radius_m + 1e-6:
+                candidates.append(candidate)
 
     counts = dict(evaluated=0, limits=0, missing=0, unavailable=0, focus_missing=0)
     qualified = []
