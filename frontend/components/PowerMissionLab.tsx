@@ -6,7 +6,6 @@ import { downloadReport } from "../lib/download-report";
 import { formatCoordinates } from "../lib/format-coordinates";
 import { optionalLimits, powerFields, simulatePower, smallLander, type Activity, type LabSource, type PowerInputs, type PowerKey, type PowerRun } from "../lib/mission-power";
 
-const steps = ["Mission brief", "Lander & operations", "Simulation", "Report"];
 const fields = Object.keys(powerFields) as PowerKey[];
 const utc = (time: string) => new Date(time).toISOString().slice(0, 19).replace("T", " ") + " UTC";
 const shortTime = (time: string) => new Intl.DateTimeFormat("en-GB", {
@@ -22,8 +21,8 @@ const initialDraft: Draft = { brief: { name: "", objective: "", payload: "", not
 const briefLabels = { name: "Mission name", objective: "Mission objective", payload: "Payload & equipment", notes: "Mission notes" } as const;
 const durationMs = 3600000;
 
-export default function PowerMissionLab({ source, onResult, onConfigure, sourceError }: {
-  source: LabSource | null; onResult: () => void; onConfigure: () => void; sourceError?: string;
+export default function PowerMissionLab({ source, onResult, onConfigure, sourceError, openSavedReport = false }: {
+  source: LabSource | null; onResult: () => void; onConfigure: () => void; sourceError?: string; openSavedReport?: boolean;
 }) {
   const [draft, setDraft] = useState(initialDraft);
   const [run, setRun] = useState<PowerRun | null>(null);
@@ -37,13 +36,13 @@ export default function PowerMissionLab({ source, onResult, onConfigure, sourceE
   useEffect(() => {
     if (!storageKey) return;
     try {
-      const saved = JSON.parse(localStorage.getItem(storageKey) ?? "null");
+      const report = JSON.parse(localStorage.getItem(storageKey + ":report") ?? "null");
+      const saved = openSavedReport ? report?.setup : JSON.parse(localStorage.getItem(storageKey) ?? "null");
       if (saved && fields.every((field) => typeof saved.power?.[field] === "string") &&
           Object.keys(briefLabels).every((key) => typeof saved.brief?.[key] === "string") &&
           Array.isArray(saved.activities) && saved.activities.every((a: Activity) => typeof a?.name === "string") &&
           typeof saved.reportNotes === "string") {
         setDraft(saved);
-        const report = JSON.parse(localStorage.getItem(storageKey + ":report") ?? "null");
         if (source && report?.setup && JSON.stringify(report.setup) === JSON.stringify(saved)) {
           try {
             setRun(simulatePower(source, saved.power, saved.activities));
@@ -52,7 +51,7 @@ export default function PowerMissionLab({ source, onResult, onConfigure, sourceE
         }
       }
     } catch { setNotice("The stored draft could not be opened."); }
-  }, [source, storageKey]);
+  }, [source, storageKey, openSavedReport]);
 
   function updateSetup(next: Draft) {
     setDraft(next);
@@ -83,7 +82,7 @@ export default function PowerMissionLab({ source, onResult, onConfigure, sourceE
     try {
       localStorage.setItem(storageKey, JSON.stringify(draft));
       localStorage.setItem("lunar-power-lab:last-source", JSON.stringify(source));
-      if (report) localStorage.setItem(storageKey + ":report", JSON.stringify(exportPayload()));
+      if (report) localStorage.setItem(storageKey + ":report", JSON.stringify({ ...exportPayload(), savedAt: new Date().toISOString() }));
       setNotice(report ? "Mission report saved on this device." : "Draft saved on this device.");
     } catch { setNotice("Browser storage could not save this mission."); }
   }
@@ -110,9 +109,6 @@ export default function PowerMissionLab({ source, onResult, onConfigure, sourceE
       </div>
     </header>
     {source ? <>
-      <nav aria-label="Mission Lab steps" className="power-lab-steps">
-        {steps.map((label, index) => <button className="button subtle" key={label} onClick={() => { const panel = document.getElementById("power-lab-step-" + index); panel?.focus({ preventScroll: true }); panel?.scrollIntoView({ block: "start" }); }}>{index + 1}. {label}</button>)}
-      </nav>
       <article className="power-lab-panel power-lab-source">
         <div className="power-lab-title"><strong>Imported from your Result</strong><button className="text-button" onClick={onResult}>View source Result ↗</button></div>
         <dl>

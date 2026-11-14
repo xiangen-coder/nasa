@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { accountApi as api } from "../lib/account-api";
 import { validRecord, type SearchRecord } from "../lib/search-record";
 
+import { listSavedPowerReports, type LabSource } from "../lib/mission-power";
 import { validSnapshot, type MissionSnapshot } from "../lib/saved-mission";
 
 type Saved = {
@@ -33,9 +34,11 @@ export default function Account({
   onRestore,
   onSignedIn,
   onOpenResult,
+  onOpenPowerReport,
   onUsernameChange,
 }: {
   onSignedIn?: () => Promise<void>;
+  onOpenPowerReport: (source: LabSource) => void;
   onOpenResult: (record: SearchRecord, snapshot: MissionSnapshot) => void;
   onRestore: (record: SearchRecord) => void;
   onUsernameChange: (username: string | null) => void;
@@ -46,6 +49,12 @@ export default function Account({
   const [confirmation, setConfirmation] = useState("");
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [saved, setSaved] = useState<Saved[]>([]);
+  const [powerReports, setPowerReports] = useState<ReturnType<typeof listSavedPowerReports>>([]);
+  useEffect(() => {
+    try { setPowerReports(listSavedPowerReports()); }
+    catch { /* The browser may disable local storage. */ }
+  }, []);
+
   const [action, setAction] = useState<Action>("login");
   const [busy, setBusy] = useState(true);
   const [message, setMessage] = useState("");
@@ -111,7 +120,7 @@ export default function Account({
       try {
         if (formAction === "login" && onSignedIn) {
           await onSignedIn();
-          setMessage("Mission saved to your account.");
+          setMessage("Result saved to your account.");
         }
       } finally {
         await refresh();
@@ -286,9 +295,9 @@ export default function Account({
       className="panel account-panel"
       aria-label="Account and saved missions"
     >
-      <h2>Saved missions</h2>
+      <h2>Saved results</h2>
       <p>
-        Open a saved mission to see its assessment and charts. Earlier saved searches open in Configure.
+        Open a saved result to see its assessment and charts. Earlier saved searches open in Configure.
       </p>
       {feedback}
       <div className="account-actions">
@@ -310,7 +319,7 @@ export default function Account({
           Sign out
         </button>
       </div>
-      {saved.length === 0 && !busy && <p>No saved missions yet.</p>}
+      {saved.length === 0 && !busy && <p>No saved results yet.</p>}
       {saved.map((r) => (
         <article key={r.id} className="saved-search">
           <div>
@@ -357,6 +366,17 @@ export default function Account({
         </article>
       ))}
       {busy && <small role="status">Connecting to your account…</small>}
+      <h2>Mission reports</h2>
+      <p>Reports saved from Mission Lab on this device.</p>
+      {powerReports.length === 0 && <p>No mission reports saved on this device yet.</p>}
+      {powerReports.map(({ storageKey, source, name, savedAt }) => (
+        <article key={storageKey} className="saved-search">
+          <div><strong>{name}</strong><br /><small>{source.site.name} · {source.site.start.slice(0, 10)} to {source.site.end.slice(0, 10)} UTC
+            {savedAt && Number.isFinite(Date.parse(savedAt)) && ` · Saved ${new Date(savedAt).toLocaleDateString()}`}
+          </small></div>
+          <button className="button subtle" onClick={() => onOpenPowerReport(source)}>Open report</button>
+        </article>
+      ))}
     </section>
   );
 }

@@ -225,7 +225,6 @@ export default function ResearchOverview({
           )}
         </div>
         <div className="result-title-actions">
-          {result && <button className="button subtle" onClick={() => onOpenMissionLab(result)}>Open in Mission Lab</button>}
           <button type="button" className="button primary new-search" onClick={onNewSearch}>
             New search
           </button>
@@ -819,8 +818,9 @@ export default function ResearchOverview({
                 disabled={missionSaveStatus?.status === "saving" || missionSaveStatus?.status === "saved"}
                 onClick={() => onSaveMission(result)}
               >
-                {missionSaveStatus?.status === "saving" ? "Saving mission…" : missionSaveStatus?.status === "saved" ? "Mission saved" : "Save mission"}
+                {missionSaveStatus?.status === "saving" ? "Saving result…" : missionSaveStatus?.status === "saved" ? "Result saved" : "Save result"}
               </button>
+              <button className="button subtle" onClick={() => onOpenMissionLab(result)}>Open in Mission Lab</button>
               <button className="button subtle" disabled={preparingPdf} onClick={() => void printAssessment()}>
                 {preparingPdf ? "Preparing PDF…" : "Save as PDF"} <Download size={15} aria-hidden="true" />
               </button>
@@ -830,7 +830,7 @@ export default function ResearchOverview({
                 </button>
               )}
             </div>
-            {missionSaveStatus?.status === "saved" && <p role="status">Mission saved to your account.</p>}
+            {missionSaveStatus?.status === "saved" && <p role="status">Result saved to your account.</p>}
             {missionSaveStatus?.status === "error" && <p className="error" role="alert">{missionSaveStatus.message}</p>}
           </section>
         </>

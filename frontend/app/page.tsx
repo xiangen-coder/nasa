@@ -523,6 +523,8 @@ export default function Page() {
   const [labVisited, setLabVisited] = useState(false);
   const labOpen = view === 16;
   const [labSource, setLabSource] = useState<LabSource | null>(null);
+  const [labReportVersion, setLabReportVersion] = useState(0);
+  const [openSavedLabReport, setOpenSavedLabReport] = useState(false);
   const [labError, setLabError] = useState("");
   useEffect(() => {
     try {
@@ -979,7 +981,7 @@ export default function Page() {
               setView(8);
             }} onSearch={()=>setView(7)} onCancel={cancelComparison}/>}
           {view===11&&<ResearchComparisonReport key={missionKey(comparisonMission)} mission={comparisonMission} alternatives={searchRecord.alternatives} comparison={comparisonState} scenarios={comparisonScenarios} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} onInspect={result=>{setResearchResult(result);setView(8);}} equipment={researchEquipment}/>}
-          {view===13&&<Account onSignedIn={missionToSave ? async () => {
+          {view===13&&<Account onOpenPowerReport={(source) => { setLabSource(source); setOpenSavedLabReport(true); setLabReportVersion((version) => version + 1); setView(12); }} onSignedIn={missionToSave ? async () => {
               await saveMission(missionToSave);
               setMissionSaveStatus({ assessment: missionToSave.snapshot.assessment, status: "saved" });
               setMissionToSave(null);
@@ -987,7 +989,7 @@ export default function Page() {
             onOpenResult={(record, snapshot) => { setReopenedMission({ record, snapshot }); setResearchEquipment(snapshot.equipment); setView(8); }} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority);setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
           {education&&<PortableEducation animate={preferences.animate}/>}
           {labVisited&&<div hidden={!labOpen}><MissionLab mode="professional" classroomNav={null} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={openSearchForm} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
-          {(view===12 || labSource)&&<div hidden={view!==12}><PowerMissionLab key={labSource?.key ?? "no-source"} source={labSource} sourceError={labError} onResult={()=>{
+          {(view===12 || labSource)&&<div hidden={view!==12}><PowerMissionLab key={JSON.stringify([labSource?.key, labReportVersion])} openSavedReport={openSavedLabReport} source={labSource} sourceError={labError} onResult={()=>{
             if (labSource && displayedResult !== labSource.assessment) {
               setReopenedMission({
                 record: { ...searchRecord, mission: labSource.site, alternatives: [] },
@@ -1025,6 +1027,7 @@ export default function Page() {
               const centre = !reopenedMission && activeArea?.result?.results.some((item) => sameMission(item.mission, assessment.mission))
                 ? activeArea.area.centre : undefined;
               const imported = adaptAssessment(assessment, centre);
+              setOpenSavedLabReport(false);
               setLabSource((previous) => previous?.assessment === assessment && previous.key === imported.key ? previous : imported);
               setLabError("");
             } catch (error) {

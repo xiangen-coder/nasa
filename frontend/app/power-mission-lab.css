@@ -1,5 +1,5 @@
 .power-lab { display: grid; gap: 16px; }
-.power-lab-title, .power-lab-actions, .power-lab-steps { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.power-lab-title, .power-lab-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .power-lab h1, .power-lab h2 { font-family: Fraunces, Georgia, serif; margin: 0; }
 .power-lab h1 { font-size: clamp(2rem, 4vw, 3.25rem); }
 .power-lab p { color: #c6d5ea; margin-block: 7px 12px; }
@@ -45,7 +45,7 @@
 @media print {
   body:has(div:not([hidden]) > .power-lab) .lunar-app > :not(.main-shell),
   body:has(div:not([hidden]) > .power-lab) main > :not(:has(> .power-lab)), body:has(div:not([hidden]) > .power-lab) .footer,
-  .power-lab :is(button, .power-lab-steps) { display: none !important; }
+  .power-lab button { display: none !important; }
   .power-lab { display: block; print-color-adjust: exact; }
   .power-lab-panel { margin-block: 8px; }
   .power-lab-columns { display: block; }

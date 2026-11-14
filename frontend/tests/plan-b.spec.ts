@@ -316,9 +316,9 @@ test("saved mission opens its completed result without a new analysis", async ({
     const { mission } = route.request().postDataJSON();
     return route.fulfill({ json: evidence(mission, 85) });
   });
-  await page.locator("#result-save").getByRole("button", { name: "Save mission" }).click();
+  await page.locator("#result-save").getByRole("button", { name: "Save result" }).click();
   await expect.poll(() => saved?.snapshot).toMatchObject({ version: 1, assessment: { score: 70 }, equipment: { area_m2: 4 } });
-  await expect(page.getByText("Mission saved to your account.")).toBeVisible();
+  await expect(page.getByText("Result saved to your account.")).toBeVisible();
   await expect(page).toHaveURL(/#result$/);
   expect(saves).toBe(1);
   await page.getByRole("button", { name: "Go to saved searches" }).click();

@@ -124,3 +124,24 @@ export function simulatePower(source: LabSource, inputs: PowerInputs, activities
   return { timeline, generated, unmet, firstBelow, belowHours, minimumPct: minimum / power.battery * 100 };
 }
 export type PowerRun = ReturnType<typeof simulatePower>;
+
+export function listSavedPowerReports() {
+  const reports: { storageKey: string; source: LabSource; name: string; savedAt?: string }[] = [];
+  for (let index = 0; index < localStorage.length; index++) {
+    const storageKey = localStorage.key(index);
+    if (!storageKey?.startsWith("lunar-power-lab:v1:") || !storageKey.endsWith(":report")) continue;
+    try {
+      const report = JSON.parse(localStorage.getItem(storageKey) ?? "null");
+      if (!report?.source?.assessment || !report.setup?.power || !report.simulation) continue;
+      const source = adaptAssessment(report.source.assessment, report.source.researchArea, report.source.resultId);
+      if (!source.complete || storageKey !== "lunar-power-lab:v1:" + source.key + ":report") continue;
+      reports.push({
+        storageKey, source,
+        name: typeof report.setup.brief?.name === "string" && report.setup.brief.name.trim()
+          ? report.setup.brief.name.trim() : source.site.name,
+        savedAt: typeof report.savedAt === "string" ? report.savedAt : undefined,
+      });
+    } catch { continue; }
+  }
+  return reports.sort((a, b) => (b.savedAt ?? "").localeCompare(a.savedAt ?? ""));
+}
