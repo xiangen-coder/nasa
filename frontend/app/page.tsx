@@ -28,7 +28,6 @@ import ResearchComparisonReport from "../components/ResearchComparisonReport";
 import { defaultSolar } from "../components/mission-lab/scenario-science";
 import {AlternativeCards} from "../components/AssessmentOverview";
 const CinematicHero = dynamic(() => import("../components/CinematicHero"), { ssr: false });
-const AstronomySimulation = dynamic(() => import("../components/AstronomySimulation"), { ssr: false, loading: () => <div className="panel empty">Loading astronomical simulation…</div> });
 import {
   Area,
   CartesianGrid,
@@ -532,7 +531,7 @@ export default function Page() {
         setLabSource({ ...validated, importedAt: typeof saved.importedAt === "string" ? saved.importedAt : validated.importedAt });
       }
     } catch {
-      setLabError("The last saved Mission Planer source could not be restored.");
+      setLabError("The last saved Mission Planner source could not be restored.");
     }
   }, []);
 
@@ -572,9 +571,6 @@ export default function Page() {
   };sync();window.addEventListener("hashchange",sync);try{const p=JSON.parse(localStorage.getItem("lunar-preferences-v1")||"null");if(p&&typeof p.animate==="boolean"&&typeof p.scale==="number")setPreferences({animate:p.animate,scale:Math.max(.95,Math.min(1.08,p.scale)),detailed:p.detailed!==false});}catch{}return()=>window.removeEventListener("hashchange",sync);},[]);
   const updatePreferences=(p:Preferences)=>{setPreferences(p);try{localStorage.setItem("lunar-preferences-v1",JSON.stringify(p));}catch{}};
   const full=preferences.detailed??true;
-  const [astronomyVisited, setAstronomyVisited] = useState(false);
-  const [observatoryMode, setObservatoryMode] = useState<"system" | "journey">("journey");
-  useEffect(() => { if (view === 5 && observatoryMode === "system") setAstronomyVisited(true); }, [view, observatoryMode]);
   const [sites, setSites] = useState<Site[]>([]);
   const [missionSites, setMissionSites] = useState<MissionCatalogEntry[]>([]);
   const [selected, setSelected] = useState<Site>({
@@ -956,11 +952,11 @@ export default function Page() {
       {!education&&<NewsSidebar/>}
       <div className="main-shell">
         <div className="workspace-with-news"><main id="main-content">
-          {view!==7&&view!==8&&view!==9&&view!==11&&view!==12&&view!==13&&!education&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission Planer","Account","Education","Mission report","Mission Planer"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission Planer.","Your account.","Lunar classroom.","Mission report.","Mission Planer."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div></div></>}
+          {view!==7&&view!==8&&view!==9&&view!==11&&view!==12&&view!==13&&!education&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission Planner","Account","Education","Mission report","Mission Planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission Planner.","Your account.","Lunar classroom.","Mission report.","Mission Planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div></div></>}
           {view===7&&<section className="search-layout revised-search" aria-label="Search for a lunar landing site">
             <section className="lunar-hero cinematic-hero" aria-label="Lunar exploration"><div className="hero-copy"><span className="eyebrow">A NEW PERSPECTIVE ON THE MOON</span><h1>Find your place<br/>on the <em>Moon.</em></h1><p>Every mission starts with a possibility. Explore lunar locations through real sunlight, communication and terrain data.</p><div className="hero-hairline"/><span className="hero-footnote">EXPLORE · ASSESS · DISCOVER</span><button className="cinematic-cta" onClick={()=>document.getElementById("landing-search-form")?.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}>Explore the Moon <ArrowRight size={15}/></button></div><CinematicHero animate={preferences.animate}/></section>
             <LandingSearch selected={selected} missionSites={missionSites} onSelected={setSelected} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} interval={interval} onInterval={setIntervalMinutes} clearance={clearance} onClearance={setClearance} priority={researchPriority} onPriority={v=>setResearchPriority(v as ResearchPriority)} radiusKm={radiusKm} onRadius={setRadiusKm} busy={researchBusy || !!activeArea?.busy} onSubmit={searchResearchArea}/>
-            <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(12)}>Mission Planer</button></div>
+            <div className="account-actions search-extra-tools"><button className="button subtle" onClick={()=>setView(12)}>Mission Planner</button></div>
           </section>}
           {view===11&&<PreliminaryComparison mission={comparisonMission} state={comparisonState} area={activeArea?.area} areaResult={activeArea?.result} radiusKm={comparisonRadius} alternatives={searchRecord.alternatives} priority={researchPriority} equipment={researchEquipment} notice={comparisonNotice} onEvaluate={()=>activeArea && !recommendation ? void searchResearchArea() : void assessComparison(searchRecord.alternatives)}
             scenarios={comparisonScenarios}
@@ -1745,17 +1741,8 @@ export default function Page() {
                 <iframe title="Lunar mission archive and interactive 3D paths" src="/mission-archive/index.html" style={{width:"100%",height:"min(1200px, 85vh)",minHeight:640,border:0,borderRadius:12,display:"block"}} />
               </section>
             )}
-            {view === 5 && (
-              <>
-                <div className="panel astro-camera-controls" role="group" aria-label="Observatory view" style={{padding:16}}>
-                  <button className={`button ${observatoryMode === "journey" ? "primary" : "subtle"}`} aria-pressed={observatoryMode === "journey"} onClick={() => setObservatoryMode("journey")}>Lunar Journey</button>
-                  <button className={`button ${observatoryMode === "system" ? "primary" : "subtle"}`} aria-pressed={observatoryMode === "system"} onClick={() => setObservatoryMode("system")}>Sun–Earth–Moon simulation</button>
-                </div>
-                {observatoryMode === "journey" && <PortableJourney target={selected} animate={preferences.animate} />}
-              </>
-            )}
+            {view === 5 && <PortableJourney target={selected} animate={preferences.animate} />}
             <LandingResearch showPanel={view===3} onComparisonChange={setResearchComparison} onResultChange={activeArea ? undefined : setResearchResult} actionRef={researchActions} priority={researchPriority} onBusyChange={setResearchBusy} mission={mission()} sites={sites} onAddComparison={addComparisonSite} onSelect={site => { setSelected(site); setView(7); }} />
-            <div hidden={view !== 5 || observatoryMode !== "system"}>{astronomyVisited && <AstronomySimulation active={view === 5 && observatoryMode === "system"} />}</div>
             {view===3&&comparison&&<AlternativeCards comparison={comparison} onInspect={r=>{setSelected({name:r.mission.name,latitude:r.mission.latitude,longitude:r.mission.longitude});openSearchForm();}}/>}
             {view===9&&<AboutLunar onExplore={()=>setView(7)} onResults={()=>setView(8)}/>}
             {view===10&&<section className="preferences-page glass"><span className="eyebrow">YOUR EXPERIENCE</span><h2>Settings.</h2><PreferencesControls value={preferences} onChange={updatePreferences}/><button className="button subtle" onClick={()=>setView(7)}>Back to Search <ArrowRight size={14}/></button></section>}

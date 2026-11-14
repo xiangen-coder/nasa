@@ -35,8 +35,8 @@ export const viewPaths = [
   "mission-lab",
 ];
 export const toolItems = [
-  { view: 5, label: "3D observatory", icon: Orbit, detail: "Earth-to-Moon journey & NASA positions" },
-  { view: 12, label: "Mission Planer", icon: Rocket, detail: "Lander power simulation & mission reports" },
+  { view: 5, label: "3D observatory", icon: Orbit, detail: "Interactive Earth-to-Moon journey" },
+  { view: 12, label: "Mission Planner", icon: Rocket, detail: "Lander power simulation & mission reports" },
   { view: 4, label: "Lunar mission archive", icon: Archive, detail: "Historical missions & documented 3D paths" },
 ];
 

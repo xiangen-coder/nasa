@@ -86,20 +86,19 @@ test("unavailable and stale news are explicitly labeled", async ({ page }) => {
   await expect(side).toContainText("STALE");
 });
 
-test("observatory opens Lunar Journey and keeps the NASA simulation available", async ({ page }) => {
+test("observatory opens Lunar Journey directly", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await page.getByRole("button", { name: "More", exact: true }).click();
   await expect(nav(page, "Map explorer")).toHaveCount(0);
-  await expect(nav(page, "Mission Planer")).toBeVisible();
+  await expect(nav(page, "Mission Planner")).toBeVisible();
   await expect(nav(page, "Lunar surface route")).toHaveCount(0);
   const modelAssets = ["earth.glb", "sun.glb", "moon-texture.jpg"].map((asset) =>
     page.waitForResponse((response) => response.url().endsWith("/models/" + asset)),
   );
   await nav(page, "3D observatory").click();
-  await expect(page.getByRole("button", { name: "Lunar Journey", exact: true }))
-    .toHaveAttribute("aria-pressed", "true");
+
   const journey = page.locator("lunar-journey");
   await expect(journey.getByRole("heading", { name: "Earth to your lunar landing point" })).toBeVisible();
   await expect(journey.getByText("Shackleton vicinity", { exact: true })).toBeVisible();
@@ -112,9 +111,7 @@ test("observatory opens Lunar Journey and keeps the NASA simulation available", 
   await expect(timeline).toHaveValue("700");
   await journey.getByRole("button", { name: "Restart journey" }).click();
   await expect(timeline).toHaveValue("0");
-  await page.getByRole("button", { name: "Sun–Earth–Moon simulation", exact: true }).click();
-  await expect(page.getByLabel("Astronomy date", { exact: true })).toBeVisible();
-  await expect(journey).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Sun–Earth–Moon simulation", exact: true })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
@@ -130,11 +127,11 @@ test("mission archive uses the site palette and keeps its trajectory controls", 
 });
 
 
-test("Mission Planer replaces the old planner and Mission Lab routes", async ({ page }) => {
+test("Mission Planner replaces the old planner and Mission Lab routes", async ({ page }) => {
   await page.goto("/#mission-lab");
   await expect(page).toHaveURL(/#mission-planner$/);
-  await expect(page.getByRole("heading", { name: "Mission Planer." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mission Planner." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Vehicle worksheet", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "More", exact: true }).click();
-  await expect(nav(page, "Mission Planer")).toHaveCount(1);
+  await expect(nav(page, "Mission Planner")).toHaveCount(1);
 });

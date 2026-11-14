@@ -369,7 +369,7 @@ test("retired map explorer bookmarks open Configure", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Find your next horizon." })).toHaveCount(0);
 });
 
-test("Mission Planer imports the Result and models a battery change", async ({ page }) => {
+test("Mission Planner imports the Result and models a battery change", async ({ page }) => {
   test.setTimeout(90000);
   await openCompare(page);
   await page.route("**/api/research/research-area", async (route) => {
@@ -389,10 +389,10 @@ test("Mission Planer imports the Result and models a battery change", async ({ p
   page.on("request", (request) => {
     if (/\/api\/research\/(evaluate|research-area)$/.test(request.url())) analysisRequests++;
   });
-  await page.getByRole("button", { name: "Open in Mission Planer" }).click();
+  await page.getByRole("button", { name: "Open in Mission Planner" }).click();
   await expect(page.getByText("Imported from your Result")).toBeVisible();
   await page.getByRole("button", { name: "Run power simulation" }).click();
-  await expect(page.getByRole("region", { name: "Mission Planer" }).getByRole("alert")).toContainText("Effective incident irradiance");
+  await expect(page.getByRole("region", { name: "Mission Planner" }).getByRole("alert")).toContainText("Effective incident irradiance");
   await page.getByRole("spinbutton", { name: "Effective incident irradiance" }).fill("1000");
   await page.getByRole("button", { name: "Run power simulation" }).click();
   await expect(page.getByText("Generated energy · 9.07 kWh")).toBeVisible();
