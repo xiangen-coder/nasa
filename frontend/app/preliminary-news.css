@@ -484,24 +484,27 @@
   gap: 4px;
   pointer-events: none;
 }
-.lunar-shortcuts .lunar-shortcut-placeholder {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 6px;
-}
-.lunar-shortcuts .news-launcher {
+.lunar-shortcuts :is(.lunar-shortcut-placeholder, .news-launcher) {
+  position: relative;
   display: grid;
   place-items: center;
+  pointer-events: auto;
+}
+.lunar-shortcuts .news-launcher {
   border: 0;
   padding: 0;
   background: none;
   color: inherit;
   cursor: pointer;
-  pointer-events: auto;
   border-radius: 12px;
 }
 .lunar-shortcut-label {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  visibility: hidden;
+  pointer-events: none;
   display: grid;
   place-items: center;
   min-height: 40px;
@@ -512,6 +515,10 @@
   color: #f5f8ff;
   white-space: nowrap;
 }
+@media (hover: hover) {
+  .lunar-shortcuts :hover > .lunar-shortcut-label { visibility: visible; }
+}
+.news-launcher:focus-visible > .lunar-shortcut-label { visibility: visible; }
 .lunar-shortcuts img { width: 64px; height: 64px; object-fit: contain; }
 .news-launcher:is(:hover, [aria-expanded="true"]) img {
   filter: drop-shadow(0 0 6px #82deff);

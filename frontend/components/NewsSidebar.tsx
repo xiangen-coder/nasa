@@ -91,7 +91,7 @@ export default function NewsSidebar() {
             setOpen(null);
           }}
         >
-          <img src="/illustration/shortcut-moon.webp" alt="" width={64} height={64} />
+          <ShortcutArt label="Moon news" illustration="moon" />
         </button>
       </div>
       {panelOpen && (
