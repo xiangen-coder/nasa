@@ -32,13 +32,12 @@ export default function CinematicHero({ animate }: { animate: boolean }) {
       <video
         ref={video}
         className="cinematic-video"
-        src="/illustration/lunar-hero.mp4"
+        src="/illustration/lunar-homepage-loop.mp4"
         muted
         loop
         playsInline
         preload="metadata"
       />
-      <div className="cinematic-shade" />
     </div>
   );
 }

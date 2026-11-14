@@ -5,8 +5,6 @@
 .cinematic-hero .hero-copy .eyebrow { margin-bottom:30px; font-size:12px; letter-spacing:3px; }
 .cinematic-hero .hero-copy p { max-width:440px; color:#e0e7f2; margin-top:25px; text-shadow:0 2px 16px #030a19; }
 .cinematic-hero .hero-copy .hero-mantra { margin-top:25px; }
-.cinematic-visual { position:absolute; inset:0; z-index:-1; overflow:hidden; }
-.cinematic-shade { position:absolute; inset:0; background:linear-gradient(90deg,#030a19f2 0%,#030a19c9 31%,#030a1966 55%,#030a190d 78%),linear-gradient(0deg,#071225 0%,transparent 30%,#06101d22 100%); pointer-events:none; }
 .cinematic-cta { pointer-events:auto; margin-top:27px; border-radius:36px; display:inline-flex; align-items:center; gap:14px; padding:13px 24px; min-height:48px; font-size:15px; background:#edf3fa; color:#0a172e; border:1px solid #bed8ff; box-shadow:0 5px 34px #adcaff2b; }
 .cinematic-cta:hover { background:white; box-shadow:0 5px 40px #adcaff50; }
 .cinematic-hero + .search-console { margin-top:26px; }
@@ -14,7 +12,6 @@
  .lunar-hero.cinematic-hero { min-height:690px; padding-top:58px; padding-bottom:150px; }
  .cinematic-hero .hero-copy { width:90%; }
  .cinematic-hero .hero-copy h1 { font-size:clamp(54px,8vw,72px); }
- .cinematic-shade { position:absolute; inset:0; background:linear-gradient(90deg,#030a19df,#030a1977 65%,#030a1944),linear-gradient(0deg,#071225,transparent 40%); }
 }
 @media(max-width:500px) {
  .lunar-hero.cinematic-hero { margin-inline:-20px; min-height:680px; padding:42px 20px 128px; align-items:flex-start; }
@@ -24,7 +21,6 @@
  .cinematic-hero .hero-copy p { font-size:14px; max-width:315px; width:92%; }
  .cinematic-hero .hero-copy .hero-mantra { font-size:10px; margin-top:22px; }
  .cinematic-cta { font-size:14px; padding:12px 20px; }
- .cinematic-shade { position:absolute; inset:0; background:linear-gradient(180deg,#030a19bf,#030a1977 40%,#030a191a 72%,#071225),linear-gradient(90deg,#030a1977,transparent); }
 }
 @media print { .cinematic-visual { display:none; } }
 
@@ -38,15 +34,21 @@
   margin-inline: calc((100% - 100cqw) / 2);
   min-height: max(500px, calc(100svh - 104px));
   padding-inline: clamp(22px, 7vw, 140px);
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(24px, 4vw, 72px);
   align-items: center;
   background: #030a19;
 }
 
 .revised-search .lunar-hero.cinematic-hero .hero-copy {
+  width: 100%;
   align-self: auto;
 }
 
-.revised-search .cinematic-hero .cinematic-visual {
+.cinematic-visual {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
   mask-image: none;
   background: #030a19;
 }
@@ -55,21 +57,15 @@
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   pointer-events: none;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 850px) {
   .revised-search > .lunar-hero.cinematic-hero {
+    grid-template-columns: minmax(0, 1fr);
     min-height: 0;
-    padding-block: 42px calc(56.25cqw + 20px);
-  }
-
-  .cinematic-video {
-    position: absolute;
-    bottom: 0;
-    height: auto;
-    aspect-ratio: 16 / 9;
+    padding-block: 42px;
   }
 }
