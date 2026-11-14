@@ -1,5 +1,5 @@
 "use client";
-import { ArrowUpRight, ClipboardList, Download, Eye, Layers, Mountain, Route, Save, Sun, Thermometer, Zap } from "lucide-react";
+import { ArrowUpRight, Calculator, CalendarDays, ChevronRight, ClipboardList, Download, Eye, FlaskConical, Layers, Mountain, Orbit, Route, Save, Sun, Thermometer, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   Line,
@@ -52,9 +52,17 @@ const sections = [
   ["Energy", "Energy", Zap],
   ["Terrain", "Terrain", Mountain],
   ["Environment", "Environment", Thermometer],
-  ["Methods", "Methods, sources & limitations", Layers],
+  ["Sources & limitations", "Sources & limitations", Layers, "result-methods"],
+  ["Score calculation", "Score calculation", Calculator, "result-score"],
   ["Save", "Save", Save],
 ] as const;
+
+const limitationGroups = [
+  { title: "Research use only", Icon: FlaskConical, matches: /research ranking|certification|safe-site/i },
+  { title: "Visibility model", Icon: Eye, matches: /visibility|eclipses|airless/i },
+  { title: "Sampling & time", Icon: CalendarDays, matches: /sampling|UT1|leap seconds/i },
+  { title: "Terrain geometry", Icon: Layers, matches: /alignment|horizon rays|subpixel/i },
+];
 
 function SectionHeading({ index, subtitle }: { index: number; subtitle?: string }) {
   const [, title, Icon] = sections[index];
@@ -166,8 +174,8 @@ export default function ResearchOverview({
       {result && (
         <nav className="result-section-nav" aria-label="Results sections">
           <span className="result-nav-label">Assessment</span>
-          {sections.map(([label, , Icon]) => {
-            const id = `result-${label.toLowerCase()}`;
+          {sections.map(([label, , Icon, sectionId]) => {
+            const id = sectionId ?? `result-${label.toLowerCase()}`;
             return (
               <a key={id} href={`#${id}`} aria-current={activeSection === id ? "location" : undefined}
                 onClick={(event) => {
@@ -699,40 +707,50 @@ export default function ResearchOverview({
             <WaterEvidence location={result.mission} />
           </section>
           <section id="result-methods" tabIndex={-1} className="result-section">
-            <SectionHeading index={6} />
-            <div className="research-result-columns">
-              <div>
-                <p>
-                  JPL Horizons provides the sampled Sun and Earth positions.
-                  LOLA elevation maps support terrain screening where coverage
-                  is complete. Diviner provides historical surface temperatures.
-                </p>
-                {Object.entries(result.geometry.sources ?? {}).map(
-                  ([body, source]) => (
-                    <p key={body}>
-                      {body === "sun" ? "Sun" : "Earth"} · {source.ephemeris} ·{" "}
-                      {source.orientation}
-                    </p>
-                  ),
-                )}
-              </div>
-              <aside aria-label="Assessment limitations">
-                <h3>Limitations</h3>
-                <ul>
-                  {result.limitations.map((limitation) => (
-                    <li key={limitation}>{limitation}</li>
-                  ))}
-                </ul>
-              </aside>
+            <SectionHeading index={6} subtitle="Data used in this assessment and the limits of interpretation." />
+            <h3>Data sources</h3>
+            <div className="result-source-grid">
+              <article>
+                <h4><Orbit aria-hidden="true" /> JPL Horizons</h4>
+                <p>Sun &amp; Earth positions.</p>
+                {Object.entries(result.geometry.sources ?? {}).map(([body, source]) => (
+                  <p className="result-source-meta" key={body}>
+                    {body === "sun" ? "Sun" : "Earth"} · {source.ephemeris} · {source.orientation}
+                  </p>
+                ))}
+              </article>
+              <article>
+                <h4><Mountain aria-hidden="true" /> LOLA</h4>
+                <p>Elevation &amp; terrain screening where map coverage is complete.</p>
+              </article>
+              <article>
+                <h4><Thermometer aria-hidden="true" /> Diviner</h4>
+                <p>Historical surface temperatures.</p>
+              </article>
             </div>
-            <h3>Research score calculation</h3>
+            <h3>Limitations</h3>
+            <div className="result-limitation-grid">
+              {limitationGroups.map(({ title, Icon, matches }) => {
+                const items = result.limitations.filter((item) => limitationGroups.find((group) => group.matches.test(item))?.matches === matches);
+                return (
+                  <article key={title}>
+                    <h4><Icon aria-hidden="true" /> {title}</h4>
+                    {items.length ? items.map((item) => <p key={item}>{item}</p>) : <p>Unavailable for this assessment.</p>}
+                  </article>
+                );
+              })}
+            </div>
+            {result.limitations.filter((item) => !limitationGroups.some(({ matches }) => matches.test(item))).map((item) => <p key={item}>{item}</p>)}
+          </section>
+          <section id="result-score" tabIndex={-1} className="result-section">
+            <SectionHeading index={7} />
             <p>
               The score adds each available factor score multiplied by its used weight.
               The model scales the available weights to total 100% and requires both
               sunlight and Earth visibility to calculate an overall score.
               Compare sites with similar evidence coverage.
             </p>
-            <div className="table-scroll">
+            <div className="table-scroll result-score-table" role="region" aria-label="Research score table" tabIndex={0}>
               <table aria-label="Research score factors">
                 <thead>
                   <tr>
@@ -755,10 +773,13 @@ export default function ResearchOverview({
                       <td>{value(factor.contribution, " points")}</td>
                       <td>{factor.quality}</td>
                       <td>
-                        {factor.explanation}
-                        {factor.source?.source_url && (
-                          <> <a href={factor.source.source_url}>{factor.source.name || "Dataset source"}</a></>
-                        )}
+                        <details className="result-factor-details">
+                          <summary>View details <ChevronRight size={13} aria-hidden="true" /></summary>
+                          <p>{factor.explanation}</p>
+                          {factor.source?.source_url && (
+                            <a href={factor.source.source_url}>{factor.source.name || "Dataset source"}</a>
+                          )}
+                        </details>
                       </td>
                     </tr>
                   ))}
@@ -767,7 +788,7 @@ export default function ResearchOverview({
             </div>
           </section>
           <section id="result-save" tabIndex={-1} className="result-section">
-            <SectionHeading index={7} />
+            <SectionHeading index={8} />
             <div className="account-actions">
               <button className="button subtle" onClick={() => onNavigate(11)}>
                 Back to comparison

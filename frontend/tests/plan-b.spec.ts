@@ -11,7 +11,12 @@ function evidence(mission: Mission, score = 80, original = false) {
   return {
     mission, limits, score, available_weight: original ? 0.8 : 0.95,
     missing: original ? ["H"] : [], provisional: true, constraints_failed: [], safety_status: "not_established",
-    warnings: [], limitations: [], terrain: { available: true, resolution_m: 5, radius_m: 100, grid: [],
+    warnings: [], limitations: [
+      "Research ranking only; never a NASA landing certification or a safe-site recommendation.",
+      "Visibility is not a power model. Finite body disks and eclipses are excluded.",
+      "Sampling uses left endpoints. Before 1962 Horizons UT is UT1; future leap seconds are unknown.",
+      "DEM and observation frame alignment must be checked. Finite horizon rays exclude distant and subpixel obstruction.",
+    ], terrain: { available: true, resolution_m: 5, radius_m: 100, grid: [],
       slope_max_deg: 5, roughness_m: 1, relief_m: 4 },
     horizon: { available: true }, temperature: { available: !original },
     ice: { available: true, value: 0, radius_m: 100 },
@@ -102,8 +107,21 @@ test("shows the assessed site's summary, methods, Lunar Journey and Water/Ice Ev
   await expect(summary).toContainText("12.0 h of sunlight");
   await expect(page.getByRole("region", { name: "NASA landing research" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Open map for research thresholds/ })).toHaveCount(0);
-  const factors = page.locator("#result-methods").getByRole("table", { name: "Research score factors" });
+  const factors = page.locator("#result-score").getByRole("table", { name: "Research score factors" });
   await expect(factors.getByRole("row", { name: /Water ice evidence/ })).toContainText("5.0%");
+  const limitations = page.locator(".result-limitation-grid");
+  await expect(limitations.locator("article").nth(1)).toContainText("eclipses are excluded");
+  await expect(limitations.locator("article").nth(2)).toContainText("UT1");
+  await expect(limitations.locator("article").nth(3)).toContainText("subpixel obstruction");
+  const navigation = page.getByRole("navigation", { name: "Results sections" });
+  await navigation.getByRole("link", { name: "Score calculation" }).click();
+  await expect(navigation.getByRole("link", { name: "Score calculation" })).toHaveAttribute("aria-current", "location");
+  const details = factors.getByText("View details", { exact: true }).first();
+  await details.focus();
+  await page.keyboard.press("Enter");
+  await expect(factors.locator("details[open] p")).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 850 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   const journey = page.locator("#result-summary + #result-journey");
   await expect(journey.getByRole("heading", { name: "Earth to your lunar landing point" })).toBeVisible();
   await expect(journey.locator("lunar-journey")).toHaveAttribute("latitude", "-89.54");
