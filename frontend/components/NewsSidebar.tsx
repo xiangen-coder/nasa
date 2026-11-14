@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import LunarAiPanel from "./LunarAiPanel";
+import LunarAiPanel, { LunarSpacecraft } from "./LunarAiPanel";
 import { ExternalLink, Newspaper, RefreshCw, X } from "lucide-react";
 type Article = {
   title: string;
@@ -17,15 +17,6 @@ type Feed = {
   warnings?: string[];
 };
 const canadianRoverData = "https://data.asc-csa.gc.ca/dataset/9151430-4v0p-4t5c-468vnhj714ao64";
-
-function ShortcutArt({ label, illustration }: { label: string; illustration: "ufo" | "moon" }) {
-  return (
-    <>
-      <span className="lunar-shortcut-label">{label}</span>
-      <img src={`/illustration/shortcut-${illustration}.webp`} alt="" width={64} height={64} />
-    </>
-  );
-}
 
 export default function NewsSidebar({ showAiPet, aiContext, signedIn, onSignIn, planner }: { showAiPet: boolean; aiContext: string; signedIn: boolean; onSignIn: () => void; planner: boolean }) {
   const [feed, setFeed] = useState<Feed | null>(null),
@@ -82,7 +73,7 @@ export default function NewsSidebar({ showAiPet, aiContext, signedIn, onSignIn, 
           <button type="button" className="lunar-shortcut-placeholder"
             aria-label="Ask Lunar AI" aria-expanded={aiOpen} aria-controls="lunar-ai-popover"
             onClick={() => { setPanelOpen(false); setOpen(null); setAiOpen((value) => !value); }}>
-            <ShortcutArt label="Ask Lunar AI" illustration="ufo" />
+            <LunarSpacecraft />
           </button>
         )}
         <button
@@ -98,7 +89,8 @@ export default function NewsSidebar({ showAiPet, aiContext, signedIn, onSignIn, 
             setOpen(null);
           }}
         >
-          <ShortcutArt label="Moon news" illustration="moon" />
+          <span className="lunar-shortcut-label">Moon news</span>
+          <img src="/illustration/shortcut-moon.webp" alt="" width={64} height={64} />
         </button>
       </div>
       {showAiPet && aiOpen && (

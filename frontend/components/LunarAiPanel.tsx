@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { ArrowUp, ArrowUpRight, Info, Layers, MapPin, Minus, Orbit, Route, SquarePen } from "lucide-react";
+import { ArrowUp, ArrowUpRight, Info, Layers, MapPin, Minus, Route, SquarePen } from "lucide-react";
 
 import Markdown from "react-markdown";
+
+export function LunarSpacecraft({ size = 64 }: { size?: number }) {
+  return <img src="/illustration/shortcut-ufo.webp" alt="" width={size} height={size} />;
+}
 
 type Message = { role: "user" | "model"; text: string };
 const defaults = {
@@ -97,7 +101,7 @@ export default function LunarAiPanel({ context, signedIn, onSignIn, options }: P
   if (minimized) return (
     <button className="lunar-ai-pill" ref={pill} type="button" onClick={() => setMinimized(false)}
       aria-label="Restore Lunar AI" title="Restore Lunar AI">
-      <img src="/illustration/shortcut-ufo.webp" alt="" width={64} height={64} />
+      <LunarSpacecraft />
     </button>
   );
 
@@ -110,7 +114,7 @@ export default function LunarAiPanel({ context, signedIn, onSignIn, options }: P
         }
       }}>
       <header className="lunar-ai-header">
-        <span className="lunar-ai-orbit"><Orbit size={18} aria-hidden="true" /></span>
+        <span className="lunar-ai-spacecraft"><LunarSpacecraft size={38} /></span>
         <div><h2>Lunar AI</h2><p>Your mission, in context</p></div>
         <button type="button" aria-label="New conversation" title="New conversation" onClick={reset}><SquarePen size={16} /></button>
         <button type="button" aria-label="Minimize Lunar AI" title="Minimize Lunar AI" onClick={() => setMinimized(true)}><Minus size={17} /></button>

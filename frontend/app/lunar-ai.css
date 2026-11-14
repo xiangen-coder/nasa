@@ -25,7 +25,7 @@
 .lunar-ai-companion button:disabled { cursor: default; }
 .lunar-ai-companion :focus-visible, .lunar-ai-pill:focus-visible { outline: 2px solid #a7ece2; outline-offset: 2px; }
 .lunar-ai-header { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; padding: 16px 18px 12px; }
-.lunar-ai-orbit { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; color: #a7ece2; background: #233c48; }
+.lunar-ai-spacecraft img { display: block; width: 38px; height: 38px; object-fit: contain; }
 .lunar-ai-header h2 { font-family: inherit; line-height: 1.3; font-size: 15px; font-weight: 600; }
 .lunar-ai-header p { color: #a7b5ca; font-size: 11px; }
 .lunar-ai-header button, .lunar-ai-context button, .lunar-ai-composer button {
