@@ -56,7 +56,7 @@
 .about-lunar-evidence summary { color: var(--about-blue); cursor: pointer; margin-top: .75rem; }
 .about-lunar-evidence a { color: var(--about-blue); }
 .about-lunar-body > .about-lunar-team { text-align: center; padding-block: clamp(1.75rem, 3vw, 3rem) 1.5rem; }
-.about-lunar-team h2 { color: #bdd8fa; font-family: inherit; font-weight: 600; font-size: clamp(1.55rem, 3vw, 2.55rem); }
+.about-lunar-team h2 { text-align: center; color: #bdd8fa; font-family: inherit; font-weight: 600; font-size: clamp(1.55rem, 3vw, 2.55rem); }
 .about-lunar-team-main { max-width: 66ch; margin: 0 auto; line-height: 1.55; }
 .about-lunar-team-main p + p { margin-top: .85rem; }
 .about-lunar-wordmark {
@@ -70,7 +70,7 @@
   background: #d5e8ff; color: #081424; font: italic 600 clamp(1rem, 2vw, 1.35rem)/1.35 Fraunces, Georgia, serif;
 }
 .about-lunar-body > .about-lunar-cta { text-align: center; border-top: 0; padding-block: 1rem 2rem; }
-.about-lunar-cta h2 { max-width: 27ch; margin-inline: auto; text-wrap: balance; }
+.about-lunar-cta h2 { text-align: center; max-width: 27ch; margin-inline: auto; text-wrap: balance; }
 .about-lunar-cta .button { margin-top: 1rem; }
 @media (max-width: 880px) {
   .about-lunar-hero-copy { max-width: 72%; }
