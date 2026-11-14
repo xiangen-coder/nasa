@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     if (requests.has(user.id)) return json({ error: "Please wait a few seconds before sending another question." }, 429);
     requests.set(user.id, now + cooldownMs);
 
-    const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
