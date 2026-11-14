@@ -291,21 +291,95 @@ export default function Account({
     );
   }
   return (
-    <section
-      className="panel account-panel"
-      aria-label="Account and saved missions"
-    >
-      <h2>Saved results</h2>
-      <p>
-        Open a saved result to see its assessment and charts. Earlier saved searches open in Configure.
-      </p>
-      {feedback}
-      <div className="account-actions">
+    <div className="account-saved-items" aria-label="Account and saved missions">
+      <section className="panel account-panel" aria-labelledby="saved-results-heading">
+        <h2 id="saved-results-heading">Saved results</h2>
+        <p>
+          Open a saved result to see its assessment and charts. Earlier saved searches open in Configure.
+        </p>
+        {feedback}
+        {saved.length === 0 && !busy && <p>No saved results yet.</p>}
+        {saved.map((r) => (
+          <article key={r.id} className="saved-search">
+            <div>
+              <strong>{r.name}</strong>
+              <br />
+              <small>
+                {r.payload.mission.name} · {r.payload.mission.start.slice(0, 10)}{" "}
+                to {r.payload.mission.end.slice(0, 10)} UTC · Saved {new Date(r.created_at).toLocaleDateString()}
+              </small>
+            </div>
+            <div className="account-actions">
+              <button
+                className="button subtle"
+                disabled={busy}
+                onClick={() => {
+                  if (!r.has_snapshot) {
+                    onRestore(r.payload);
+                    return;
+                  }
+                  void run(async () => {
+                    const opened = await api(`/history?id=${encodeURIComponent(r.id)}`);
+                    if (!validRecord(opened.record) || !validSnapshot(opened.snapshot, opened.record))
+                      throw new Error("Saved mission result unavailable.");
+                    onOpenResult(opened.record, opened.snapshot);
+                  });
+                }}
+              >
+                {r.has_snapshot ? "Open result" : "Open saved search"}
+              </button>
+              <button
+                className="button subtle account-destructive"
+                disabled={busy}
+                aria-label={`Delete ${r.name}`}
+                onClick={() =>
+                  void run(async () => {
+                    await api(`/history?id=${r.id}`, "DELETE");
+                    setSaved((items) => items.filter((item) => item.id !== r.id));
+                  })
+                }
+              >
+                Delete
+              </button>
+            </div>
+          </article>
+        ))}
+        {busy && <small role="status">Connecting to your account…</small>}
+      </section>
+      <section className="panel account-panel" aria-labelledby="saved-reports-heading">
+        <h2 id="saved-reports-heading">Saved mission reports</h2>
+        <p>Reports saved from Mission Lab on this device.</p>
+        {powerReports.length === 0 && <p>No mission reports saved on this device yet.</p>}
+        {powerReports.map(({ storageKey, source, name, savedAt }) => (
+          <article key={storageKey} className="saved-search">
+            <div><strong>{name}</strong><br /><small>{source.site.name} · {source.site.start.slice(0, 10)} to {source.site.end.slice(0, 10)} UTC
+              {savedAt && Number.isFinite(Date.parse(savedAt)) && ` · Saved ${new Date(savedAt).toLocaleDateString()}`}
+            </small></div>
+            <div className="account-actions">
+              <button className="button subtle" disabled={busy} onClick={() => onOpenPowerReport(source)}>
+                Open report
+              </button>
+              <button
+                className="button subtle account-destructive"
+                disabled={busy}
+                aria-label={`Delete report ${name}`}
+                onClick={() => void run(async () => {
+                  localStorage.removeItem(storageKey);
+                  setPowerReports((items) => items.filter((item) => item.storageKey !== storageKey));
+                })}
+              >
+                Delete
+              </button>
+            </div>
+          </article>
+        ))}
+      </section>
+      <section className="panel account-panel account-session-card" aria-label="Signed-in account">
         <p>
           Signed in as <strong>{user.email}</strong>
         </p>
         <button
-          className="button subtle"
+          className="button subtle account-destructive"
           disabled={busy}
           onClick={() =>
             void run(async () => {
@@ -318,65 +392,7 @@ export default function Account({
         >
           Sign out
         </button>
-      </div>
-      {saved.length === 0 && !busy && <p>No saved results yet.</p>}
-      {saved.map((r) => (
-        <article key={r.id} className="saved-search">
-          <div>
-            <strong>{r.name}</strong>
-            <br />
-            <small>
-              {r.payload.mission.name} · {r.payload.mission.start.slice(0, 10)}{" "}
-              to {r.payload.mission.end.slice(0, 10)} UTC · Saved {new Date(r.created_at).toLocaleDateString()}
-            </small>
-          </div>
-          <div className="account-actions">
-            <button
-              className="button subtle"
-              disabled={busy}
-              onClick={() => {
-                if (!r.has_snapshot) {
-                  onRestore(r.payload);
-                  return;
-                }
-                void run(async () => {
-                  const opened = await api(`/history?id=${encodeURIComponent(r.id)}`);
-                  if (!validRecord(opened.record) || !validSnapshot(opened.snapshot, opened.record))
-                    throw new Error("Saved mission result unavailable.");
-                  onOpenResult(opened.record, opened.snapshot);
-                });
-              }}
-            >
-              {r.has_snapshot ? "Open result" : "Open saved search"}
-            </button>
-            <button
-              className="button subtle"
-              disabled={busy}
-              aria-label={`Delete ${r.name}`}
-              onClick={() =>
-                void run(async () => {
-                  await api(`/history?id=${r.id}`, "DELETE");
-                  setSaved((items) => items.filter((item) => item.id !== r.id));
-                })
-              }
-            >
-              Delete
-            </button>
-          </div>
-        </article>
-      ))}
-      {busy && <small role="status">Connecting to your account…</small>}
-      <h2>Mission reports</h2>
-      <p>Reports saved from Mission Planner on this device.</p>
-      {powerReports.length === 0 && <p>No mission reports saved on this device yet.</p>}
-      {powerReports.map(({ storageKey, source, name, savedAt }) => (
-        <article key={storageKey} className="saved-search">
-          <div><strong>{name}</strong><br /><small>{source.site.name} · {source.site.start.slice(0, 10)} to {source.site.end.slice(0, 10)} UTC
-            {savedAt && Number.isFinite(Date.parse(savedAt)) && ` · Saved ${new Date(savedAt).toLocaleDateString()}`}
-          </small></div>
-          <button className="button subtle" onClick={() => onOpenPowerReport(source)}>Open report</button>
-        </article>
-      ))}
-    </section>
+      </section>
+    </div>
   );
 }

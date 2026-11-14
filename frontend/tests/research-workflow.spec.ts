@@ -204,6 +204,19 @@ test("Configure offers three references and carries a custom map point back", as
 test("header account dropdown supports saved searches and logout on desktop and mobile", async ({ page }) => {
   let signedIn = true;
   let shouldFail = true;
+  await page.addInitScript(() => {
+    const start = "2026-10-01T00:00:00Z";
+    const end = "2026-10-01T01:00:00Z";
+    const mission = { name: "Test ridge", latitude: -89, longitude: 0, start, end, interval_minutes: 60, clearance_deg: 0 };
+    const key = JSON.stringify([-89, 0, start, end, 60, 0, null, null, null, null, null]);
+    localStorage.setItem("lunar-power-lab:v1:" + key + ":report", JSON.stringify({
+      source: { assessment: { mission, terrain: {}, horizon: {}, geometry: {
+        available: true, series: [{ time: start, sun_visible: true }, { time: end, sun_visible: true }],
+      } } },
+      setup: { power: {}, brief: { name: "Saved power report" } },
+      simulation: {},
+    }));
+  });
   await page.route("**/api/account", async (route) => {
     if (route.request().method() === "POST") {
       expect(route.request().postDataJSON()).toEqual({ action: "logout" });
@@ -228,7 +241,16 @@ test("header account dropdown supports saved searches and logout on desktop and 
   await account.click();
   await saved.click();
   await expect(page).toHaveURL(/#account$/);
-  await expect(page.getByRole("heading", { name: "Saved missions" })).toBeVisible();
+  const results = page.getByRole("region", { name: "Saved results" });
+  const reports = page.getByRole("region", { name: "Saved mission reports" });
+  const session = page.getByRole("region", { name: "Signed-in account" });
+  await expect(results).toContainText("No saved results yet.");
+  await expect(session).toContainText("Signed in as test@example.com");
+  await expect(session.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
+  await expect(reports.getByRole("button", { name: "Open report" })).toBeVisible();
+  await reports.getByRole("button", { name: "Delete report Saved power report" }).click();
+  await expect(reports).toContainText("No mission reports saved on this device yet.");
+  expect(await page.evaluate(() => Object.keys(localStorage).some((key) => key.endsWith(":report")))).toBe(false);
   await page.setViewportSize({ width: 320, height: 780 });
   await header.getByRole("button", { name: "Education", exact: true }).click();
   await account.click();
