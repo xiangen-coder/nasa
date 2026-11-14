@@ -13,7 +13,6 @@ export type ResearchAreaResult = {
   results: Research[];
   recommended?: boolean;
   sampled: number;
-  qualifying?: number;
   sampling?: { radii_m: number[]; points_per_ring: number };
   reasons: string[];
   counts: { evaluated: number; limits: number; missing: number; unavailable: number; focus_missing: number };

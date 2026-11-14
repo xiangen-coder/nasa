@@ -121,7 +121,7 @@ test("calendar windows clamp month ends, handle leap dates and allow longer sear
   expect(searchDates(mission, "year", "", "").count).toBe(365);
 });
 
-test("delay search samples then refines, ranks by earliest and preserves the original", async ({ page }) => {
+test("delay search samples then refines, ranks by score and preserves the original", async ({ page }) => {
   const candidates: Mission[] = [];
   await page.route("**/api/research/plan-b", async (route) => {
     const body = route.request().postDataJSON();
@@ -134,7 +134,6 @@ test("delay search samples then refines, ranks by earliest and preserves the ori
   const criteria = original.getByRole("region", { name: "Criteria at a glance" });
   await expect(criteria.getByRole("meter", { name: "Water ice potential" })).toHaveCount(0);
   await expect(criteria.getByRole("meter", { name: "Temperature" })).toHaveCount(0);
-  await expect(criteria.getByText("Unavailable")).toBeVisible();
   await original.getByText("Environment & limits", { exact: true }).click();
   const originalText = await original.innerText();
   await expect(plan.getByRole("radio", { name: "Change date" })).toBeChecked();
@@ -243,61 +242,17 @@ test("suggests comparison points around the first selected site when terrain is 
   await expect(added).toHaveCount(0);
 });
 
-test("missing evidence blocks recommendations, and cancellation marks a search incomplete", async ({ page }) => {
-  await page.route("**/api/research/plan-b", (route) => route.fulfill({
-    json: { status: "missing", reasons: ["Mapped hazard fraction is unavailable."] },
+test("missing scores and cancelled searches remain visible", async ({ page }) => {
+  await page.route("**/api/research/plan-b", route => route.fulfill({
+    json: { status: "unavailable", reasons: ["Visibility is unavailable."] },
   }));
   const plan = await openCompare(page);
-  await plan.getByLabel("Search window").selectOption("year");
   await plan.getByRole("button", { name: "Run What IF" }).click();
-  await expect(plan.getByText(/No backup passed the checks/)).toBeVisible();
-  await expect(plan.getByRole("status")).toContainText("1 option evaluated");
-  const forecasts = plan.getByRole("region", { name: "Suggested comparison options" });
-  await expect(forecasts).toContainText("2026-10-02");
-  await expect(forecasts).toContainText("2027-10-01");
-  await forecasts.getByRole("button", { name: /Details for.*2026-10-02/ }).click();
-  await expect(forecasts).toContainText("Estimated solar energy");
-  await expect(plan).toContainText("1 lacked required evidence");
-  await expect(plan.getByText("Assessment notes")).toBeVisible();
-  await expect(plan).toContainText("Mapped hazard fraction is unavailable.");
-  await forecasts.getByRole("checkbox", { name: /Select.*2026-10-02/ }).check();
-  await forecasts.getByRole("button", { name: "Compare selected (2)", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Compare selected plans" })).toBeVisible();
-  const pinned = page.getByRole("article", { name: /Alternative 1:/ });
-  await expect(pinned).toContainText("WHAT IF FORECAST");
-  await expect(pinned).toContainText("Mapped hazard fraction is unavailable.");
-  await expect(pinned).toContainText("2026-10-02 00:00:00 UTC");
-  await expect(page.locator(".pre-result-grid > article").last()).toHaveAttribute("aria-label", "What IF");
-  await expect(page.getByRole("article", { name: /Recommended landing point:/ })).toContainText("2026-10-01 00:00:00 UTC");
-  await expect(pinned.getByRole("button", { name: "Remove from Compare" })).toBeVisible();
-  const table = page.getByRole("table", { name: "Side-by-side research comparison" });
-  await expect(table.getByRole("columnheader", { name: /Shackleton vicinity · 2026-10-02/ })).toBeVisible();
-  await expect(table.getByRole("row", { name: "Assessment status" })).toContainText("What IF forecast");
-  const inspect = page.getByLabel("Site to inspect");
-  await inspect.selectOption({ label: "Shackleton vicinity · 2026-10-02 00:00:00 UTC" });
-  await expect(page.getByRole("heading", { name: "Mission evidence · Shackleton vicinity · 2026-10-02 00:00:00 UTC" })).toBeVisible();
-  const jsonDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export research JSON" }).click();
-  const exported = JSON.parse(await readFile(await (await jsonDownload).path(), "utf8"));
-  expect(exported.sites).toHaveLength(2);
-  expect(exported.sites.map(({ mission }: { mission: Mission }) => Date.parse(mission.start))).toEqual([
-    Date.parse(start), Date.parse("2026-10-02T00:00:00Z"),
-  ]);
-  expect(exported.sites[1].what_if.reasons).toContain("Mapped hazard fraction is unavailable.");
-  const csvDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export comparison CSV" }).click();
-  const csv = await readFile(await (await csvDownload).path(), "utf8");
-  expect(csv).toContain('"Touchdown (UTC)","2026-10-01 00:00:00 UTC","2026-10-02 00:00:00 UTC"');
-  expect(csv).toContain("Mapped hazard fraction is unavailable.");
-  await pinned.getByRole("button", { name: "Remove from Compare" }).click();
-  await page.getByRole("button", { name: "Back to options", exact: true }).click();
-  await expect(forecasts.getByRole("checkbox", { name: /Select.*2026-10-02/ })).not.toBeChecked();
-  await expect(pinned).toHaveCount(0);
-  await expect(table.getByRole("columnheader")).toHaveCount(2);
+  await expect(plan.getByText("No landing-point scores were available for this search.")).toBeVisible();
+  await expect(plan.getByText("Search incomplete", { exact: false })).toBeVisible();
   await page.unroute("**/api/research/plan-b");
   await page.route("**/api/research/plan-b", () => {});
   await plan.getByRole("button", { name: "Edit search" }).click();
-  await plan.getByLabel("Alternate UTC touchdown time").fill("18:00");
   const request = page.waitForRequest("**/api/research/plan-b");
   await plan.getByRole("button", { name: "Run What IF" }).click();
   await request;

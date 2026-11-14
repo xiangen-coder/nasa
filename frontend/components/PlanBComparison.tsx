@@ -278,15 +278,7 @@ export default function PlanBComparison({
           !sameMission(location, originalWindow)) continue;
 
       const energy = solarEstimate(result, equipment);
-      const reasons = [...result.constraints_failed];
-      if (areaResult.recommended !== true && !reasons.length)
-        reasons.push("Required landing evidence was unresolved in the initial search.");
-      if (result.geometry.mode !== "terrain_screened" || !energy ||
-          !Number.isFinite(result.geometry.sunlight_hours) ||
-          !Number.isFinite(result.geometry.metrics?.longest_blackout_hours))
-        reasons.push("Complete terrain-screened Sun and Earth observations are unavailable.");
-      if (energy && (energy.unmet_kwh ?? 0) > 1e-8)
-        reasons.push("The modeled solar array and battery leave some configured equipment demand unmet.");
+      const reasons = result.warnings ?? [];
       reused.push({ location, result, energy: energy?.total_kwh, reasons });
     }
   }
@@ -357,15 +349,14 @@ export default function PlanBComparison({
     status === "cancelled" ||
     status === "error" ||
     progress.clipped ||
-    progress.unavailable > 0 ||
-    progress.forecastsUnavailable > 0;
+    progress.unavailable > 0;
   const done = status !== "idle" && status !== "running";
   const options = new Map<string, PlanBForecast>();
   for (const option of reused.slice(0, showMoreLocations ? 4 : 2)) {
     options.set(missionKey(option.result.mission), option);
   }
   if (done) {
-    for (const option of [...ranked, ...progress.forecasts]) {
+    for (const option of ranked) {
       const key = missionKey(option.result.mission);
       if (!options.has(key)) options.set(key, option);
     }
@@ -405,10 +396,8 @@ export default function PlanBComparison({
         </p>
         <p>
           NASA JPL predicts Sun and Earth positions for the selected UTC dates.
-          Measured terrain and historical temperature data inform the landing
-          checks. When a site fails those checks or lacks evidence, What IF can
-          still show a limited outlook for its sunlight, Earth visibility, and
-          solar energy.
+          What IF ranks the calculated scores using the selected research focus.
+          Available terrain and solar energy evidence are shown with each option.
         </p>
       </details>
       <fieldset className="what-if-mode" disabled={status === "running"}>
@@ -559,9 +548,7 @@ export default function PlanBComparison({
                   value={
                     progress.evaluated +
                     progress.unavailable +
-                    progress.skipped +
-                    progress.forecasts.length +
-                    progress.forecastsUnavailable
+                    progress.missing + progress.limits
                   }
                 />
               )}
@@ -570,8 +557,6 @@ export default function PlanBComparison({
                 {progress.evaluated === 1 ? "option" : "options"} evaluated
                 {progress.unavailable > 0 &&
                   ` · ${progress.unavailable} could not be evaluated`}
-                {progress.skipped > 0 &&
-                  ` · ${progress.skipped} skipped after site screening`}
                 .
               </p>
               {incomplete && (
@@ -603,8 +588,7 @@ export default function PlanBComparison({
                 )}
                 {done && ranked.length === 0 && !reused.some((option) => !option.reasons.length) && (
                   <p className="info">
-                    No backup passed the checks in this search. Any available
-                    forecasts are marked Unverified.
+                    No landing-point scores were available for this search.
                   </p>
                 )}
                 {options.size > 0 && (
@@ -738,9 +722,7 @@ export default function PlanBComparison({
                                       )}
                                   </td>
                                   <td>
-                                    {option.reasons.length
-                                      ? "Unverified"
-                                      : "Screened"}
+                                    {result.provisional ? "Provisional" : "Scored"}
                                     {added && <small>In comparison</small>}
                                   </td>
                                   <td>
@@ -829,42 +811,14 @@ export default function PlanBComparison({
                 )}
               </section>
               <details className="pre-extra" hidden={rankedLocationMode}>
-                <summary>Skipped options &amp; screening reasons</summary>
+                <summary>Search details</summary>
                 {progress.sampled && (
                   <p>
                     The search checks selected touchdown times within your date
                     window.
                   </p>
                 )}
-                {progress.skipped > 0 && (
-                  <p>
-                    The skipped dates share a site with a failed check or
-                    missing evidence. Changing the touchdown date cannot resolve
-                    that site check. Forecasts sample the first and last
-                    touchdown times for that site.
-                  </p>
-                )}
-                {(progress.limits > 0 || progress.missing > 0) && (
-                  <p>
-                    {progress.limits} exceeded limits · {progress.missing}{" "}
-                    lacked required evidence.
-                  </p>
-                )}
-                {progress.shortlist && (
-                  <p>
-                    Terrain screening covered {progress.shortlist.searched}{" "}
-                    points: {progress.shortlist.outside_or_missing} lacked
-                    evidence, {progress.shortlist.failed_limits} exceeded
-                    limits, {progress.shortlist.overlap_excluded} overlapped,
-                    and {progress.shortlist.passing_terrain_candidates} passed.
-                  </p>
-                )}
-                {progress.forecastsUnavailable > 0 && (
-                  <p>
-                    {progress.forecastsUnavailable} outlooks could not be
-                    calculated.
-                  </p>
-                )}
+                {progress.missing > 0 && <p>{progress.missing} yielded no score.</p>}
               </details>
               {progress.reasons.length > 0 && (
                 <details className="pre-extra" open={ranked.length === 0}>

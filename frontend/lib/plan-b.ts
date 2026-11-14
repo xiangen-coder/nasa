@@ -23,7 +23,7 @@ export type PlanBShortlist = {
 };
 type Rejection = { status: "missing" | "limits" | "unavailable"; reasons: string[] };
 export type PlanBAssessment = Rejection | { status: "evaluated"; result: Research };
-export type PlanBOption = PlanBSite & { result: Research; energy: number };
+export type PlanBOption = PlanBSite & { result: Research; energy?: number };
 export type PlanBForecast = PlanBSite & { result: Research; energy?: number; reasons: string[] };
 
 export function latestTouchdown(mission: Mission) {
@@ -146,9 +146,9 @@ export function rankOptions(options: PlanBOption[], priority: ResearchPriority, 
       : result.score ?? -1;
   };
   return [...options].sort((a, b) =>
-    (mode === "relocate" ? 0 : Date.parse(a.result.mission.start) - Date.parse(b.result.mission.start)) ||
+    
     (priority === "I" && mode !== "delay" ? (a.shadow_distance_m ?? Infinity) - (b.shadow_distance_m ?? Infinity) : 0) ||
-    score(b.result) - score(a.result));
+    score(b.result) - score(a.result) || Date.parse(a.result.mission.start) - Date.parse(b.result.mission.start));
 }
 
 export const touchdownAt = (first: number, index: number) => first + index * day;
@@ -158,15 +158,12 @@ export type PlanBProgress = {
   unavailable: number;
   limits: number;
   missing: number;
-  skipped: number;
   scheduled: number;
   sampled: boolean;
   clipped: boolean;
   shortlist?: PlanBShortlist;
   reasons: string[];
   options: PlanBOption[];
-  forecasts: PlanBForecast[];
-  forecastsUnavailable: number;
   stage: string;
 };
 
@@ -196,8 +193,8 @@ async function planBRequest<T>(path: string, body: unknown, signal: AbortSignal,
 }
 
 export const initialProgress: PlanBProgress = {
-  evaluated: 0, unavailable: 0, limits: 0, missing: 0, skipped: 0, scheduled: 0,
-  sampled: false, clipped: false, reasons: [], options: [], forecasts: [], forecastsUnavailable: 0, stage: "",
+  evaluated: 0, unavailable: 0, limits: 0, missing: 0, scheduled: 0,
+  sampled: false, clipped: false, reasons: [], options: [], stage: "",
 };
 
 export async function findPlanB({
@@ -216,7 +213,6 @@ export async function findPlanB({
   const mission = original.mission;
   const limits = original.limits;
   let locations: PlanBSite[] = [{ location: mission }];
-  const exploration = new Map<PlanBSite, string[]>();
   const progress = { ...initialProgress, clipped: dates.clipped };
   const report = (stage: string) => update({ ...progress, stage });
   const addReasons = (reasons: string[]) => {
@@ -231,39 +227,20 @@ export async function findPlanB({
       inComparisonArea(centre, location, radiusKm);
     report(`Screening terrain within ${radiusKm} km…`);
     progress.shortlist = await planBRequest<PlanBShortlist>("/api/reliability/plan-b-sites",
-      { mission: centre, limits, search_radius_m: Math.round(radiusKm * 1000), shadow_focus: priority === "I" }, signal, () => true);
+      { mission: centre, limits, search_radius_m: Math.round(radiusKm * 1000), shadow_focus: priority === "I", score_only: true }, signal, () => true);
     locations = progress.shortlist.candidates.filter(({ location }, index, candidates) =>
       isNewSite(location) &&
       candidates.findIndex((candidate) => siteKey(candidate.location) === siteKey(location)) === index);
-    if (priority === "I") {
-      for (const site of locations.filter((site) => site.shadow_distance_m == null)) {
-        exploration.set(site, ["No mapped shadow target was found in the research area."]);
-      }
-      locations = locations.filter((site) => site.shadow_distance_m != null);
-    }
-    for (const site of progress.shortlist.exploration_candidates ?? []) {
-      if (isNewSite(site.location))
-        exploration.set(site, ["Available terrain supports comparison. Footprint and uncertainty evidence is incomplete."]);
-    }
-    for (const site of progress.shortlist.comparison_candidates ?? []) {
-      if (isNewSite(site.location))
-        exploration.set(site, ["Terrain evidence is incomplete for this nearby comparison point."]);
-    }
+
   }
 
   const coarse = sampledDays(dates.count, mode === "both" ? 6 : 10);
-  progress.sampled = coarse.length < dates.count && (locations.length > 0 || exploration.size > 0);
+  progress.sampled = coarse.length < dates.count && (locations.length > 0);
   progress.scheduled = coarse.length * locations.length;
-  const blocked = new Map<PlanBSite, string[]>();
-  const seeds = new Map<PlanBSite, { index: number; energy: number; score: number; viable: boolean }[]>();
+  const seeds = new Map<PlanBSite, { index: number; score: number }[]>();
 
   async function evaluate(site: PlanBSite, index: number) {
     signal.throwIfAborted();
-    if (blocked.has(site)) {
-      progress.skipped++;
-      report("Applying site-wide screening…");
-      return;
-    }
     const candidate = candidateMission(mission, site.location, touchdownAt(dates.first, index));
     report(`Checking ${candidate.name} · ${candidate.start.slice(0, 10)} UTC…`);
     try {
@@ -273,35 +250,18 @@ export async function findPlanB({
       if (assessment.status !== "evaluated") {
         progress[assessment.status]++;
         addReasons(assessment.reasons);
-        if (assessment.status !== "unavailable") {
-          blocked.set(site, assessment.reasons);
-          progress.evaluated++;
-        }
       } else {
         const result = assessment.result;
         if (!sameMission(candidate, result.mission)) throw Error("The assessment returned a different mission window or site.");
-        const energy = solarEstimate(result, equipment);
-        const metrics = result.geometry.metrics;
-        progress.evaluated++;
-        if (result.constraints_failed.length) {
-          progress.limits++;
-          addReasons(result.constraints_failed);
-        } else if (!energy || result.geometry.mode !== "terrain_screened" || !Number.isFinite(result.geometry.sunlight_hours) ||
-                   !Number.isFinite(metrics?.longest_blackout_hours)) {
+        if (result.score == null) {
           progress.missing++;
-          addReasons(["Complete terrain-screened Sun and Earth observations are unavailable."]);
         } else {
-          const viable = (energy.unmet_kwh ?? 0) <= 1e-8;
+          progress.evaluated++;
           const siteSeeds = seeds.get(site) ?? [];
           const score = priority === "overall" ? result.score : result.factors[priority]?.score;
-          siteSeeds.push({ index, energy: energy.total_kwh, score: score ?? -1, viable });
+          siteSeeds.push({ index, score: score ?? -1 });
           seeds.set(site, siteSeeds);
-          if (!viable) {
-            progress.limits++;
-            addReasons(["The modeled solar array and battery leave some configured equipment demand unmet."]);
-          } else {
-            progress.options = [...progress.options, { ...site, result, energy: energy.total_kwh }];
-          }
+          progress.options = [...progress.options, { ...site, result, energy: solarEstimate(result, equipment)?.total_kwh }];
         }
       }
     } catch (error) {
@@ -319,40 +279,12 @@ export async function findPlanB({
   if (progress.sampled) {
     const refinements = locations.flatMap((site) => {
       const checked = seeds.get(site) ?? [];
-      const earliest = checked.find((seed) => seed.viable);
-      const strongest = [...checked].sort((a, b) =>
-        Number(b.viable) - Number(a.viable) ||
-        (a.viable && b.viable ? b.score - a.score : 0) || b.energy - a.energy)[0];
-      const promising = [earliest?.index, strongest?.index].filter((index): index is number => index !== undefined);
+      const strongest = [...checked].sort((a, b) => b.score - a.score)[0];
+      const promising = strongest ? [strongest.index] : [];
       return refinementDays(coarse, promising).map((index) => ({ site, index }));
     }).sort((a, b) => a.index - b.index);
     progress.scheduled += refinements.length;
     for (const { site, index } of refinements) await evaluate(site, index);
-  }
-  // A site-wide evidence gap still allows a limited outlook for the selected dates.
-  const outlookSites = [...blocked, ...exploration];
-  const outlookDates = [...new Set([coarse[0], coarse[coarse.length - 1]])];
-  progress.scheduled += outlookSites.length * outlookDates.length;
-  for (const [site, reasons] of outlookSites) {
-    for (const index of outlookDates) {
-      signal.throwIfAborted();
-      const candidate = candidateMission(mission, site.location, touchdownAt(dates.first, index));
-      report(`Forecasting ${candidate.name} · ${candidate.start.slice(0, 10)} UTC…`);
-      try {
-        const result = await planBRequest<Research>("/api/research/evaluate", { mission: candidate, limits }, signal,
-          (data) => data.geometry.available);
-        signal.throwIfAborted();
-        if (!sameMission(candidate, result.mission)) throw Error("The forecast returned a different site or mission window.");
-        if (!result.geometry.available) throw Error(result.geometry.reason || "Future visibility is unavailable for this window.");
-        const energy = solarEstimate(result, equipment)?.total_kwh;
-        progress.forecasts = [...progress.forecasts, { ...site, result, energy, reasons }];
-      } catch (error) {
-        signal.throwIfAborted();
-        progress.forecastsUnavailable++;
-        addReasons([error instanceof Error ? error.message : "An outlook could not be calculated."]);
-      }
-      report(progress.stage);
-    }
   }
   signal.throwIfAborted();
   report("");

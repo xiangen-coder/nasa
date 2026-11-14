@@ -138,33 +138,17 @@ def regional_slope_score(terrain, limits):
     return {**terrain, 'regional_score': score}
 
 
-def research(request, *, plan_b=False, deadline=None, allow_remote=True):
+def research(request, *, deadline=None, allow_remote=True):
     mission=request.mission;limits=request.limits
     terrain_options = {} if allow_remote else {'allow_remote': False}
-    if plan_b:
-        terrain_options['broad_screening'] = False
     t=rasters.local_terrain(mission,limits.radius_m,allow_regional=True,**terrain_options)
     t = regional_slope_score(t, limits)
     observer_height = rasters.site_elevation(mission, t)
     hazards=rasters.measurement('hazards',mission);ice=rasters.ice_evidence(mission,limits.radius_m)
     thermal=rasters.temperature_range(mission)
-    if plan_b:
-        topography=score_factors(t,{},hazards,ice,limits)
-        failed=topography['constraints_failed']
-        missing=[]
-        if topography['factors']['T']['score'] is None:
-            missing.append(topography['factors']['T']['explanation'])
-        elif t.get('preliminary_only'):
-            missing.append('Kaguya supports preliminary terrain screening. Plan B requires independently verified footprint terrain.')
-        if not hazards['available']:
-            missing.append('Mapped hazard fraction is unavailable.')
-        if failed or missing:
-            return {'status':'limits' if failed else 'missing', 'reasons':failed+missing}
     screening = rasters.horizon(mission, None, **terrain_options)
     observer_height = screening.pop('observer_height', observer_height)
     broad_horizon = screening.get('quality') in ('global', 'regional')
-    if plan_b and (not screening['available'] or broad_horizon):
-        return {'status':'missing', 'reasons':[screening.get('reason') or 'A higher-resolution local terrain skyline is required.']}
     try:
         height = observer_height['value'] if observer_height.get('available') else 0
         geometry = (surface_observations(mission, height) if deadline is None
@@ -212,7 +196,7 @@ def evaluate(request:ResearchRequest):
 @router.post('/plan-b')
 def evaluate_plan_b(request:ResearchRequest):
     check_research_intervals(request)
-    return plan_b_outcome(research(request, plan_b=True))
+    return plan_b_outcome(research(request))
 
 
 def plan_b_outcome(result):
@@ -254,7 +238,7 @@ def find_research_area(request: ResearchAreaRequest):
                 candidates.append(candidate)
 
     counts = dict(evaluated=0, limits=0, missing=0, unavailable=0, focus_missing=0)
-    qualified = []
+    assessed = []
     reasons = set()
     deadline = time.monotonic() + 65
     for candidate in candidates:
@@ -262,26 +246,24 @@ def find_research_area(request: ResearchAreaRequest):
             counts["unavailable"] += 1
             reasons.add("The search time limit was reached before all points could be evaluated.")
             continue
-        assessment = research(
+        result = research(
             ResearchRequest(mission=candidate, limits=request.limits),
-            plan_b=True,
-            deadline=min(deadline, time.monotonic() + 25),
+            deadline=min(deadline, time.monotonic() + 12),
+            allow_remote=False,
         )
-        outcome = plan_b_outcome(assessment)
-        status = outcome["status"]
-        counts[status] += 1
-        reasons.update(outcome.get("reasons", ()))
-        if status == "evaluated":
-            qualified.append((candidate, outcome["result"]))
+        if result["score"] is None:
+            counts["missing"] += 1
+            continue
+        counts["evaluated"] += 1
+        assessed.append((candidate, result))
 
-    distances = [None]*len(qualified)
-    if request.focus == "I" and qualified:
+    distances = [None] * len(assessed)
+    if request.focus == "I" and assessed:
         distances = research_shadow(
-            centre.latitude, centre.longitude, request.radius_m, [site for site, _ in qualified],
+            centre.latitude, centre.longitude, request.radius_m, [site for site, _ in assessed],
         )["distances_m"]
         counts["focus_missing"] = sum(distance is None for distance in distances)
-    ranked = [(result, distance) for (_, result), distance in zip(qualified, distances)
-              if request.focus != "I" or distance is not None]
+    ranked = [(result, distance) for (_, result), distance in zip(assessed, distances)]
 
     def ranking(item):
         result, distance = item
@@ -296,42 +278,9 @@ def find_research_area(request: ResearchAreaRequest):
     ranked.sort(key=ranking, reverse=True)
     results = [result for result, _ in ranked[:5]]
     recommended = bool(results)
-    if not recommended:
-        # Keep the preliminary comparison available when the strict screen has no winner.
-        fallback_deadline = time.monotonic() + 40
-        assessed_sites = []
-        for index, candidate in enumerate(candidates):
-            if time.monotonic() >= fallback_deadline:
-                reasons.add(f"Preliminary assessment stopped after {index} of {len(candidates)} sampled points.")
-                break
-            result = research(
-                ResearchRequest(mission=candidate, limits=request.limits),
-                deadline=min(fallback_deadline, time.monotonic() + 12),
-                allow_remote=False,
-            )
-            results.append(result)
-            assessed_sites.append(candidate)
-        distances = [None] * len(results)
-        if request.focus == "I" and assessed_sites:
-            distances = research_shadow(
-                centre.latitude, centre.longitude, request.radius_m, assessed_sites,
-            )["distances_m"]
-        preliminary = [(result, distance) for result, distance in zip(results, distances)
-                       if result["score"] is not None]
-        preliminary.sort(key=ranking, reverse=True)
-        results = [result for result, _ in preliminary[:5]] or results[:1]
-    # Load broader evidence only for the displayed preliminary point. Reading
-    # remote rasters while screening every sample would delay the initial ranking.
-    if not recommended and results and not results[0].get('terrain', {}).get('available') and os.getenv('LUNAR_REMOTE_HORIZON') == '1':
-        try:
-            terrain = rasters.regional_terrain(Mission.model_validate(results[0]['mission']))
-            results[0]['terrain'] = regional_slope_score(terrain, request.limits)
-        except rasters.RASTER_ERRORS:
-            pass
     return {
         "counts": counts,
         "sampled": len(candidates),
-        "qualifying": len(ranked),
         "sampling": {"radii_m": radii, "points_per_ring": 8},
         "recommended": recommended,
         "results": results,

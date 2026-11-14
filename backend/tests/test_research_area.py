@@ -26,7 +26,7 @@ def test_candidates_stay_in_circle_and_use_focus(monkeypatch, radius):
             mission.longitude, mission.latitude,
         )[2] <= radius + 1e-6
         if len(seen) == 1:
-            return {"status": "limits", "reasons": ["Slope exceeded"]}
+            return {"score": None}
         return {"mission": mission, "score": 80, "geometry": {"available": True}}
 
     monkeypatch.setattr(research, "research", evaluate)
@@ -49,7 +49,7 @@ def test_candidates_stay_in_circle_and_use_focus(monkeypatch, radius):
     )
     assert set(terrain_sites) == {(site.latitude, site.longitude) for site in seen[1:]}
     assert any(site.longitude < 0 for site in seen)
-    assert result["counts"]["limits"] == 1
+    assert result["counts"]["missing"] == 1
     assert result["results"][0]["mission"] == seen[-1]
     assert len(result["results"]) == 5
 
@@ -66,7 +66,7 @@ def test_shadow_reports_full_partial_and_missing_coverage():
     assert water.research_shadow(0, 0, 5000)["shadow_fraction"] is None
 
 
-def test_unqualified_area_returns_preliminary_comparisons(monkeypatch):
+def test_area_ranks_scores_even_with_limit_failures(monkeypatch):
     request = research.ResearchAreaRequest(
         mission=dict(name="Centre", latitude=-86.1315, longitude=148.3593,
                      start="2026-10-01T00:00:00Z", end="2026-10-08T00:00:00Z",
@@ -76,14 +76,13 @@ def test_unqualified_area_returns_preliminary_comparisons(monkeypatch):
 
     scores = iter(range(49))
 
-    def evaluate(candidate, *, plan_b=False, **kwargs):
-        if plan_b:
-            return {"status": "missing", "reasons": ["Mapped hazard fraction is unavailable."]}
-        return {"mission": candidate.mission, "score": next(scores)}
+    def evaluate(candidate, **kwargs):
+        return {"mission": candidate.mission, "score": next(scores),
+                "constraints_failed": ["Slope exceeded"]}
 
     monkeypatch.setattr(research, "research", evaluate)
     result = research.find_research_area(request)
-    assert not result["recommended"]
-    assert result["counts"]["missing"] == 49
+    assert result["recommended"]
+    assert result["counts"]["evaluated"] == 49
     assert [point["score"] for point in result["results"]] == [48, 47, 46, 45, 44]
     assert result["results"][0]["mission"] != request.mission

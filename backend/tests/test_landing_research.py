@@ -113,24 +113,6 @@ def test_horizons_failure_retains_other_data(monkeypatch):
     result=research(request)
     assert result['score'] is None and result['geometry']['reason']=='Offline'
 
-@pytest.mark.parametrize("thermal", [
-    {"available": False},
-    {"available": True, "minimum_k": 50, "maximum_k": 400},
-])
-def test_temperature_does_not_block_strict_screening(monkeypatch, thermal):
-    terrain = dict(available=True, slope_max_deg=1, slope_p95_deg=1,
-                   roughness_m=0, relief_m=0, resolution_m=5, source={})
-    monkeypatch.setattr(lunar_rasters, "local_terrain", lambda *a, **kw: terrain)
-    monkeypatch.setattr(lunar_rasters, "site_elevation", lambda *a: {})
-    monkeypatch.setattr(lunar_rasters, "measurement", lambda *a: {"available": True, "value": 0})
-    monkeypatch.setattr(lunar_rasters, "ice_evidence", lambda *a: {})
-    monkeypatch.setattr(lunar_rasters, "temperature_range", lambda *a: thermal)
-    monkeypatch.setattr(lunar_rasters, "horizon", lambda *a, **kw: {"available": False})
-    request = type("Request", (), {"mission": Location(latitude=-89, longitude=0), "limits": Limits()})()
-    result = research(request, plan_b=True)
-    assert result == {"status": "missing", "reasons": ["A higher-resolution local terrain skyline is required."]}
-
-
 def test_api_validation():
     from app.main import app
     client=TestClient(app)

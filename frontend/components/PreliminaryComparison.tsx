@@ -211,7 +211,7 @@ export default function PreliminaryComparison({
           <h2>{title}</h2>
           {area && isSelected && !searchingArea && <p>{hasRecommendation
             ? "Best of the points evaluated within your research area."
-            : "Preliminary comparison · landing checks unresolved or exceeded."}</p>}
+            : "Preliminary comparison · evidence may be incomplete."}</p>}
           {searchingArea ? (
             <p role="status"><span className="pre-result-spinner" aria-hidden="true" />Searching the research area…</p>
           ) : <p>{site.name}</p>}
@@ -767,9 +767,7 @@ function AssessmentSummary({ mission, radiusKm, result }: {
   const startTime = windowAvailable ? missionTime.format(start).replace(/:00$/, "") : "";
   const endTime = windowAvailable ? missionTime.format(end).replace(/:00$/, "") : "";
   const coordinatesAvailable = Number.isFinite(mission.latitude) && Number.isFinite(mission.longitude);
-  const qualifying = result?.qualifying ?? (result
-    ? result.recommended === false ? 0 : Math.max(0, result.counts.evaluated - (result.counts.focus_missing ?? 0))
-    : undefined);
+  const scored = result?.counts.evaluated ?? 0;
   const reasons = result?.reasons?.filter((reason) => !isTimeNote(reason)) ?? [];
   const timing = result?.reasons?.filter(isTimeNote) ?? [];
   const radiusM = Math.round(radiusKm * 1000);
@@ -797,20 +795,20 @@ function AssessmentSummary({ mission, radiusKm, result }: {
       {result && (
         <>
           <div className="compare-assessment-banner glass" role="status">
-            {qualifying === 0 ? <TriangleAlert aria-hidden="true" /> : <Info aria-hidden="true" />}
+            {scored === 0 ? <TriangleAlert aria-hidden="true" /> : <Info aria-hidden="true" />}
             <div>
-              <h2>{qualifying === 0 ? "No qualifying landing sites" : "Landing-site assessment complete"}</h2>
-              <p>{result.sampled} sampled · {result.counts.evaluated} fully evaluated · {result.counts.limits} exceeded limits · {result.counts.missing} lacked evidence · {result.counts.unavailable} unavailable
+              <h2>{scored === 0 ? "No landing-point scores available" : "Landing-site assessment complete"}</h2>
+              <p>{result.sampled} sampled · {scored} scored · {result.counts.missing} yielded no score · {result.counts.unavailable} unavailable
                 {result.counts.focus_missing > 0 && ` · ${result.counts.focus_missing} lacked a mapped shadow target`}
               </p>
             </div>
-            <div className="compare-qualifying"><strong>{qualifying}</strong><span>Qualifying sites</span></div>
+            <div className="compare-scored"><strong>{scored}</strong><span>Scored sites</span></div>
           </div>
           <div className="compare-assessment-disclosures">
             <details className="glass" open>
-              <summary>Why sites were excluded <ChevronDown size={16} aria-hidden="true" /></summary>
+              <summary>Assessment notes <ChevronDown size={16} aria-hidden="true" /></summary>
               {reasons.length ? <ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
-                : <p>No specific exclusion reasons were reported.</p>}
+                : <p>Scores use available evidence.</p>}
               {timing.map((note) => <p className="compare-assessment-note" key={note}><Info size={16} aria-hidden="true" />{note}</p>)}
             </details>
             <details className="glass" open>
