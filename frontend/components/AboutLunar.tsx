@@ -102,8 +102,7 @@ export default function AboutLunar({ onExplore, onResults }: { onExplore: () => 
 
         <section className="about-lunar-team">
           <p className="eyebrow">From Sarawak. Exploring beyond.</p>
-          <h2>Meet Road to 10000.</h2>
-          <div className="about-lunar-wordmark" aria-hidden="true">Road to<strong>10000</strong></div>
+          <div className="about-lunar-wordmark" role="img" aria-label="Road to 10000">Road to<strong>10000</strong></div>
           <div className="about-lunar-team-main">
             <p>We are first-year students at <strong>Universiti Teknologi PETRONAS</strong>, bringing together Electrical and Electronic Engineering (EEE), Mechanical Engineering (ME), and Computer Science (CS).</p>
             <p>Our different backgrounds shape how we approach a shared question: how can complex lunar data become easier to explore and understand? Through LUNAR, we combine engineering thinking, computing and clear design to make lunar research more accessible.</p>

@@ -56,7 +56,6 @@
 .about-lunar-evidence summary { color: var(--about-blue); cursor: pointer; margin-top: .75rem; }
 .about-lunar-evidence a { color: var(--about-blue); }
 .about-lunar-body > .about-lunar-team { text-align: center; padding-block: clamp(1.75rem, 3vw, 3rem) 1.5rem; }
-.about-lunar-team h2 { text-align: center; color: #bdd8fa; font-family: inherit; font-weight: 600; font-size: clamp(1.55rem, 3vw, 2.55rem); }
 .about-lunar-team-main { max-width: 66ch; margin: 0 auto; line-height: 1.55; }
 .about-lunar-team-main p + p { margin-top: .85rem; }
 .about-lunar-wordmark {
