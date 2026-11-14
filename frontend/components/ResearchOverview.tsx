@@ -1,5 +1,5 @@
 "use client";
-import { ArrowUpRight, ClipboardList, Eye, Layers, Mountain, Route, Save, Sun, Thermometer, Zap } from "lucide-react";
+import { ArrowUpRight, ClipboardList, Download, Eye, Layers, Mountain, Route, Save, Sun, Thermometer, Zap } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import {
   Line,
@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { downloadReport } from "../lib/download-report";
 import type { Research } from "./LandingResearch";
 import type { ResearchPriority } from "./SearchConsole";
 import ResearchTerrainDetails from "./ResearchTerrainDetails";
@@ -778,6 +779,11 @@ export default function ResearchOverview({
                 onClick={() => onSaveMission(result)}
               >
                 {missionSaveStatus?.status === "saving" ? "Saving mission…" : missionSaveStatus?.status === "saved" ? "Mission saved" : "Save mission"}
+              </button>
+              <button className="button subtle" onClick={() => downloadReport(
+                JSON.stringify({ assessment: result, equipment, priority }, null, 2), "json", "lunar-mission-result",
+              )}>
+                Download results <Download size={15} aria-hidden="true" />
               </button>
               {missionSaveStatus?.status === "saved" && (
                 <button className="button subtle" onClick={() => onNavigate(13)}>

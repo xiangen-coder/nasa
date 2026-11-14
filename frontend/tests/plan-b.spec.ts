@@ -90,6 +90,12 @@ test("shows the assessed site's summary, methods, Lunar Journey and Water/Ice Ev
   });
   await openCompare(page);
   await page.getByRole("article", { name: /Recommended landing point:/ }).getByRole("button", { name: "More details" }).click();
+  const downloadEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download results" }).click();
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toBe("lunar-mission-result.json");
+  const exported = JSON.parse(await readFile((await download.path())!, "utf8"));
+  expect(exported.assessment.score).toBe(70);
   const summary = page.locator("#result-summary");
   await expect(summary).toContainText("70.00 / 100");
   await expect(summary).toContainText("80% of nominal weight");

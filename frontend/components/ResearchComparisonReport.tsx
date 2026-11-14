@@ -1,5 +1,6 @@
 "use client";
 
+import { downloadReport } from "../lib/download-report";
 import { formatCoordinates } from "../lib/format-coordinates";
 import { useState } from "react";
 import type { Mission, Site } from "../app/types";
@@ -72,15 +73,6 @@ const measurements: { label: string; value: (r: Research) => string }[] = [
   { label: "Missing factors", value: (r) => r.missing.map((key) => r.factors[key]?.name ?? key).join(", ") || "None" },
   { label: "Measured limits exceeded", value: (r) => r.constraints_failed.join(" ") || "None in available evidence" },
 ];
-
-function download(content: string, format: "json" | "csv") {
-  const url = URL.createObjectURL(new Blob([content], { type: format === "json" ? "application/json" : "text/csv;charset=utf-8" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `lunar-research-report.${format}`;
-  link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 const csvCell = (value: string) => {
   const safe = /^[\s\uFEFF]*[=+@-]/.test(value) ? `'${value}` : value;
@@ -215,7 +207,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
             finally { closed.forEach((details) => { details.open = false; }); }
           }}>Print or save PDF</button>
           <details><summary className="button subtle">Export</summary>
-            <button className="button subtle" onClick={() => download(JSON.stringify({
+            <button className="button subtle" onClick={() => downloadReport(JSON.stringify({
           schema_version: 1, mission, baseline: base.mission, solar_settings: equipment, preferred_site: choice?.mission ?? null, recommendation: advice,
           sites: entries.map((entry) => ({
             site: { name: entry.mission.name, latitude: entry.mission.latitude, longitude: entry.mission.longitude },
@@ -231,7 +223,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
             } } : {}),
           })),
         }, null, 2), "json")}>Export research JSON</button>
-        <button className="button subtle" onClick={() => download([
+        <button className="button subtle" onClick={() => downloadReport([
           headers, ...grid, [], ["Comparison baseline", label(base.mission)],
           ...settings, ["Preferred point", choice ? label(choice.mission) : ""], ["Recommendation", advice],
         ].map((row) => row.map(csvCell).join(",")).join("\r\n"), "csv")}>Export comparison CSV</button>

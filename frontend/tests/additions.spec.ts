@@ -35,6 +35,13 @@ test("news sidebar displays source, date, excerpt and external article link", as
   await expect(
     sidebar.getByText("Lunar exploration test story", { exact: true }),
   ).toBeVisible();
+  await expect(sidebar.getByRole("link", { name: "Open CSA dataset" })).toHaveAttribute(
+    "href", /^https:\/\/data\.asc-csa\.gc\.ca\/dataset\//,
+  );
+  await page.setViewportSize({ width: 390, height: 800 });
+  const bounds = await sidebar.boundingBox();
+  expect(bounds!.width).toBeLessThanOrEqual(320);
+  expect(bounds!.height).toBeLessThanOrEqual(340);
   await sidebar.getByRole("button", { name: "Read summary →" }).click();
   await expect(
     sidebar.getByRole("region", { name: "Article summary" }),

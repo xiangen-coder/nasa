@@ -15,43 +15,14 @@ type Feed = {
   message: string;
   warnings?: string[];
 };
-const clamp = (n: number, lo: number, hi: number) =>
-  Math.max(lo, Math.min(Math.max(lo, hi), n));
+const canadianRoverData = "https://data.asc-csa.gc.ca/dataset/9151430-4v0p-4t5c-468vnhj714ao64";
+
 export default function NewsSidebar() {
   const [feed, setFeed] = useState<Feed | null>(null),
     [loading, setLoading] = useState(false),
     [open, setOpen] = useState<Article | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false),
-    [position, setPosition] = useState<{ x: number; y: number } | null>(null),
-    [viewport, setViewport] = useState({ width: 0, height: 0 });
-  const launcher = useRef<HTMLButtonElement>(null),
-    suppressClick = useRef(false);
-  const drag = useRef<{
-    x: number;
-    y: number;
-    left: number;
-    top: number;
-    moved: boolean;
-  } | null>(null);
-  useEffect(() => {
-    const resize = () => {
-      setViewport({
-        width: document.documentElement.clientWidth,
-        height: window.innerHeight,
-      });
-      setPosition((p) =>
-        p
-          ? {
-              x: clamp(p.x, 12, document.documentElement.clientWidth - 68),
-              y: clamp(p.y, 12, window.innerHeight - 68),
-            }
-          : null,
-      );
-    };
-    resize();
-    window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const launcher = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!panelOpen) return;
     const controller = new AbortController();
@@ -93,147 +64,34 @@ export default function NewsSidebar() {
       window.removeEventListener("keydown", escape);
     };
   }, [panelOpen]);
-  const width = viewport.width || 1024,
-    height = viewport.height || 768;
-  const icon = position ?? { x: width - 80, y: height - 156 };
-  const panelWidth = Math.min(380, width - 24),
-    panelHeight = Math.min(520, height - 100);
-  const panelStyle = {
-    width: panelWidth,
-    maxHeight: panelHeight,
-    left: clamp(
-      icon.x > width / 2 ? icon.x + 56 - panelWidth : icon.x,
-      12,
-      width - panelWidth - 12,
-    ),
-    top: clamp(
-      icon.y > height / 2 ? icon.y - panelHeight - 12 : icon.y + 68,
-      12,
-      height - panelHeight - 12,
-    ),
-  };
   return (
     <>
       <button
         ref={launcher}
         className="news-launcher"
         aria-label={panelOpen ? "Close Lunar Dispatch" : "Open Lunar Dispatch"}
-        title="Lunar Dispatch · drag to move"
+        title="Lunar Dispatch"
         aria-expanded={panelOpen}
         aria-controls="lunar-news-popover"
-        style={
-          position
-            ? {
-                left: position.x,
-                top: position.y,
-                right: "auto",
-                bottom: "auto",
-              }
-            : undefined
-        }
-        onPointerDown={(e) => {
-          if (e.button !== 0) return;
-          suppressClick.current = false;
-          const r = e.currentTarget.getBoundingClientRect();
-          drag.current = {
-            x: e.clientX,
-            y: e.clientY,
-            left: r.left,
-            top: r.top,
-            moved: false,
-          };
-          e.currentTarget.setPointerCapture(e.pointerId);
-        }}
-        onPointerMove={(e) => {
-          const start = drag.current;
-          if (!start) return;
-          if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 5)
-            start.moved = true;
-          if (start.moved)
-            setPosition({
-              x: clamp(
-                start.left + e.clientX - start.x,
-                12,
-                document.documentElement.clientWidth - 68,
-              ),
-              y: clamp(
-                start.top + e.clientY - start.y,
-                12,
-                window.innerHeight - 68,
-              ),
-            });
-        }}
-        onPointerUp={(e) => {
-          suppressClick.current = drag.current?.moved ?? false;
-          drag.current = null;
-          if (e.currentTarget.hasPointerCapture(e.pointerId))
-            e.currentTarget.releasePointerCapture(e.pointerId);
-        }}
-        onPointerCancel={() => {
-          drag.current = null;
-          suppressClick.current = false;
-        }}
-        onLostPointerCapture={() => {
-          drag.current = null;
-        }}
-        onClick={(e) => {
-          if (e.detail > 0 && suppressClick.current) {
-            suppressClick.current = false;
-            return;
-          }
-          setPanelOpen((v) => !v);
+        onClick={() => {
+          setPanelOpen((value) => !value);
           setOpen(null);
         }}
-        onKeyDown={(e) => {
-          const delta = 10;
-          if (
-            ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)
-          ) {
-            e.preventDefault();
-            const r = e.currentTarget.getBoundingClientRect();
-            setPosition({
-              x: clamp(
-                r.left +
-                  (e.key === "ArrowRight"
-                    ? delta
-                    : e.key === "ArrowLeft"
-                      ? -delta
-                      : 0),
-                12,
-                document.documentElement.clientWidth - 68,
-              ),
-              y: clamp(
-                r.top +
-                  (e.key === "ArrowDown"
-                    ? delta
-                    : e.key === "ArrowUp"
-                      ? -delta
-                      : 0),
-                12,
-                window.innerHeight - 68,
-              ),
-            });
-          }
-        }}
       >
-        <Newspaper size={22} />
-        <span className="sr-only">
-          Drag to move, or use arrow keys when focused.
-        </span>
+        <Newspaper size={22} aria-hidden="true" />
       </button>
       {panelOpen && (
         <aside
           id="lunar-news-popover"
           className="news-sidebar news-popover panel glass"
           aria-label="Lunar exploration news"
-          style={panelStyle}
         >
           <div className="panel-heading">
             <div>
               <h2>
                 <Newspaper size={17} /> Lunar dispatch
               </h2>
-              <p>Moon exploration · NASA sources</p>
+              <p>Moon exploration news &amp; data</p>
             </div>
             <span className="news-state">
               {loading ? (
@@ -260,6 +118,14 @@ export default function NewsSidebar() {
             className="news-inner"
             style={{ display: open ? "none" : undefined }}
           >
+            <article className="news-card">
+              <span>Canadian Space Agency · Open data</span>
+              <h3>Lunar rover field-test data</h3>
+              <p>Imagery, LiDAR and rover position estimates from a simulated lunar mission in a Québec quarry.</p>
+              <a className="text-button" href={canadianRoverData} target="_blank" rel="noreferrer">
+                Open CSA dataset <ExternalLink size={12} aria-hidden="true" />
+              </a>
+            </article>
             {loading && !feed ? (
               <p role="status">Checking source feeds…</p>
             ) : (
