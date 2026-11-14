@@ -10,7 +10,7 @@ import AboutLunar from "../components/AboutLunar";
 import LandingSearch from "../components/LandingSearch";
 import Navigation, {viewPaths} from "../components/Navigation";
 import PreferencesControls, {type Preferences} from "../components/Preferences";
-import PowerMissionLab from "../components/PowerMissionLab";
+import PowerMissionLab, { type PlannerAiContext } from "../components/PowerMissionLab";
 import { adaptAssessment, type LabSource } from "../lib/mission-power";
 import ResearchOverview from "../components/ResearchOverview";
 import { PortableEducation, PortableJourney } from "../components/PortableLunar";
@@ -518,6 +518,7 @@ export default function Page() {
   const [chosenAlternatives, setChosenAlternatives] = useState<Site[]>([]);
   const [comparisonNotice, setComparisonNotice] = useState("");
   const education = view === 14;
+  const [plannerAiContext, setPlannerAiContext] = useState<PlannerAiContext | null>(null);
   const [labSource, setLabSource] = useState<LabSource | null>(null);
   const [labReportVersion, setLabReportVersion] = useState(0);
   const [openSavedLabReport, setOpenSavedLabReport] = useState(false);
@@ -956,18 +957,51 @@ export default function Page() {
 
   const displayedResult = reopenedMission?.snapshot.assessment ?? researchResult;
   const aiAssessment = view === 12 ? labSource?.assessment : displayedResult;
-  const aiContext = aiAssessment ? JSON.stringify({
+  const plannerContext = view === 12 && labSource && plannerAiContext?.source === labSource
+    ? {
+        powerInputs: plannerAiContext.powerInputs,
+        activityLoads: plannerAiContext.activityLoads,
+        simulation: plannerAiContext.simulation,
+        variant: plannerAiContext.variant,
+      }
+    : undefined;
+  const aiContext = JSON.stringify({
     page: view === 12 ? "Mission Planner" : "Result",
-    mission: aiAssessment.mission,
-    score: aiAssessment.score,
-    provisional: aiAssessment.provisional,
-    missingFactors: aiAssessment.missing,
-    sunlightHours: aiAssessment.geometry.sunlight_hours,
-    longestEarthOutageHours: aiAssessment.geometry.metrics?.longest_blackout_hours,
-    geometryMode: aiAssessment.geometry.mode,
-    maximumSlopeDegrees: aiAssessment.terrain.slope_max_deg,
-    limitsExceeded: aiAssessment.constraints_failed.slice(0, 6),
-  }).slice(0, 4000) : "";
+    assessment: aiAssessment ? {
+      mission: aiAssessment.mission,
+      score: aiAssessment.score,
+      provisional: aiAssessment.provisional,
+      nominalEvidencePercent: aiAssessment.available_weight * 100,
+      missingFactors: aiAssessment.missing,
+      factors: Object.fromEntries(Object.entries(aiAssessment.factors).map(([key, factor]) =>
+        [key, { name: factor.name, score: factor.score, weight: factor.weight }])),
+      geometryMode: aiAssessment.geometry.mode,
+      sunlightHours: aiAssessment.geometry.sunlight_hours,
+      sunlightPercent: aiAssessment.geometry.metrics?.sun_visible_pct,
+      earthVisibilityPercent: aiAssessment.geometry.metrics?.earth_visible_pct,
+      simultaneousVisibilityPercent: aiAssessment.geometry.metrics?.simultaneous_pct,
+      longestDarknessHours: aiAssessment.geometry.metrics?.longest_darkness_hours,
+      longestEarthOutageHours: aiAssessment.geometry.metrics?.longest_blackout_hours,
+      terrain: {
+        available: aiAssessment.terrain.available,
+        coverage: aiAssessment.terrain.coverage_type,
+        maximumSlopeDegrees: aiAssessment.terrain.slope_max_deg,
+        roughnessMeters: aiAssessment.terrain.roughness_m,
+        reliefMeters: aiAssessment.terrain.relief_m,
+        demSpacingMeters: aiAssessment.terrain.resolution_m,
+      },
+      historicalTemperatureK: aiAssessment.temperature.available
+        ? [aiAssessment.temperature.minimum_k, aiAssessment.temperature.maximum_k] : null,
+      mappedIceEvidence: aiAssessment.ice?.available ? {
+        fraction: aiAssessment.ice.value, samplingRadiusMeters: aiAssessment.ice.radius_m,
+        evidenceType: aiAssessment.factors.I?.quality,
+      } : null,
+      limits: aiAssessment.limits,
+      limitsExceeded: aiAssessment.constraints_failed.slice(0, 6),
+      warnings: aiAssessment.warnings.slice(0, 6),
+    } : null,
+    planner: plannerContext,
+  });
   return (
     <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} style={{"--ui-scale":preferences.scale} as CSSProperties}>
       <div className="stars" aria-hidden="true"/>
@@ -1004,7 +1038,7 @@ export default function Page() {
             } : undefined}
             onOpenResult={(record, snapshot) => { setReopenedMission({ record, snapshot }); setResearchEquipment(snapshot.equipment); setView(8); }} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority === "I" ? "I" : "overall");setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
           {education&&<PortableEducation animate={preferences.animate}/>}
-          {(view===12 || labSource)&&<div hidden={view!==12}><PowerMissionLab key={JSON.stringify([labSource?.key, labReportVersion])} openSavedReport={openSavedLabReport} source={labSource} sourceError={labError} onResult={()=>{
+          {(view===12 || labSource)&&<div hidden={view!==12}><PowerMissionLab onAiContextChange={setPlannerAiContext} key={JSON.stringify([labSource?.key, labReportVersion])} openSavedReport={openSavedLabReport} source={labSource} sourceError={labError} onResult={()=>{
             if (labSource && displayedResult !== labSource.assessment) {
               setReopenedMission({
                 record: { ...searchRecord, mission: labSource.site, alternatives: [] },

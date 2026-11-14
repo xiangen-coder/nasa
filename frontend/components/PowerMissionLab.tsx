@@ -21,7 +21,25 @@ const initialDraft: Draft = { brief: { name: "", objective: "", payload: "", not
 const briefLabels = { name: "Mission name", objective: "Mission objective", payload: "Payload & equipment", notes: "Mission notes" } as const;
 const durationMs = 3600000;
 
-export default function PowerMissionLab({ source, onResult, onConfigure, sourceError, openSavedReport = false }: {
+function powerSummary(run: PowerRun | null) {
+  if (!run) return null;
+  return {
+    generatedKWh: run.generated, unmetDemandKWh: run.unmet,
+    minimumChargePercent: run.minimumPct, firstBelowReserveHoursFromStart: run.firstBelow,
+    hoursBelowReserve: run.belowHours,
+  };
+}
+
+export type PlannerAiContext = {
+  source: LabSource | null;
+  powerInputs: PowerInputs;
+  activityLoads: { startUtcHour: number; endUtcHour: number; watts: number }[];
+  simulation: ReturnType<typeof powerSummary>;
+  variant: { powerInputs: PowerInputs; simulation: ReturnType<typeof powerSummary> } | null;
+};
+
+export default function PowerMissionLab({ onAiContextChange, source, onResult, onConfigure, sourceError, openSavedReport = false }: {
+  onAiContextChange?: (value: PlannerAiContext) => void;
   source: LabSource | null; onResult: () => void; onConfigure: () => void; sourceError?: string; openSavedReport?: boolean;
 }) {
   const [draft, setDraft] = useState(initialDraft);
@@ -52,6 +70,18 @@ export default function PowerMissionLab({ source, onResult, onConfigure, sourceE
       }
     } catch { setNotice("The stored draft could not be opened."); }
   }, [source, storageKey, openSavedReport]);
+
+  useEffect(() => {
+    onAiContextChange?.({
+      source,
+      powerInputs: draft.power,
+      activityLoads: draft.activities.slice(0, 24).map(({ start, end, watts }) => ({
+        startUtcHour: start, endUtcHour: end, watts,
+      })),
+      simulation: powerSummary(run),
+      variant: variant ? { powerInputs: variant.power, simulation: powerSummary(variant.run) } : null,
+    });
+  }, [onAiContextChange, source, draft.power, draft.activities, run, variant]);
 
   function updateSetup(next: Draft) {
     setDraft(next);
