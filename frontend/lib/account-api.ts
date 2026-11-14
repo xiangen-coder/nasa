@@ -1,3 +1,9 @@
+export class AccountApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
 export async function accountApi(path: string, method = "GET", body?: unknown) {
   const response = await fetch(`/api/account${path}`, {
     method,
@@ -11,6 +17,6 @@ export async function accountApi(path: string, method = "GET", body?: unknown) {
   });
   const data = await response.json();
   if (!response.ok)
-    throw new Error(data.error || "The account request failed.");
+    throw new AccountApiError(data.error || "The account request failed.", response.status);
   return data;
 }

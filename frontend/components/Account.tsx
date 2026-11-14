@@ -31,14 +31,12 @@ function LunarMark() {
 }
 
 export default function Account({
-  record,
   onRestore,
-  snapshot,
+  onSignedIn,
   onOpenResult,
   onUsernameChange,
 }: {
-  record: SearchRecord;
-  snapshot?: MissionSnapshot;
+  onSignedIn?: () => Promise<void>;
   onOpenResult: (record: SearchRecord, snapshot: MissionSnapshot) => void;
   onRestore: (record: SearchRecord) => void;
   onUsernameChange: (username: string | null) => void;
@@ -47,7 +45,6 @@ export default function Account({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
-  const [name, setName] = useState("");
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [saved, setSaved] = useState<Saved[]>([]);
   const [action, setAction] = useState<Action>("login");
@@ -112,7 +109,14 @@ export default function Account({
       setConfirmation("");
       setAction("login");
       setMessage(data.message);
-      await refresh();
+      try {
+        if (formAction === "login" && onSignedIn) {
+          await onSignedIn();
+          setMessage("Mission saved to your account.");
+        }
+      } finally {
+        await refresh();
+      }
     });
   }
   const recovery = action === "update-password" && !!user;
@@ -307,40 +311,6 @@ export default function Account({
           Sign out
         </button>
       </div>
-      {snapshot && <form
-        className="account-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void run(async () => {
-            await api("/history", "POST", {
-              name: name.trim() || record.mission.name.slice(0, 80),
-              payload: record,
-              snapshot,
-            });
-            setName("");
-            setMessage("Mission saved to your account.");
-            await refresh();
-          });
-        }}
-      >
-        <label>
-          Save mission · {record.mission.name}
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={80}
-            placeholder="Name (optional)"
-          />
-        </label>
-        <div className="account-actions">
-          <button
-            className="button primary"
-            disabled={busy || !validRecord(record)}
-          >
-            Save mission
-          </button>
-        </div>
-      </form>}
       {saved.length === 0 && !busy && <p>No saved missions yet.</p>}
       {saved.map((r) => (
         <article key={r.id} className="saved-search">

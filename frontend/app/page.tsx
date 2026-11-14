@@ -15,6 +15,7 @@ import { PortableEducation, PortableJourney } from "../components/PortableLunar"
 import PreliminaryComparison from "../components/PreliminaryComparison";
 import ComparisonPicker, { inComparisonArea, siteKey } from "../components/ComparisonPicker";
 import type { ResearchArea, ResearchAreaResult } from "../lib/research-area";
+import { accountApi, AccountApiError } from "../lib/account-api";
 import type { MissionSnapshot } from "../lib/saved-mission";
 import type { SearchRecord } from "../lib/search-record";
 import { referenceSites } from "../lib/reference-sites";
@@ -523,6 +524,8 @@ export default function Page() {
     if (labOpen) setLabVisited(true);
   }, [labOpen]);
   const researchActions=useRef<ResearchActions|null>(null);
+  const savingMission = useRef(false);
+  const [missionSaveStatus, setMissionSaveStatus] = useState<{ assessment: Research; status: "saving" | "saved" | "error"; message?: string } | null>(null);
   const [missionToSave, setMissionToSave] = useState<{ record: SearchRecord; snapshot: MissionSnapshot } | null>(null);
   const [reopenedMission, setReopenedMission] = useState<{ record: SearchRecord; snapshot: MissionSnapshot } | null>(null);
   const rerunRequest = useRef<AbortController | null>(null);
@@ -895,6 +898,37 @@ export default function Page() {
   const comparisonLimits = comparisonState?.results.find((result) => sameMission(result.mission, comparisonMission))?.limits;
   const whatIfContext = JSON.stringify([comparisonMission, comparisonLimits, activeArea?.area, researchEquipment]);
   const comparisonScenarios = whatIfComparison?.context === whatIfContext ? whatIfComparison.scenarios : [];
+  async function saveMission({ record, snapshot }: { record: SearchRecord; snapshot: MissionSnapshot }) {
+    await accountApi("/history", "POST", {
+      name: record.mission.name.trim().slice(0, 80) || "Lunar mission",
+      payload: record,
+      snapshot,
+    });
+  }
+
+  async function saveDisplayedMission(assessment: Research) {
+    if (savingMission.current || (missionSaveStatus?.assessment === assessment && missionSaveStatus.status === "saved")) return;
+    const pending = {
+      record: { ...(reopenedMission?.record ?? searchRecord), mission: assessment.mission, alternatives: [] },
+      snapshot: { version: 1 as const, assessment, equipment: researchEquipment },
+    };
+    savingMission.current = true;
+    setMissionSaveStatus({ assessment, status: "saving" });
+    try {
+      await saveMission(pending);
+      setMissionSaveStatus({ assessment, status: "saved" });
+    } catch (error) {
+      setMissionSaveStatus({ assessment, status: "error", message: error instanceof Error ? error.message : "Unable to save this mission." });
+      if (error instanceof AccountApiError && error.status === 401) {
+        setAccountName(null);
+        setMissionToSave(pending);
+        setView(13);
+      }
+    } finally {
+      savingMission.current = false;
+    }
+  }
+
   const displayedResult = reopenedMission?.snapshot.assessment ?? researchResult;
   return (
     <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} style={{"--ui-scale":preferences.scale} as CSSProperties}>
@@ -925,7 +959,11 @@ export default function Page() {
               setView(8);
             }} onSearch={()=>setView(7)} onCancel={cancelComparison}/>}
           {view===11&&<ResearchComparisonReport key={missionKey(comparisonMission)} mission={comparisonMission} alternatives={searchRecord.alternatives} comparison={comparisonState} scenarios={comparisonScenarios} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} onInspect={result=>{setResearchResult(result);setView(8);}} equipment={researchEquipment}/>}
-          {view===13&&<Account record={missionToSave?.record ?? searchRecord} snapshot={missionToSave?.snapshot}
+          {view===13&&<Account onSignedIn={missionToSave ? async () => {
+              await saveMission(missionToSave);
+              setMissionSaveStatus({ assessment: missionToSave.snapshot.assessment, status: "saved" });
+              setMissionToSave(null);
+            } : undefined}
             onOpenResult={(record, snapshot) => { setReopenedMission({ record, snapshot }); setResearchEquipment(snapshot.equipment); setView(8); }} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority);setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
           {education&&<PortableEducation animate={preferences.animate}/>}
           {labVisited&&<div hidden={!labOpen}><MissionLab mode="professional" classroomNav={null} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
@@ -953,13 +991,7 @@ export default function Page() {
             } finally {
               if (!controller.signal.aborted) setRerunningMission(false);
             }
-          } : undefined} onSaveMission={(assessment) => {
-            setMissionToSave({
-              record: { ...(reopenedMission?.record ?? searchRecord), mission: assessment.mission, alternatives: [] },
-              snapshot: { version: 1, assessment, equipment: researchEquipment },
-            });
-            setView(13);
-          }} onAddComparison={addComparisonSite} busy={rerunningMission || (!reopenedMission && (researchBusy || !!activeArea?.busy))} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={reopenedMission?.record.priority ?? researchPriority} animate={preferences.animate} assessmentError={reopenedMission ? rerunError : comparisonState?.error}/>}
+          } : undefined} onSaveMission={saveDisplayedMission} missionSaveStatus={missionSaveStatus && missionSaveStatus.assessment === displayedResult ? missionSaveStatus : undefined} onAddComparison={addComparisonSite} busy={rerunningMission || (!reopenedMission && (researchBusy || !!activeArea?.busy))} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={reopenedMission?.record.priority ?? researchPriority} animate={preferences.animate} assessmentError={reopenedMission ? rerunError : comparisonState?.error}/>}
           <div hidden={![0,1,3].includes(view)}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>

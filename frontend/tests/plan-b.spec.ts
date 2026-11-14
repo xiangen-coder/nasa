@@ -306,12 +306,14 @@ test("missing evidence blocks recommendations, and cancellation marks a search i
 
 test("saved mission opens its completed result without a new analysis", async ({ page }) => {
   let saved: { payload: unknown; snapshot: unknown } | undefined;
+  let saves = 0;
   let analysisCount = 0;
   await page.route("**/api/account", (route) => route.fulfill({ json: {
     configured: true, user: { id: "fixture", username: "Xiang En", email: "test@example.com" },
   } }));
   await page.route(/\/api\/account\/history(?:\?|$)/, async (route) => {
     if (route.request().method() === "POST") {
+      saves++;
       saved = route.request().postDataJSON();
 
       return route.fulfill({ status: 201, json: { id: "fixture" } });
@@ -330,10 +332,11 @@ test("saved mission opens its completed result without a new analysis", async ({
     return route.fulfill({ json: evidence(mission, 85) });
   });
   await page.locator("#result-save").getByRole("button", { name: "Save mission" }).click();
-  await page.getByRole("button", { name: "Save mission", exact: true }).click();
   await expect.poll(() => saved?.snapshot).toMatchObject({ version: 1, assessment: { score: 70 }, equipment: { area_m2: 4 } });
   await expect(page.getByText("Mission saved to your account.")).toBeVisible();
-  await page.reload();
+  await expect(page).toHaveURL(/#result$/);
+  expect(saves).toBe(1);
+  await page.goto("/#account");
   await page.getByRole("button", { name: "Open result" }).click();
   await expect(page).toHaveURL(/#result$/);
   await expect(page.locator("#result-summary")).toContainText("70.00 / 100");

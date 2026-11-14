@@ -82,6 +82,7 @@ export default function ResearchOverview({
   comparisonRadiusKm,
   onNavigate,
   onSaveMission,
+  missionSaveStatus,
   onRunAgain,
   onAddComparison,
   onNewSearch,
@@ -97,6 +98,7 @@ export default function ResearchOverview({
   comparisonRadiusKm?: number;
   onNavigate: (view: number) => void;
   onSaveMission: (assessment: Research) => void;
+  missionSaveStatus?: { status: "saving" | "saved" | "error"; message?: string };
   onRunAgain?: () => void;
   onAddComparison: (site: Site) => void;
   onNewSearch: () => void;
@@ -759,10 +761,16 @@ export default function ResearchOverview({
               <button className="button subtle" onClick={() => onNavigate(11)}>
                 Back to comparison
               </button>
-              <button className="button primary" onClick={() => onSaveMission(result)}>
-                Save mission
+              <button
+                className="button primary"
+                disabled={missionSaveStatus?.status === "saving" || missionSaveStatus?.status === "saved"}
+                onClick={() => onSaveMission(result)}
+              >
+                {missionSaveStatus?.status === "saving" ? "Saving mission…" : missionSaveStatus?.status === "saved" ? "Mission saved" : "Save mission"}
               </button>
             </div>
+            {missionSaveStatus?.status === "saved" && <p role="status">Mission saved to your account.</p>}
+            {missionSaveStatus?.status === "error" && <p className="error" role="alert">{missionSaveStatus.message}</p>}
           </section>
         </>
       ) : (
