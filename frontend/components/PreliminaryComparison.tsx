@@ -1,4 +1,5 @@
 "use client";
+import { formatCoordinates } from "../lib/format-coordinates";
 import { ChevronRight, ChevronDown, Info, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Mission, Site } from "../app/types";
@@ -216,7 +217,7 @@ export default function PreliminaryComparison({
             <p role="status"><span className="pre-result-spinner" aria-hidden="true" />Searching the research area…</p>
           ) : <p>{site.name}</p>}
           {area && !searchingArea && <p>
-            {site.latitude.toFixed(4)}°, {site.longitude.toFixed(4)}° ·{" "}
+            {formatCoordinates(site.latitude, site.longitude)} ·{" "}
             {comparisonDistanceKm(area.centre, site).toFixed(2)} km from research centre
           </p>}
           {comparing && (
@@ -781,7 +782,7 @@ function AssessmentSummary({ mission, radiusKm, result }: {
       <dl className="research-centre-summary glass">
         <div><dt>Research area name</dt><dd>{mission.name?.trim() || "Custom location"}</dd></div>
         <div><dt>Research area coordinates</dt><dd>{coordinatesAvailable
-          ? `${mission.latitude.toFixed(4)}°, ${mission.longitude.toFixed(4)}°` : "Unavailable"}</dd></div>
+          ? formatCoordinates(mission.latitude, mission.longitude) : "Unavailable"}</dd></div>
         <div><dt>Search radius</dt><dd>{radiusKm} km</dd></div>
         <div>
           <dt>Mission window</dt>

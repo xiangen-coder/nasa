@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCoordinates } from "../lib/format-coordinates";
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { comparisonDistanceKm, comparisonRadiusKm, inComparisonArea, siteKey } from "./ComparisonPicker";
@@ -156,7 +157,7 @@ function OptionDetails({
           <div>
             <dt>Coordinates</dt>
             <dd>
-              {mission.latitude.toFixed(5)}°, {mission.longitude.toFixed(5)}°
+              {formatCoordinates(mission.latitude, mission.longitude, 5)}
             </dd>
           </div>
           {result.observer_height?.available &&

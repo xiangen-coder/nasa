@@ -1,5 +1,6 @@
 "use client";
 
+import { formatCoordinates } from "../lib/format-coordinates";
 import { useState } from "react";
 import type { Mission, Site } from "../app/types";
 import type { Research, ResearchComparison, ResearchSpan } from "./LandingResearch";
@@ -243,7 +244,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
         {entries.map(({ mission: point, assessment }, index) => (
           <article className={`report-option report-option-${index}`} key={missionKey(point)}>
             <h3>{point.name}{index === baseIndex && " · Baseline"}</h3>
-            <p>{point.latitude.toFixed(4)}°, {point.longitude.toFixed(4)}° · {format(duration(point), " h")}</p>
+            <p>{formatCoordinates(point.latitude, point.longitude)} · {format(duration(point), " h")}</p>
             {!sharedWindow && <p>{utc(point.start)} → {utc(point.end)}</p>}
             <p>{assessmentStatus(entries[index])}</p>
             {assessment && <button className="text-button" onClick={() => onInspect(assessment)}>View full result ↗</button>}
