@@ -5,7 +5,6 @@ import {
   Archive,
   ArrowUpRight,
   ChevronDown,
-  Moon,
   Orbit,
   Rocket,
   Settings,
@@ -181,7 +180,7 @@ export default function Navigation({
         }}
         aria-label="Lunar Navigator home"
       >
-        <Moon size={27} strokeWidth={1.6} />
+        <img className="lunar-brand-icon" src="/lunar-logo.webp" alt="" width={34} height={34} />
         <span>
           LUNAR<span className="brand-caption">A NEW PERSPECTIVE</span>
         </span>

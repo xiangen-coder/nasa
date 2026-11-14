@@ -12,6 +12,7 @@ import "./research-workflow.css";
 import "./about-lunar.css";
 export const metadata: Metadata = {
   title: "Lunar Landing Site Navigator",
+  icons: { icon: "/lunar-logo.webp" },
   description:
     "Explore lunar south pole Sun and Earth visibility using NASA/JPL ephemerides. Scientific mission planning demonstrator.",
 };

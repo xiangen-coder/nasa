@@ -1724,7 +1724,7 @@ export default function Page() {
             {view===10&&<section className="preferences-page glass"><span className="eyebrow">YOUR EXPERIENCE</span><h2>Settings.</h2><PreferencesControls value={preferences} onChange={updatePreferences}/><button className="button subtle" onClick={()=>setView(7)}>Back to Search <ArrowRight size={14}/></button></section>}
             <footer className="footer">
               <span>
-                <Moon size={13} /> LUNAR LANDING SITE NAVIGATOR <span> / </span>{" "}
+                <img src="/lunar-logo.webp" alt="" width={18} height={18} /> LUNAR LANDING SITE NAVIGATOR <span> / </span>{" "}
                 NASA Space Apps 2026 project
               </span>
               <span>

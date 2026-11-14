@@ -144,7 +144,7 @@
     gap: 6px;
     font-size: 14px;
   }
-  .lunar-app .lunar-topbar:has(.header-login) .lunar-brand > svg {
+  .lunar-app .lunar-topbar:has(.header-login) .lunar-brand > .lunar-brand-icon {
     width: 19px;
   }
   .lunar-app .lunar-topbar:has(.header-login) .brand-caption {
@@ -167,7 +167,7 @@
   .lunar-app .lunar-brand {
     font-size: 15px;
   }
-  .lunar-app .lunar-brand > svg {
+  .lunar-app .lunar-brand > .lunar-brand-icon {
     width: 19px;
   }
   .header-mode-switch button {

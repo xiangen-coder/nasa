@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Moon } from "lucide-react";
 import { accountApi as api } from "../lib/account-api";
 import { validRecord, type SearchRecord } from "../lib/search-record";
 
@@ -25,7 +24,7 @@ const labels = {
 function LunarMark() {
   return (
     <span className="lunar-auth-mark" aria-hidden="true">
-      <Moon strokeWidth={1} />
+      <img src="/lunar-logo.webp" alt="" width={165} height={165} />
     </span>
   );
 }

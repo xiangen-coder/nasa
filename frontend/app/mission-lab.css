@@ -971,7 +971,7 @@
   .lunar-brand > span {
     font-size: 16px;
   }
-  .lunar-brand svg {
+  .lunar-brand .lunar-brand-icon {
     width: 20px;
   }
   .experience-switch button {

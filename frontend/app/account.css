@@ -52,26 +52,10 @@
   margin-inline: auto;
 }
 
-.lunar-auth-mark::before,
-.lunar-auth-mark::after {
-  content: "";
-  position: absolute;
-  inset: 32% 4%;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  opacity: 0.65;
-  rotate: -34deg;
-}
-
-.lunar-auth-mark::after {
-  inset: 37% 12%;
-  rotate: 32deg;
-}
-
-.lunar-auth-mark svg {
-  width: 55%;
-  height: 55%;
-  fill: currentColor;
+.lunar-auth-mark img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .lunar-auth-intro .lunar-auth-mark {

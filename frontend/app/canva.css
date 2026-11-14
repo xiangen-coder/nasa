@@ -149,7 +149,8 @@ button:disabled {
   font-weight: 400;
   letter-spacing: 0.17em;
 }
-.lunar-brand > svg {
+.lunar-brand > .lunar-brand-icon {
+  height: auto;
   transform: rotate(-20deg);
 }
 .nav-pill {
