@@ -560,8 +560,8 @@ export default function PreliminaryComparison({
           {areaResult.counts.limits} exceeded limits · {areaResult.counts.missing} lacked required evidence ·{" "}
           {areaResult.counts.unavailable} could not be evaluated
           {areaResult.counts.focus_missing > 0 && ` · ${areaResult.counts.focus_missing} lacked a mapped shadow target`}
-          <div>
-            We sample the centre and eight evenly spaced directions on rings at different distances within the search radius.
+          <div style={{ color: "var(--blue)" }}>
+            We sample the centre and eight evenly spaced points per ring. Nearby rings sit at 0.5, 1 and 2 km when inside the search radius. Outer rings sit at ⅓, ⅔ and the full radius.
           </div>
         </div>
       )}

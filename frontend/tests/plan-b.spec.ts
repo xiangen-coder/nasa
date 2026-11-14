@@ -351,7 +351,7 @@ test("Change location reveals the initial ranked list two at a time", async ({ p
       extraRequests.push(request.url());
   });
   const plan = await openCompare(page, true);
-  await expect(page.getByText(/We sample the centre and eight evenly spaced directions/)).toBeVisible();
+  await expect(page.getByText(/We sample the centre and eight evenly spaced points per ring/)).toBeVisible();
   await plan.getByRole("radio", { name: "Change location" }).check();
   const rows = plan.getByRole("table", { name: "Suggested plans" }).getByRole("row");
   await expect(rows).toHaveCount(4);
