@@ -282,7 +282,9 @@ export default function PreliminaryComparison({
                   <dt>{label}</dt>
                   <dd>
                     {searchingArea ? "—" : factor === "T" && terrain?.regional_only
-                      ? `Regional · ${terrain.slope_p95_deg?.toFixed(1)}° slope (p95)`
+                      ? terrain.regional_score != null
+                        ? `${terrain.regional_score.toFixed(1)} / 100 · Regional slope score (${terrain.resolution_m?.toFixed(0)} m pixels, ${terrain.radius_m} m radius)`
+                        : `Regional · ${terrain.slope_p95_deg?.toFixed(1)}° slope (p95)`
                       : score(result, factor)}
                     {change != null && (
                       <small>

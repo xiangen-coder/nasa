@@ -134,12 +134,23 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
             'safety_status':'fails_configured_limits' if failures else 'not_established',
             'formula':'0.35T + 0.25S + 0.20C + 0.15H + 0.05I; available weights renormalized for provisional scores only.'}
 
+def regional_slope_score(terrain, limits):
+    """Use the configured slope preference for a standalone regional score."""
+    if not terrain.get('regional_only') or terrain['resolution_m'] > 60:
+        return terrain
+    slope = terrain['slope_p95_deg']
+    score = clamp(100 * (limits.max_slope_deg - slope) /
+                  (limits.max_slope_deg - limits.good_slope_deg))
+    return {**terrain, 'regional_score': score}
+
+
 def research(request, *, plan_b=False, deadline=None, allow_remote=True):
     mission=request.mission;limits=request.limits
     terrain_options = {} if allow_remote else {'allow_remote': False}
     if plan_b:
         terrain_options['broad_screening'] = False
     t=rasters.local_terrain(mission,limits.radius_m,allow_regional=True,**terrain_options)
+    t = regional_slope_score(t, limits)
     observer_height = rasters.site_elevation(mission, t)
     hazards=rasters.measurement('hazards',mission);ice=rasters.ice_evidence(mission,limits.radius_m)
     thermal=rasters.temperature_range(mission)
@@ -323,7 +334,8 @@ def find_research_area(request: ResearchAreaRequest):
     # remote rasters while screening every sample would delay the initial ranking.
     if not recommended and results and not results[0].get('terrain', {}).get('available') and os.getenv('LUNAR_REMOTE_HORIZON') == '1':
         try:
-            results[0]['terrain'] = rasters.regional_terrain(Mission.model_validate(results[0]['mission']))
+            terrain = rasters.regional_terrain(Mission.model_validate(results[0]['mission']))
+            results[0]['terrain'] = regional_slope_score(terrain, request.limits)
         except rasters.RASTER_ERRORS:
             pass
     return {
@@ -339,6 +351,7 @@ def terrain(latitude:float=Query(ge=-90,le=90),longitude:float=Query(ge=-180,le=
     """Bounded local raster window; no Horizons requests or scientific downloads."""
     location=Location(latitude=latitude,longitude=longitude)
     local=rasters.local_terrain(location,radius_m,allow_regional=True)
+    local = regional_slope_score(local, Limits(radius_m=radius_m))
     elevation = rasters.site_elevation(location, local)
     return {'location':location.model_dump(),'radius_m':radius_m,'terrain':local,'regional_elevation':elevation,
             'coordinate_note':'Diagnostic offsets follow projected raster axes, centred on the nearest pixel; grid up is not necessarily geographic north.',

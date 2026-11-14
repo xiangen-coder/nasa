@@ -428,11 +428,20 @@ def _regional_terrain(latitude, longitude):
         north = latitude >= 60
         folder = 'LOLA_20mpp_NP' if north else 'LOLA_20mpp'
         side = 'N' if north else 'S'
-        url = f'https://pgda.gsfc.nasa.gov/data/{folder}/LDEM_60{side}_60MPP_ADJ.TIF'
-        size = 3123278298 if north else 3089110093
-        meta = {'name': f'NASA LOLA {side} polar DEM', 'source_url': url, 'resolution_m': 60, 'units': 'm'}
-        with _remote_polar_raster(url, size, resolution=60, north=north, budget=10) as (ds, _):
-            return _terrain_metrics(ds, meta, location, 300)
+        products = [(60, 60, 3123278298 if north else 3089110093)]
+        if abs(latitude) >= 75:
+            products.insert(0, (75, 30, 2945953056 if north else 2802850273))
+        for boundary, spacing, size in products:
+            url = f'https://pgda.gsfc.nasa.gov/data/{folder}/LDEM_{boundary}{side}_{spacing}MPP_ADJ.TIF'
+            meta = {'name': f'NASA LOLA {side} polar DEM', 'source_url': url,
+                    'resolution_m': spacing, 'units': 'm'}
+            try:
+                budget = 22 if spacing == 30 else 8
+                with _remote_polar_raster(url, size, resolution=spacing, north=north, budget=budget) as (ds, _):
+                    return _terrain_metrics(ds, meta, location, 300)
+            except RASTER_ERRORS:
+                if spacing == 60:
+                    raise
     return _sldem_terrain(latitude, longitude)
 
 

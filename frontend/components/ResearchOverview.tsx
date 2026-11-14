@@ -607,6 +607,13 @@ export default function ResearchOverview({
               </dl>
               <aside aria-label="Interpreting terrain measurements">
                 <h3>What the measurements show</h3>
+                {terrain?.regional_score != null && (
+                  <p>
+                    <strong>{terrain.regional_score.toFixed(1)} / 100 regional slope score</strong>
+                    {" · "}{value(terrain.resolution_m, " m")} pixels · {value(terrain.radius_m, " m")} radius.
+                    The score uses the 95th-percentile slope and sits outside the overall landing score.
+                  </p>
+                )}
                 <p>
                   Most sampled slopes are at or below the 95th-percentile slope.
                   Maximum slope highlights the steepest sampled ground.

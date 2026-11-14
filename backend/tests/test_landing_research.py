@@ -157,3 +157,15 @@ def test_regional_metrics_do_not_apply_footprint_limits():
                       "resolution_m": 60, "slope_max_deg": 45, "roughness_m": 50, "relief_m": 200})
     assert result["factors"]["T"]["score"] is None
     assert not result["constraints_failed"]
+
+
+def test_regional_slope_score_respects_scale_and_keeps_detailed_score_separate():
+    from app.landing_research import regional_slope_score
+
+    for resolution in (30, 60):
+        terrain = {"regional_only": True, "resolution_m": resolution, "slope_p95_deg": 10}
+        result = regional_slope_score(terrain, Limits(good_slope_deg=5, max_slope_deg=15))
+        assert result["regional_score"] == 50
+        assert score(t=result)["factors"]["T"]["score"] is None
+    coarse = {"regional_only": True, "resolution_m": 1900}
+    assert "regional_score" not in regional_slope_score(coarse, Limits())

@@ -56,6 +56,7 @@ export type Research = {
     available: boolean;
     coverage_type?: "regional";
     regional_only?: boolean;
+    regional_score?: number;
     reason?: string;
     elevation_m?: number;
     slope_p95_deg?: number;
