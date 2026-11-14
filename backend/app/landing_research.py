@@ -331,6 +331,8 @@ def find_research_area(request: ResearchAreaRequest):
     return {
         "counts": counts,
         "sampled": len(candidates),
+        "qualifying": len(ranked),
+        "sampling": {"radii_m": radii, "points_per_ring": 8},
         "recommended": recommended,
         "results": results,
         "reasons": sorted(reasons),

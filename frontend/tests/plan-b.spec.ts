@@ -59,7 +59,7 @@ async function openCompare(page: Page, withAlternatives = false) {
   await configure.getByLabel("Search radius (km)").fill("5");
   await expect(configure.getByText(/cyan ring marks the 5 km search radius/)).toBeVisible();
   await configure.getByRole("button", { name: "Find landing point", exact: true }).click();
-  await expect(page.locator(".research-centre-summary")).toContainText("5 km search radius");
+  await expect(page.locator(".research-centre-summary")).toContainText("5 km");
   const plan = page.getByRole("article", { name: "What IF" });
   await expect(plan.getByRole("button", { name: "Run What IF" })).toBeVisible();
   return plan;
@@ -211,7 +211,7 @@ test("location and combined searches keep the baseline and enforce the selected 
   const cards = page.getByRole("region", { name: "Comparison cards" });
   await expect(cards.getByRole("article")).toHaveCount(3);
   await expect(original).toBeVisible();
-  await expect(page.locator(".research-centre-summary")).toContainText("5 km search radius");
+  await expect(page.locator(".research-centre-summary")).toContainText("5 km");
   await page.getByRole("checkbox", { name: "Show differences only" }).check();
   await expect(cards.getByRole("meter", { name: "Water ice potential" })).toHaveCount(0);
   await page.getByRole("button", { name: "Back to options" }).click();
@@ -356,7 +356,7 @@ test("Change location reveals the initial ranked list two at a time", async ({ p
       extraRequests.push(request.url());
   });
   const plan = await openCompare(page, true);
-  await expect(page.getByText(/We sample the centre and eight evenly spaced points per ring/)).toBeVisible();
+  await expect(page.getByText(/We sample the centre and 8 evenly spaced points per ring/)).toBeVisible();
   await plan.getByRole("radio", { name: "Change location" }).check();
   const rows = plan.getByRole("table", { name: "Suggested plans" }).getByRole("row");
   await expect(rows).toHaveCount(4);

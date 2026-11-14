@@ -1,5 +1,5 @@
 "use client";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ChevronDown, Info, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Mission, Site } from "../app/types";
 import type { Research, ResearchComparison } from "./LandingResearch";
@@ -518,15 +518,8 @@ export default function PreliminaryComparison({
       <div className="preliminary-intro">
         <div>
           <span className="eyebrow">PRELIMINARY ASSESSMENT</span>
-          <p>
-            Compare up to two sites within {radiusKm} km of the research centre using the
-            original mission window, or use What IF to test a different site or
-            touchdown.
-          </p>
-          <small>
-            {mission.start.replace("T", " ")} → {mission.end.replace("T", " ")}{" "}
-            · {mission.interval_minutes}-minute samples
-          </small>
+          <h1>Compare landing sites</h1>
+          <p>Compare up to 2 sites, or use What IF to test another location or touchdown.</p>
         </div>
         <div className="preliminary-controls">
           {cards.length > 1 && (!!state?.results.length || scenarios.length > 0) && (
@@ -562,33 +555,7 @@ export default function PreliminaryComparison({
           )}
         </div>
       </div>
-      {area && (
-        <div className="research-centre-summary glass">
-          <strong>Research area centre</strong>
-          <span>[{area.centre.name}]</span>
-          <span>({area.centre.latitude.toFixed(4)}°, {area.centre.longitude.toFixed(4)}°)</span>
-          <span>{area.radiusKm} km search radius</span>
-          <span>Mission {utc(area.centre.start)} → {utc(area.centre.end)}</span>
-        </div>
-      )}
-      {areaResult && (
-        <div className="info" role="status">
-          {areaResult.sampled - areaResult.counts.unavailable} evaluated · {areaResult.sampled} sampled ·{" "}
-          {areaResult.counts.limits} exceeded limits · {areaResult.counts.missing} lacked required evidence ·{" "}
-          {areaResult.counts.unavailable} could not be evaluated
-          {areaResult.counts.focus_missing > 0 && ` · ${areaResult.counts.focus_missing} lacked a mapped shadow target`}
-          <div style={{ color: "var(--blue)" }}>
-            We sample the centre and eight evenly spaced points per ring. Nearby rings sit at 0.5, 1 and 2 km when inside the search radius. Outer rings sit at ⅓, ⅔ and the full radius.
-          </div>
-        </div>
-      )}
-      {areaResult && !hasRecommendation && <p>No qualifying landing point found in this research area.</p>}
-      {areaResult?.reasons?.length ? (
-        <details className="panel">
-          <summary>Why candidates were excluded</summary>
-          <ul>{areaResult.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
-        </details>
-      ) : null}
+      <AssessmentSummary mission={area?.centre ?? mission} radiusKm={radiusKm} result={areaResult} />
       {state?.busy && (
         <p role="status" className="info">
           {state.progress || "Preparing the comparison…"}{" "}
@@ -777,5 +744,86 @@ export default function PreliminaryComparison({
         </p>
       )}
     </section>
+  );
+}
+
+const missionDate = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+});
+const missionTime = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "UTC",
+});
+const kilometres = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
+const isTimeNote = (reason: string) => /stopped after|time limit was reached/i.test(reason);
+
+function AssessmentSummary({ mission, radiusKm, result }: {
+  mission: Mission;
+  radiusKm: number;
+  result?: ResearchAreaResult;
+}) {
+  const start = new Date(mission.start);
+  const end = new Date(mission.end);
+  const windowAvailable = Number.isFinite(+start) && Number.isFinite(+end);
+  const startTime = windowAvailable ? missionTime.format(start).replace(/:00$/, "") : "";
+  const endTime = windowAvailable ? missionTime.format(end).replace(/:00$/, "") : "";
+  const coordinatesAvailable = Number.isFinite(mission.latitude) && Number.isFinite(mission.longitude);
+  const qualifying = result?.qualifying ?? (result
+    ? result.recommended === false ? 0 : Math.max(0, result.counts.evaluated - (result.counts.focus_missing ?? 0))
+    : undefined);
+  const reasons = result?.reasons?.filter((reason) => !isTimeNote(reason)) ?? [];
+  const timing = result?.reasons?.filter(isTimeNote) ?? [];
+  const radiusM = Math.round(radiusKm * 1000);
+  const outerRings = [radiusM / 3, radiusM * 2 / 3, radiusM];
+  const nearbyRings = [500, 1000, 2000].filter((distance) => distance < radiusM);
+  const radii = result?.sampling?.radii_m ?? [...new Set([...nearbyRings, ...outerRings])];
+  const perRing = result?.sampling?.points_per_ring ?? 8;
+
+  return (
+    <div className="compare-assessment">
+      <dl className="research-centre-summary glass">
+        <div><dt>Research area name</dt><dd>{mission.name?.trim() || "Custom location"}</dd></div>
+        <div><dt>Research area coordinates</dt><dd>{coordinatesAvailable
+          ? `${mission.latitude.toFixed(4)}°, ${mission.longitude.toFixed(4)}°` : "Unavailable"}</dd></div>
+        <div><dt>Search radius</dt><dd>{radiusKm} km</dd></div>
+        <div>
+          <dt>Mission window</dt>
+          <dd>{windowAvailable ? missionDate.formatRange(start, end) : "Unavailable"}</dd>
+          <dd className="compare-mission-meta">
+            {windowAvailable && `${startTime}${startTime === endTime ? "" : ` → ${endTime}`} UTC · `}
+            {mission.interval_minutes === 60 ? "Hourly samples" : `${mission.interval_minutes}-minute samples`}
+          </dd>
+        </div>
+      </dl>
+      {result && (
+        <>
+          <div className="compare-assessment-banner glass" role="status">
+            {qualifying === 0 ? <TriangleAlert aria-hidden="true" /> : <Info aria-hidden="true" />}
+            <div>
+              <h2>{qualifying === 0 ? "No qualifying landing sites" : "Landing-site assessment complete"}</h2>
+              <p>{result.sampled} sampled · {result.counts.evaluated} fully evaluated · {result.counts.limits} exceeded limits · {result.counts.missing} lacked evidence · {result.counts.unavailable} unavailable
+                {result.counts.focus_missing > 0 && ` · ${result.counts.focus_missing} lacked a mapped shadow target`}
+              </p>
+            </div>
+            <div className="compare-qualifying"><strong>{qualifying}</strong><span>Qualifying sites</span></div>
+          </div>
+          <div className="compare-assessment-disclosures">
+            <details className="glass" open>
+              <summary>Why sites were excluded <ChevronDown size={16} aria-hidden="true" /></summary>
+              {reasons.length ? <ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+                : <p>No specific exclusion reasons were reported.</p>}
+              {timing.map((note) => <p className="compare-assessment-note" key={note}><Info size={16} aria-hidden="true" />{note}</p>)}
+            </details>
+            <details className="glass" open>
+              <summary>How sites were sampled <ChevronDown size={16} aria-hidden="true" /></summary>
+              <ul>
+                <li>We sample the centre and {perRing} evenly spaced points per ring across {radii.length} rings.</li>
+                {nearbyRings.length > 0 && <li>Nearby rings at {nearbyRings.map((distance) => kilometres.format(distance / 1000)).join(", ")} km.</li>}
+                <li>Outer rings at ⅓, ⅔ and the full radius ({outerRings.map((distance) => kilometres.format(distance / 1000)).join(", ")} km).</li>
+              </ul>
+            </details>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
