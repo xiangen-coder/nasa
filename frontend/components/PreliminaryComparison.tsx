@@ -11,7 +11,6 @@ import {
   comparableScores,
   comparableTerrain,
   comparableVisibility,
-  missionKey,
   sameMission,
   type PlanBForecast,
 } from "../lib/plan-b";
