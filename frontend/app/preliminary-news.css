@@ -474,39 +474,57 @@
   line-height: 1.9;
   margin: 24px 0 30px;
 }
-.news-launcher {
-  --news-inset: max(18px, env(safe-area-inset-right));
-  --news-bottom: max(28px, env(safe-area-inset-bottom));
-  position: fixed;
-  right: var(--news-inset);
-  bottom: var(--news-bottom);
-  width: 56px;
-  height: 56px;
-  min-height: 56px;
-  border: 1px solid #dce9ff45;
-  border-radius: 50%;
-  z-index: 85;
+.lunar-shortcuts {
+  display: grid;
+  width: max-content;
+  margin: 12px 18px 12px auto;
+  gap: 4px;
+  pointer-events: none;
+}
+.lunar-shortcuts :is(.news-launcher, .lunar-shortcut-placeholder) {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 6px;
+}
+.lunar-shortcuts .news-launcher {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  pointer-events: auto;
+  border-radius: 12px;
+}
+.lunar-shortcut-label {
   display: grid;
   place-items: center;
-  color: #dfebfb;
-  background: linear-gradient(135deg, #566d8cc9, #22354fef);
-  backdrop-filter: blur(18px);
-  box-shadow:
-    inset 0 1px 1px #ffffff15,
-    0 10px 40px #02071166;
-  cursor: pointer;
+  min-height: 40px;
+  padding-inline: 12px;
+  border: 1px solid #829fc564;
+  border-radius: 12px;
+  background: #101d32ee;
+  color: #f5f8ff;
+  white-space: nowrap;
 }
-.news-launcher:hover {
-  background: #425c80;
+.lunar-shortcuts img { width: 64px; height: 64px; object-fit: contain; }
+.news-launcher:is(:hover, :focus-visible, [aria-expanded="true"]) .lunar-shortcut-label {
+  border-color: #a3d8ff;
+  background: #233956;
 }
-.news-launcher[aria-expanded="true"] {
-  border-color: #dce9ff9c;
+@media (max-width: 600px) {
+  .lunar-shortcuts { margin: 8px 16px 8px auto; }
+  .lunar-shortcuts img { width: 46px; height: 46px; }
+  .lunar-shortcut-label { min-height: 36px; font-size: 0.875rem; }
+}
+@media print {
+  .lunar-shortcuts, .lunar-app .news-sidebar.news-popover { display: none; }
 }
 .lunar-app .news-sidebar.news-popover {
   position: fixed;
   z-index: 84;
   right: max(18px, env(safe-area-inset-right));
-  bottom: calc(max(28px, env(safe-area-inset-bottom)) + 64px);
+  bottom: max(18px, env(safe-area-inset-bottom));
   width: min(320px, calc(100vw - 36px));
   max-height: min(340px, 48dvh);
   min-width: 0;

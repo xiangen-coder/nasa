@@ -17,6 +17,15 @@ type Feed = {
 };
 const canadianRoverData = "https://data.asc-csa.gc.ca/dataset/9151430-4v0p-4t5c-468vnhj714ao64";
 
+function ShortcutArt({ label, illustration }: { label: string; illustration: "ufo" | "moon" }) {
+  return (
+    <>
+      <span className="lunar-shortcut-label">{label}</span>
+      <img src={`/illustration/shortcut-${illustration}.webp`} alt="" width={64} height={64} />
+    </>
+  );
+}
+
 export default function NewsSidebar() {
   const [feed, setFeed] = useState<Feed | null>(null),
     [loading, setLoading] = useState(false),
@@ -66,20 +75,24 @@ export default function NewsSidebar() {
   }, [panelOpen]);
   return (
     <>
-      <button
-        ref={launcher}
-        className="news-launcher"
-        aria-label={panelOpen ? "Close Lunar Dispatch" : "Open Lunar Dispatch"}
-        title="Lunar Dispatch"
-        aria-expanded={panelOpen}
-        aria-controls="lunar-news-popover"
-        onClick={() => {
-          setPanelOpen((value) => !value);
-          setOpen(null);
-        }}
-      >
-        <Newspaper size={22} aria-hidden="true" />
-      </button>
+      <div className="lunar-shortcuts">
+        <div className="lunar-shortcut-placeholder">
+          <ShortcutArt label="Ask Lunar AI" illustration="ufo" />
+        </div>
+        <button
+          type="button"
+          ref={launcher}
+          className="news-launcher"
+          aria-expanded={panelOpen}
+          aria-controls="lunar-news-popover"
+          onClick={() => {
+            setPanelOpen((value) => !value);
+            setOpen(null);
+          }}
+        >
+          <ShortcutArt label="Moon news" illustration="moon" />
+        </button>
+      </div>
       {panelOpen && (
         <aside
           id="lunar-news-popover"

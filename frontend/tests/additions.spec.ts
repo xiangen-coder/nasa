@@ -27,7 +27,7 @@ test("news sidebar displays source, date, excerpt and external article link", as
     page.getByRole("complementary", { name: "Lunar exploration news" }),
   ).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Open Lunar Dispatch", exact: true })
+    .getByRole("button", { name: "Moon news", exact: true })
     .click();
   const sidebar = page.getByRole("complementary", {
     name: "Lunar exploration news",
@@ -68,7 +68,7 @@ test("unavailable and stale news are explicitly labeled", async ({ page }) => {
   );
   await page.goto("/");
   await page
-    .getByRole("button", { name: "Open Lunar Dispatch", exact: true })
+    .getByRole("button", { name: "Moon news", exact: true })
     .click();
   const side = page.getByRole("complementary", {
     name: "Lunar exploration news",
@@ -80,7 +80,7 @@ test("unavailable and stale news are explicitly labeled", async ({ page }) => {
   );
   await page.reload();
   await page
-    .getByRole("button", { name: "Open Lunar Dispatch", exact: true })
+    .getByRole("button", { name: "Moon news", exact: true })
     .click();
   await expect(side).toContainText("Cached headlines");
   await expect(side).toContainText("STALE");
