@@ -1,6 +1,7 @@
 """Transparent first-version research ranking; never a landing certification."""
 import json
 import math
+import os
 import time
 from threading import Lock
 from urllib.parse import urlencode
@@ -55,7 +56,9 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
     failures=[];warnings=[]
     t=terrain
     regional=t.get('coverage_type')=='regional'
-    if t.get('available'):
+    if t.get('regional_only'):
+        factors['T']['explanation'] = 'Regional slope, roughness and relief are available. Detailed landing scoring requires finer coverage.'
+    elif t.get('available'):
         if t['slope_max_deg']>limits.max_slope_deg: failures.append('Measured maximum neighbourhood slope exceeds the configured limit.')
         if t['roughness_m']>limits.max_roughness_m: failures.append('Measured detrended roughness exceeds the configured limit.')
         if t['relief_m']>limits.max_relief_m: failures.append('Measured neighbourhood relief exceeds the configured limit.')
@@ -134,6 +137,8 @@ def score_factors(terrain,geometry,thermal,hazards,ice,limits):
 def research(request, *, plan_b=False, deadline=None, allow_remote=True):
     mission=request.mission;limits=request.limits
     terrain_options = {} if allow_remote else {'allow_remote': False}
+    if plan_b:
+        terrain_options['broad_screening'] = False
     t=rasters.local_terrain(mission,limits.radius_m,allow_regional=True,**terrain_options)
     observer_height = rasters.site_elevation(mission, t)
     hazards=rasters.measurement('hazards',mission);ice=rasters.ice_evidence(mission,limits.radius_m)
@@ -314,6 +319,13 @@ def find_research_area(request: ResearchAreaRequest):
                        if result["score"] is not None]
         preliminary.sort(key=ranking, reverse=True)
         results = [result for result, _ in preliminary[:5]] or results[:1]
+    # Load broader evidence only for the displayed preliminary point. Reading
+    # remote rasters while screening every sample would delay the initial ranking.
+    if not recommended and results and not results[0].get('terrain', {}).get('available') and os.getenv('LUNAR_REMOTE_HORIZON') == '1':
+        try:
+            results[0]['terrain'] = rasters.regional_terrain(Mission.model_validate(results[0]['mission']))
+        except rasters.RASTER_ERRORS:
+            pass
     return {
         "counts": counts,
         "sampled": len(candidates),

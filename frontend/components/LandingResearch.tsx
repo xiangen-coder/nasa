@@ -55,6 +55,7 @@ export type Research = {
   terrain: {
     available: boolean;
     coverage_type?: "regional";
+    regional_only?: boolean;
     reason?: string;
     elevation_m?: number;
     slope_p95_deg?: number;

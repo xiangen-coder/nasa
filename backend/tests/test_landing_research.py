@@ -150,3 +150,10 @@ def test_terrain_endpoint_missing_footprint_keeps_elevation_separate(monkeypatch
 def test_terrain_endpoint_rejects_invalid_requests(query):
     from app.main import app
     assert TestClient(app).get('/api/research/terrain?'+query).status_code==422
+
+
+def test_regional_metrics_do_not_apply_footprint_limits():
+    result = score(t={"available": True, "coverage_type": "regional", "regional_only": True,
+                      "resolution_m": 60, "slope_max_deg": 45, "roughness_m": 50, "relief_m": 200})
+    assert result["factors"]["T"]["score"] is None
+    assert not result["constraints_failed"]

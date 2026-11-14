@@ -127,16 +127,17 @@ class _ElevationRangeReader(BufferedIOBase):
 
 
 @contextmanager
-def _remote_polar_raster(url, size, chunk_size=1_048_576, *, resolution=20):
+def _remote_polar_raster(url, size, chunk_size=1_048_576, *, resolution=20, north=False, budget=45):
     if not _polar_horizon_slots.acquire(timeout=1):
         raise ValueError('NASA raster requests are busy. Try again shortly.')
     try:
         with httpx.Client() as client:
             reader = _ElevationRangeReader(client, url, size, chunk_size)
+            reader.deadline = monotonic() + budget
             with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN='EMPTY_DIR'), rasterio.open(
                     'lola-polar.tif', opener=reader.open) as ds:
                 crs = CRS(ds.crs)
-                if (crs.to_json_dict().get('id') != {'authority': 'IAU', 'code': 30135}
+                if (crs.to_json_dict().get('id') != {'authority': 'IAU', 'code': 30130 if north else 30135}
                         or abs(crs.ellipsoid.semi_major_metre - RADIUS) > 1
                         or abs(crs.ellipsoid.semi_minor_metre - RADIUS) > 1
                         or ds.res != (resolution, resolution) or ds.count != 1):
@@ -339,7 +340,7 @@ def _polar_ice(latitude, longitude, radius_m):
         return _ice_window(ds, POLAR_SHADOW_SOURCE, Location(latitude=latitude, longitude=longitude), radius_m)
 
 
-def local_terrain(location, radius_m=100, *, allow_regional=False, allow_remote=True):
+def local_terrain(location, radius_m=100, *, allow_regional=False, allow_remote=True, broad_screening=True):
     footprint = _terrain_window('lola', location, radius_m)
     if footprint['available'] or not allow_regional:
         return footprint
@@ -356,6 +357,11 @@ def local_terrain(location, radius_m=100, *, allow_regional=False, allow_remote=
         if kaguya['available']:
             return {**kaguya, 'coverage_type': 'regional', 'footprint_reason': footprint['reason'],
                     'preliminary_only': True}
+    if broad_screening and allow_remote and os.getenv('LUNAR_REMOTE_HORIZON') == '1':
+        try:
+            return dict(regional_terrain(location))
+        except RASTER_ERRORS:
+            pass
     return {**footprint, 'reason': f"{footprint['reason']} Regional window: {regional['reason']}"}
 
 
@@ -387,14 +393,20 @@ def _terrain_metrics(ds, meta, location, radius_m):
     if n>500: raise ValueError('Requested neighbourhood exceeds processing bound.')
     if row-n<0 or col-n<0 or row+n>=ds.height or col+n>=ds.width: raise ValueError('Incomplete terrain neighbourhood coverage.')
     z=ds.read(1,window=Window(col-n,row-n,2*n+1,2*n+1),masked=True).astype(float)*ds.scales[0]+ds.offsets[0]
-    yy,xx=np.mgrid[-n:n+1,-n:n+1];xx=xx*ds.res[0];yy=yy*ds.res[1]
+    return _terrain_grid_metrics(z, meta, radius_m, ds.res)
+
+
+def _terrain_grid_metrics(z, meta, radius_m, spacing):
+    n = z.shape[0] // 2
+    resolution = max(spacing)
+    yy,xx=np.mgrid[-n:n+1,-n:n+1];xx=xx*spacing[0];yy=yy*spacing[1]
     circle=xx**2+yy**2<=radius_m**2
     valid=circle & ~np.ma.getmaskarray(z) & np.isfinite(z.filled(np.nan))
     coverage=float(valid.sum()/circle.sum())
     if coverage<1 or valid.sum()<9: raise ValueError('Terrain neighbourhood has gaps or fewer than nine valid samples.')
     # Reject nodata in the derivative stencil too; no gradients across gaps.
     if np.ma.getmaskarray(z).any() or not np.isfinite(z).all(): raise ValueError('Slope stencil intersects missing data.')
-    dzdy,dzdx=np.gradient(np.asarray(z),ds.res[1],ds.res[0])
+    dzdy,dzdx=np.gradient(np.asarray(z),spacing[1],spacing[0])
     slopes=np.degrees(np.arctan(np.hypot(dzdx,dzdy)))[valid]
     a=np.column_stack([xx[valid],yy[valid],np.ones(valid.sum())])
     heights=np.asarray(z)[valid];residual=heights-a@np.linalg.lstsq(a,heights,rcond=None)[0]
@@ -405,6 +417,92 @@ def _terrain_metrics(ds, meta, location, radius_m):
             'slope_mean_deg':float(slopes.mean()),'slope_max_deg':float(slopes.max()),'roughness_m':float(np.sqrt(np.mean(residual**2))),
             'relief_m':float(np.ptp(heights)),'resolution_m':resolution,'radius_m':radius_m,'coverage':coverage,'samples':int(valid.sum()),'source':meta,'grid':grid}
 
+
+
+@lru_cache(maxsize=128)
+def _regional_terrain(latitude, longitude):
+    from .models import Location
+
+    location = Location(latitude=latitude, longitude=longitude)
+    if abs(latitude) >= 60:
+        north = latitude >= 60
+        folder = 'LOLA_20mpp_NP' if north else 'LOLA_20mpp'
+        side = 'N' if north else 'S'
+        url = f'https://pgda.gsfc.nasa.gov/data/{folder}/LDEM_60{side}_60MPP_ADJ.TIF'
+        size = 3123278298 if north else 3089110093
+        meta = {'name': f'NASA LOLA {side} polar DEM', 'source_url': url, 'resolution_m': 60, 'units': 'm'}
+        with _remote_polar_raster(url, size, resolution=60, north=north, budget=10) as (ds, _):
+            return _terrain_metrics(ds, meta, location, 300)
+    return _sldem_terrain(latitude, longitude)
+
+
+def _sldem_terrain(latitude, longitude):
+    # PDS FLOAT tiles contain little-endian elevations in km relative to 1737.4 km.
+    pixels_per_degree = 512
+    tile_width = 45 * pixels_per_degree
+    tile_height = 30 * pixels_per_degree
+    pixel_m = np.radians(1 / pixels_per_degree) * RADIUS
+    east_m = pixel_m * np.cos(np.radians(latitude))
+    radius_m = 300
+    n = int(np.ceil(radius_m / east_m))
+    columns = (int((longitude % 360) * pixels_per_degree) + np.arange(-n, n+1)) % (360 * pixels_per_degree)
+    rows = int((60 - latitude) * pixels_per_degree) + np.arange(-n, n+1)
+    if rows[0] < 0 or rows[-1] >= 4 * tile_height:
+        raise ValueError('SLDEM2015 neighbourhood crosses its latitude limit.')
+    base_url = 'https://imbrium.mit.edu/DATA/SLDEM2015/TILES/FLOAT_IMG'
+    bands = ('30N_60N', '00N_30N', '30S_00S', '60S_30S')
+    values = np.empty((len(rows), len(columns)))
+    readers = {}
+    deadline = monotonic() + 10
+    with httpx.Client() as client:
+        try:
+            for i, row in enumerate(rows):
+                band, tile_row = divmod(int(row), tile_height)
+                for tile in np.unique(columns // tile_width):
+                    key = (band, int(tile))
+                    if key not in readers:
+                        west = int(tile) * 45
+                        url = f'{base_url}/SLDEM2015_512_{bands[band]}_{west:03d}_{west+45:03d}_FLOAT.IMG'
+                        readers[key] = _ElevationRangeReader(client, url, tile_width * tile_height * 4)
+                        readers[key].deadline = deadline
+                    reader = readers[key]
+                    mask = columns // tile_width == tile
+                    cols = columns[mask] % tile_width
+                    reader.seek((tile_row * tile_width + int(cols[0])) * 4)
+                    data = reader.read(len(cols) * 4)
+                    if len(data) != len(cols) * 4:
+                        raise ValueError('SLDEM2015 elevation window could not be loaded.')
+                    values[i, mask] = np.frombuffer(data, dtype='<f4') * 1000
+        finally:
+            for reader in readers.values():
+                reader.close()
+    meta = {'name': 'NASA LOLA / Kaguya SLDEM2015', 'source_url': 'https://pgda.gsfc.nasa.gov/products/54',
+            'resolution_m': pixel_m, 'units': 'm'}
+    return _terrain_grid_metrics(np.ma.masked_where(np.abs(values) > 30_000, values),
+                                 meta, radius_m, (east_m, pixel_m))
+
+
+def regional_terrain(location):
+    try:
+        result = _regional_terrain(location.latitude, location.longitude)
+    except RASTER_ERRORS:
+        # Use the existing whole-Moon height map at kilometre-scale where finer
+        # windows fail, including at the boundaries between polar and midlatitude maps.
+        with opened('global_dem')[0] as ds:
+            spacing = np.radians(ds.res[1]) * RADIUS
+            offsets = np.arange(-3, 4) * spacing
+            xx, yy = np.meshgrid(offsets, -offsets)
+            distances = np.hypot(xx, yy)
+            bearings = np.degrees(np.arctan2(xx, yy))
+            lon, lat, _ = GEOD.fwd(np.full(xx.size, location.longitude), np.full(xx.size, location.latitude),
+                                  bearings.ravel(), distances.ravel())
+            lat = np.clip(lat, -90 + ds.res[1] / 2, 90 - ds.res[1] / 2)
+            lon = (lon + 180) % 360 - 180
+            heights = _sample_horizon_pixels(ds, lon, lat).reshape(xx.shape)*ds.scales[0]+ds.offsets[0]
+            meta = {'name': 'NASA LOLA global elevation (LDEM_16)', 'source_url': SOURCES['global_dem'],
+                    'resolution_m': spacing, 'units': 'm'}
+            result = _terrain_grid_metrics(np.ma.asarray(heights), meta, 3 * spacing, (spacing, spacing))
+    return {**result, 'coverage_type': 'regional', 'preliminary_only': True, 'regional_only': True}
 
 def _sample_horizon_pixels(dataset, xs, ys, prefetch=None):
     """Read each raster block touched by the selected site's rays only once."""

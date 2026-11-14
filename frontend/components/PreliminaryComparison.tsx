@@ -281,7 +281,9 @@ export default function PreliminaryComparison({
                 <div key={factor}>
                   <dt>{label}</dt>
                   <dd>
-                    {searchingArea ? "—" : score(result, factor)}
+                    {searchingArea ? "—" : factor === "T" && terrain?.regional_only
+                      ? `Regional · ${terrain.slope_p95_deg?.toFixed(1)}° slope (p95)`
+                      : score(result, factor)}
                     {change != null && (
                       <small>
                         {" "}
@@ -368,7 +370,7 @@ export default function PreliminaryComparison({
                     <dd>{terrain.slope_p95_deg.toFixed(1)}° p95 slope</dd>
                   )}
                   {terrain?.coverage_type === "regional" && (
-                    <dd>{terrain.resolution_m} m regional screening</dd>
+                    <dd>{terrain.resolution_m?.toFixed(0)} m regional screening</dd>
                   )}
                   {observer?.available &&
                     observer.coverage_type === "global" &&
@@ -379,9 +381,16 @@ export default function PreliminaryComparison({
                         lunar reference sphere · NASA LOLA global map
                       </dd>
                     )}
+                  {terrain?.regional_only && (
+                    <dd>
+                      {terrain.source?.name} · {terrain.radius_m?.toFixed(0)} m sampling radius
+                      {terrain.roughness_m != null && ` · ${terrain.roughness_m.toFixed(1)} m roughness`}
+                      {terrain.relief_m != null && ` · ${terrain.relief_m.toFixed(1)} m relief`}
+                    </dd>
+                  )}
                   {result.factors.T?.score == null && (
                     <dd>
-                      {observer?.coverage_type === "global"
+                      {observer?.coverage_type === "global" && !terrain?.regional_only
                         ? "Local slope, roughness and relief require finer elevation coverage."
                         : result.factors.T?.explanation ||
                           "Terrain evidence unavailable."}
