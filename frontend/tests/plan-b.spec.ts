@@ -45,7 +45,9 @@ async function openCompare(page: Page, withAlternatives = false) {
     await route.fulfill({ json: {
       results: withAlternatives ? [
         evidence({ ...mission, name: "Recommended ridge", latitude: mission.latitude + 0.14 }),
-        evidence({ ...mission, name: "Previously assessed ridge", latitude: mission.latitude - 0.14 }, 75),
+        ...[75, 70, 65, 60].map((score, index) =>
+          evidence({ ...mission, name: `Ranked ridge ${index + 2}`, latitude: mission.latitude - 0.02 * (index + 1) }, score)),
+
       ] : [evidence(mission, 70, true)], recommended: true, sampled: 17,
       counts: { evaluated: 1, limits: 0, missing: 16, unavailable: 0, focus_missing: 0 }, reasons: [],
     } });
@@ -177,11 +179,8 @@ test("location and combined searches keep the baseline and enforce the selected 
   await plan.getByText("Change location", { exact: true }).click();
   await expect(plan.getByText("Custom coordinates and terrain suggestions")).toBeVisible();
   await expect(plan.getByLabel("Search window")).toHaveCount(0);
-  await plan.getByRole("button", { name: "Suggest nearby points" }).click();
-  await expect(plan.getByRole("heading", { name: /Choose (dates|locations|options) to compare/ })).toBeVisible();
-  await expect(plan.getByRole("table").first()).toContainText(longName);
-  expect(candidates).toHaveLength(2);
-  expect(candidates.every((mission) => Date.parse(mission.start) === Date.parse(start))).toBeTruthy();
+  await expect(plan).toContainText("The original search returned no other locations");
+  expect(candidates).toHaveLength(0);
   await plan.getByText("Change both", { exact: true }).click();
   await expect(plan.getByText("Choose alternative sites")).toBeHidden();
   await expect(plan).toContainText("Research centre: Shackleton vicinity");
@@ -190,7 +189,7 @@ test("location and combined searches keep the baseline and enforce the selected 
   await plan.getByLabel("Alternate UTC touchdown time").fill("12:30");
   await plan.getByRole("button", { name: "Run What IF" }).click();
   await expect(plan.getByRole("heading", { name: /Choose (dates|locations|options) to compare/ })).toBeVisible();
-  expect(candidates.slice(2).every((mission) => Date.parse(mission.start) > Date.parse(start) && mission.start.includes("T12:30:00"))).toBeTruthy();
+  expect(candidates.every((mission) => Date.parse(mission.start) > Date.parse(start) && mission.start.includes("T12:30:00"))).toBeTruthy();
   expect(candidates.some((mission) => mission.start.startsWith("2028-12-01"))).toBeTruthy();
   expect(candidates.some((mission) => mission.name === "Far")).toBeFalsy();
   expectMissionSettings(candidates);
@@ -218,23 +217,6 @@ test("location and combined searches keep the baseline and enforce the selected 
   await expect(plan.getByRole("table", { name: "Suggested plans" })).toBeVisible();
   await expect(choices.nth(0)).toBeChecked();
   await expect(choices.nth(1)).toBeChecked();
-});
-
-test("nominal terrain candidates get a forecast for the original window", async ({ page }) => {
-  const point = { name: "Unverified ridge", latitude: -89.52, longitude: 0 };
-  await page.route("**/api/reliability/plan-b-sites", (route) => route.fulfill({
-    json: { candidates: [], exploration_candidates: [{ location: point }], searched: 1,
-      outside_or_missing: 1, failed_limits: 0, overlap_excluded: 0, passing_terrain_candidates: 0 },
-  }));
-  const plan = await openCompare(page);
-  await plan.getByText("Change location", { exact: true }).click();
-  await plan.getByRole("button", { name: "Suggest nearby points" }).click();
-  const forecast = plan.getByRole("region", { name: "Suggested comparison options" });
-  await expect(forecast).toContainText("Unverified ridge");
-  await expect(forecast).toContainText("2026-10-01 00:00:00 UTC");
-  await forecast.getByRole("button", { name: /Details for Unverified ridge/ }).click();
-  await expect(forecast).toContainText("Footprint and uncertainty evidence is incomplete.");
-  await expect(plan.getByText(/No backup passed the checks/)).toBeVisible();
 });
 
 test("suggests comparison points around the first selected site when terrain is missing", async ({ page }) => {
@@ -362,37 +344,29 @@ test("saved mission opens its completed result without a new analysis", async ({
   expect(analysisCount).toBe(1);
 });
 
-test("Change location reuses results from the original circle and skips them in a new search", async ({ page }) => {
-  let shortlistCalls = 0;
-  const assessed: Mission[] = [];
-  await page.route("**/api/reliability/plan-b-sites", async (route) => {
-    shortlistCalls++;
-    const { mission, search_radius_m } = route.request().postDataJSON();
-    expect(mission.latitude).toBe(-89.54);
-    expect(search_radius_m).toBe(5000);
-    await route.fulfill({ json: {
-      candidates: [
-        { location: { ...mission, name: "Previously assessed ridge", latitude: mission.latitude - 0.14 } },
-        { location: { ...mission, name: "New ridge", latitude: mission.latitude - 0.10 } },
-      ],
-    } });
-  });
-  await page.route("**/api/research/plan-b", async (route) => {
-    const { mission } = route.request().postDataJSON();
-    assessed.push(mission);
-    await route.fulfill({ json: { status: "evaluated", result: evidence(mission) } });
+test("Change location reveals the initial ranked list two at a time", async ({ page }) => {
+  const extraRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/\/api\/(reliability\/plan-b-sites|research\/plan-b)$/.test(request.url()))
+      extraRequests.push(request.url());
   });
   const plan = await openCompare(page, true);
   await plan.getByRole("radio", { name: "Change location" }).check();
-  await expect(plan.getByRole("row", { name: /Previously assessed ridge/ })).toBeVisible();
-  expect(shortlistCalls).toBe(0);
-  expect(assessed).toHaveLength(0);
+  const rows = plan.getByRole("table", { name: "Suggested plans" }).getByRole("row");
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(1)).toContainText("#1 · Recommended ridge");
+  await expect(rows.nth(2)).toContainText("#2 · Ranked ridge 2");
+  await expect(rows.nth(3)).toContainText("#3 · Ranked ridge 3");
 
-  await plan.getByRole("button", { name: "Search more locations" }).click();
-  await expect(plan.getByRole("row", { name: /New ridge/ })).toBeVisible();
-  await expect(plan.getByRole("row", { name: /Previously assessed ridge/ })).toHaveCount(1);
-  expect(shortlistCalls).toBe(1);
-  expect(assessed.map((mission) => mission.name)).toEqual(["New ridge"]);
-  expect(Date.parse(assessed[0].start)).toBe(Date.parse(start));
-  expect(Date.parse(assessed[0].end)).toBe(Date.parse(end));
+  await plan.getByRole("button", { name: "Show more locations" }).click();
+  await expect(rows).toHaveCount(6);
+  await expect(rows.nth(4)).toContainText("#4 · Ranked ridge 4");
+  await expect(rows.nth(5)).toContainText("#5 · Ranked ridge 5");
+  await expect(plan.getByRole("button", { name: "Show more locations" })).toHaveCount(0);
+  const choices = plan.getByRole("checkbox", { name: /^Select / });
+  await choices.nth(0).check();
+  await choices.nth(3).check();
+  await expect(choices.nth(1)).toBeDisabled();
+  await expect(plan.getByRole("button", { name: "Compare selected (3)" })).toBeEnabled();
+  expect(extraRequests).toEqual([]);
 });

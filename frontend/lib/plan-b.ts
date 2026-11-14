@@ -200,7 +200,7 @@ export const initialProgress: PlanBProgress = {
 };
 
 export async function findPlanB({
-  original, area, mode, dates, equipment, priority, signal, update, excludedSites = new Set<string>(),
+  original, area, mode, dates, equipment, priority, signal, update,
 }: {
   original: Research;
   area?: ResearchArea;
@@ -209,7 +209,6 @@ export async function findPlanB({
   equipment: SolarSettings;
   priority: ResearchPriority;
   signal: AbortSignal;
-  excludedSites?: ReadonlySet<string>;
   update: (progress: PlanBProgress) => void;
 }) {
   if (!validSolar(equipment)) throw Error("Review the original mission’s solar and battery settings.");
@@ -227,7 +226,7 @@ export async function findPlanB({
     const centre = area?.centre ?? mission;
     const radiusKm = area?.radiusKm ?? comparisonRadiusKm;
     const isNewSite = (location: Site) =>
-      siteKey(location) !== siteKey(mission) && !excludedSites.has(siteKey(location)) &&
+      siteKey(location) !== siteKey(mission) &&
       inComparisonArea(centre, location, radiusKm);
     report(`Screening terrain within ${radiusKm} km…`);
     progress.shortlist = await planBRequest<PlanBShortlist>("/api/reliability/plan-b-sites",

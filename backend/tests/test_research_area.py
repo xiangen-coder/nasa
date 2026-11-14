@@ -37,7 +37,7 @@ def test_candidates_stay_in_circle_and_use_focus(monkeypatch, radius):
     assert any(site.longitude < 0 for site in seen)
     assert result["counts"]["limits"] == 1
     assert result["results"][0]["mission"] == seen[-1]
-    assert len(result["results"]) == 3
+    assert len(result["results"]) == 5
 
 
 def test_shadow_reports_full_partial_and_missing_coverage():
@@ -63,11 +63,13 @@ def test_unqualified_area_returns_preliminary_comparisons(monkeypatch):
     def evaluate(candidate, *, plan_b=False, **kwargs):
         if plan_b:
             return {"status": "missing", "reasons": ["Mapped hazard fraction is unavailable."]}
-        return {"mission": candidate.mission, "score": 80}
+        suffix = candidate.mission.name.removeprefix("Candidate ")
+        score = int(suffix) if suffix.isdigit() else 0
+        return {"mission": candidate.mission, "score": score}
 
     monkeypatch.setattr(research, "research", evaluate)
     result = research.find_research_area(request)
     assert not result["recommended"]
     assert result["counts"]["missing"] == 17
-    assert len(result["results"]) == 3
+    assert [point["score"] for point in result["results"]] == [16, 15, 14, 13, 12]
     assert result["results"][0]["mission"] != request.mission

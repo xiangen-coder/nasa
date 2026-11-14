@@ -248,6 +248,7 @@ export default function PlanBComparison({
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [editing, setEditing] = useState(true);
+  const [showMoreLocations, setShowMoreLocations] = useState(false);
   const [progress, setProgress] = useState(initialProgress);
   const [status, setStatus] = useState<
     "idle" | "running" | "done" | "cancelled" | "error"
@@ -262,6 +263,7 @@ export default function PlanBComparison({
     [],
   );
 
+  const rankedLocationMode = mode === "relocate" && !!areaResult;
   const reused: PlanBForecast[] = [];
   if (mode === "relocate" && area && areaResult && original) {
     for (const result of areaResult.results) {
@@ -291,6 +293,10 @@ export default function PlanBComparison({
 
   async function run() {
     if (!original || controller.current) return;
+    if (rankedLocationMode) {
+      setShowMoreLocations(true);
+      return;
+    }
     setMessage("");
     setProgress(initialProgress);
     if (mode !== "relocate") {
@@ -325,7 +331,6 @@ export default function PlanBComparison({
         equipment,
         priority,
         signal: active.signal,
-        excludedSites: new Set(reused.map(({ location }) => siteKey(location))),
         update: (next) => {
           if (controller.current === active) setProgress(next);
         },
@@ -356,7 +361,9 @@ export default function PlanBComparison({
     progress.forecastsUnavailable > 0;
   const done = status !== "idle" && status !== "running";
   const options = new Map<string, PlanBForecast>();
-  for (const option of reused) options.set(missionKey(option.result.mission), option);
+  for (const option of reused.slice(0, showMoreLocations ? 4 : 2)) {
+    options.set(missionKey(option.result.mission), option);
+  }
   if (done) {
     for (const option of [...ranked, ...progress.forecasts]) {
       const key = missionKey(option.result.mission);
@@ -379,6 +386,7 @@ export default function PlanBComparison({
     setSelectedKeys([]);
     setExpanded(null);
     setEditing(true);
+    setShowMoreLocations(false);
   };
   const mission = original?.mission ?? pendingMission;
   return (
@@ -517,9 +525,11 @@ export default function PlanBComparison({
                   </label>
                 </>
               )}
-              <button type="submit" className="button primary" disabled={!original}>
-                {mode === "relocate" ? (reused.length ? "Search more locations" : "Suggest nearby points") : "Run What IF"}
-              </button>
+              {(!rankedLocationMode || (reused.length > 2 && !showMoreLocations)) && (
+                <button type="submit" className="button primary" disabled={!original}>
+                  {rankedLocationMode ? "Show more locations" : mode === "relocate" ? "Suggest nearby points" : "Run What IF"}
+                </button>
+              )}
             </fieldset>
             {status === "running" && (
               <button
@@ -576,7 +586,7 @@ export default function PlanBComparison({
               )}
             </div>
           )}
-          {original && (done || reused.length > 0) && (
+          {original && (done || rankedLocationMode) && (
             <>
               <section aria-label="Suggested comparison options">
                 <h3>
@@ -586,7 +596,11 @@ export default function PlanBComparison({
                       ? "Choose locations to compare"
                       : "Choose options to compare"}
                 </h3>
-                {reused.length > 0 && <p>Showing {reused.length} locations already assessed for this research area and mission window.</p>}
+                {rankedLocationMode && (
+                  <p>{options.size
+                    ? `Showing ${options.size} ranked alternatives from the original research area search.`
+                    : "The original search returned no other locations for this mission window."}</p>
+                )}
                 {done && ranked.length === 0 && !reused.some((option) => !option.reasons.length) && (
                   <p className="info">
                     No backup passed the checks in this search. Any available
@@ -631,7 +645,7 @@ export default function PlanBComparison({
                               />
                             </td>
                             <th scope="row">
-                              {original.mission.name}
+                              {rankedLocationMode && "#1 · "}{original.mission.name}
                               <small>{utc(original.mission.start)}</small>
                             </th>
                             <td>{optionValue(original.score)}</td>
@@ -649,7 +663,7 @@ export default function PlanBComparison({
                             <td>Baseline</td>
                             <td>—</td>
                           </tr>
-                          {[...options].map(([key, option]) => {
+                          {[...options].map(([key, option], index) => {
                             const result = option.result;
                             const candidate = result.mission;
                             const added = isCompared(option);
@@ -685,7 +699,7 @@ export default function PlanBComparison({
                                     />
                                   </td>
                                   <th scope="row">
-                                    {candidate.name}
+                                    {rankedLocationMode && `#${index + 2} · `}{candidate.name}
                                     <small>{utc(candidate.start)}</small>
                                     <small>
                                       {mode !== "delay" &&
@@ -814,7 +828,7 @@ export default function PlanBComparison({
                   </>
                 )}
               </section>
-              <details className="pre-extra">
+              <details className="pre-extra" hidden={rankedLocationMode}>
                 <summary>Skipped options &amp; screening reasons</summary>
                 {progress.sampled && (
                   <p>

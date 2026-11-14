@@ -234,7 +234,6 @@ def find_research_area(request: ResearchAreaRequest):
 
     counts = dict(evaluated=0, limits=0, missing=0, unavailable=0, focus_missing=0)
     qualified = []
-    screened_out = []
     reasons = set()
     deadline = time.monotonic() + 65
     for candidate in candidates:
@@ -253,8 +252,6 @@ def find_research_area(request: ResearchAreaRequest):
         reasons.update(outcome.get("reasons", ()))
         if status == "evaluated":
             qualified.append((candidate, outcome["result"]))
-        else:
-            screened_out.append((status, candidate))
 
     distances = [None]*len(qualified)
     if request.focus == "I" and qualified:
@@ -269,22 +266,22 @@ def find_research_area(request: ResearchAreaRequest):
         result, distance = item
         overall = result["score"] if result["score"] is not None else -1
         if request.focus == "I":
-            return -distance, overall
+            return (-distance if distance is not None else float("-inf")), overall
         if request.focus == "overall":
             return overall, overall
         factor = result["factors"][request.focus]["score"]
         return (factor if factor is not None else -1), overall
 
     ranked.sort(key=ranking, reverse=True)
-    results = [result for result, _ in ranked[:3]]
+    results = [result for result, _ in ranked[:5]]
     recommended = bool(results)
     if not recommended:
         # Keep the preliminary comparison available when the strict screen has no winner.
         fallback_deadline = time.monotonic() + 40
-        ordered = sorted(screened_out, key=lambda row: row[0] != "missing")
-        fallback_sites = [site for _, site in ordered if site != centre][:2]
-        for candidate in [*fallback_sites, centre][:3]:
-            if results and time.monotonic() >= fallback_deadline:
+        assessed_sites = []
+        for index, candidate in enumerate(candidates):
+            if time.monotonic() >= fallback_deadline:
+                reasons.add(f"Preliminary assessment stopped after {index} of {len(candidates)} sampled points.")
                 break
             result = research(
                 ResearchRequest(mission=candidate, limits=request.limits),
@@ -292,7 +289,16 @@ def find_research_area(request: ResearchAreaRequest):
                 allow_remote=False,
             )
             results.append(result)
-        results.sort(key=lambda result: result["score"] if result["score"] is not None else -1, reverse=True)
+            assessed_sites.append(candidate)
+        distances = [None] * len(results)
+        if request.focus == "I" and assessed_sites:
+            distances = research_shadow(
+                centre.latitude, centre.longitude, request.radius_m, assessed_sites,
+            )["distances_m"]
+        preliminary = [(result, distance) for result, distance in zip(results, distances)
+                       if result["score"] is not None]
+        preliminary.sort(key=ranking, reverse=True)
+        results = [result for result, _ in preliminary[:5]] or results[:1]
     return {
         "counts": counts,
         "sampled": len(candidates),
