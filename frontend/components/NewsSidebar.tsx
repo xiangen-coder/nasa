@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import LunarAiPanel from "./LunarAiPanel";
 import { ExternalLink, Newspaper, RefreshCw, X } from "lucide-react";
 type Article = {
   title: string;
@@ -26,11 +27,13 @@ function ShortcutArt({ label, illustration }: { label: string; illustration: "uf
   );
 }
 
-export default function NewsSidebar({ showAiPet }: { showAiPet: boolean }) {
+export default function NewsSidebar({ showAiPet, aiContext }: { showAiPet: boolean; aiContext: string }) {
   const [feed, setFeed] = useState<Feed | null>(null),
     [loading, setLoading] = useState(false),
     [open, setOpen] = useState<Article | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const aiLauncher = useRef<HTMLButtonElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!panelOpen) return;
@@ -77,9 +80,11 @@ export default function NewsSidebar({ showAiPet }: { showAiPet: boolean }) {
     <>
       <div className="lunar-shortcuts">
         {showAiPet && (
-          <div className="lunar-shortcut-placeholder">
+          <button type="button" ref={aiLauncher} className="lunar-shortcut-placeholder"
+            aria-label="Ask Lunar AI" aria-expanded={aiOpen} aria-controls="lunar-ai-popover"
+            onClick={() => { setPanelOpen(false); setOpen(null); setAiOpen((value) => !value); }}>
             <ShortcutArt label="Ask Lunar AI" illustration="ufo" />
-          </div>
+          </button>
         )}
         <button
           type="button"
@@ -89,6 +94,7 @@ export default function NewsSidebar({ showAiPet }: { showAiPet: boolean }) {
           aria-expanded={panelOpen}
           aria-controls="lunar-news-popover"
           onClick={() => {
+            setAiOpen(false);
             setPanelOpen((value) => !value);
             setOpen(null);
           }}
@@ -96,6 +102,12 @@ export default function NewsSidebar({ showAiPet }: { showAiPet: boolean }) {
           <ShortcutArt label="Moon news" illustration="moon" />
         </button>
       </div>
+      {showAiPet && aiOpen && (
+        <LunarAiPanel key={aiContext} context={aiContext} onClose={() => {
+          setAiOpen(false);
+          aiLauncher.current?.focus();
+        }} />
+      )}
       {panelOpen && (
         <aside
           id="lunar-news-popover"

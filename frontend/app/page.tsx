@@ -955,11 +955,24 @@ export default function Page() {
   }
 
   const displayedResult = reopenedMission?.snapshot.assessment ?? researchResult;
+  const aiAssessment = view === 12 ? labSource?.assessment : displayedResult;
+  const aiContext = aiAssessment ? JSON.stringify({
+    page: view === 12 ? "Mission Planner" : "Result",
+    mission: aiAssessment.mission,
+    score: aiAssessment.score,
+    provisional: aiAssessment.provisional,
+    missingFactors: aiAssessment.missing,
+    sunlightHours: aiAssessment.geometry.sunlight_hours,
+    longestEarthOutageHours: aiAssessment.geometry.metrics?.longest_blackout_hours,
+    geometryMode: aiAssessment.geometry.mode,
+    maximumSlopeDegrees: aiAssessment.terrain.slope_max_deg,
+    limitsExceeded: aiAssessment.constraints_failed.slice(0, 6),
+  }).slice(0, 4000) : "";
   return (
     <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} style={{"--ui-scale":preferences.scale} as CSSProperties}>
       <div className="stars" aria-hidden="true"/>
       <Navigation view={view} education={education} accountName={accountName} onLogout={()=>{setAccountName(null);if(view===13)setView(7);}} onNavigate={setView} preferences={preferences} onPreferences={updatePreferences}/>
-      {!education&&<NewsSidebar showAiPet={view === 8 || view === 12}/>}
+      {!education&&<NewsSidebar key={view === 8 || view === 12 ? view : "news"} showAiPet={view === 8 || view === 12} aiContext={aiContext}/>}
       <div className="main-shell">
         <div className="workspace-with-news"><main id="main-content">
           {view!==7&&view!==8&&view!==9&&view!==11&&view!==12&&view!==13&&!education&&<><div className="workspace-breadcrumb"><button onClick={()=>setView(7)}>Search</button><ChevronRight size={12}/><span>{view===11?"Preliminary assessment":views[view]||["","","","","","","","","Result","About Us","Settings","Preliminary assessment","Mission Planner","Account","Education","Mission report","Mission Planner"][view]}</span></div><div className="page-heading"><div><div className="eyebrow">LUNAR SOUTH POLE / MISSION RESEARCH</div><h1>{["","See beyond the horizon.","Read the lunar landscape.","Compare the possibilities.","Explore the missions before us.","A new perspective on space.","","","The outlook.","Look further.","Make it your own.","Compare the possibilities.","Mission Planner.","Your account.","Lunar classroom.","Mission report.","Mission Planner."][view]}</h1><p>{view===8?"Your selected location, assessed with real ephemerides. Every result has a source and a limit.":view===14?"Plan a lunar mission and test how sunlight, battery power and Earth visibility affect your choices.":view===9?"A new perspective on exploration. Grounded in data, open about uncertainty.":"Explore measurements, geometry and the evidence behind the mission window."}</p></div></div></>}

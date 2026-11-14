@@ -658,3 +658,16 @@
   35% { transform: translate(-3px, -9px) rotate(5deg); }
   70% { transform: translate(2px, -4px) rotate(-1deg); }
 }
+
+.lunar-shortcut-placeholder {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 12px;
+}
+.lunar-shortcut-placeholder:focus-visible > .lunar-shortcut-label { visibility: visible; }
+.lunar-app .lunar-ai-popover { max-height: min(34rem, calc(100dvh - 174px)); }
+.lunar-ai-popover form { display: grid; gap: 8px; }
+.lunar-ai-popover textarea { width: 100%; resize: vertical; }
+.lunar-ai-popover [role="log"] p { white-space: pre-wrap; overflow-wrap: anywhere; }
