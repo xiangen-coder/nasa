@@ -527,7 +527,7 @@ export default function PlanBComparison({
               )}
               {(!rankedLocationMode || (reused.length > 2 && !showMoreLocations)) && (
                 <button type="submit" className="button primary" disabled={!original}>
-                  {rankedLocationMode ? "Show more locations" : mode === "relocate" ? "Suggest nearby points" : "Run What IF"}
+                  {rankedLocationMode ? "Search more locations" : mode === "relocate" ? "Suggest nearby points" : "Run What IF"}
                 </button>
               )}
             </fieldset>

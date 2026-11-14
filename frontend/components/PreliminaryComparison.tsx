@@ -555,12 +555,15 @@ export default function PreliminaryComparison({
         </div>
       )}
       {areaResult && (
-        <p className="info" role="status">
+        <div className="info" role="status">
           {areaResult.sampled - areaResult.counts.unavailable} evaluated · {areaResult.sampled} sampled ·{" "}
           {areaResult.counts.limits} exceeded limits · {areaResult.counts.missing} lacked required evidence ·{" "}
           {areaResult.counts.unavailable} could not be evaluated
           {areaResult.counts.focus_missing > 0 && ` · ${areaResult.counts.focus_missing} lacked a mapped shadow target`}
-        </p>
+          <div>
+            We sample the centre and eight evenly spaced directions on rings at different distances within the search radius.
+          </div>
+        </div>
       )}
       {areaResult && !hasRecommendation && <p>No qualifying landing point found in this research area.</p>}
       {areaResult?.reasons?.length ? (

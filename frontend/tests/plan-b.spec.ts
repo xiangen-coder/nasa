@@ -351,6 +351,7 @@ test("Change location reveals the initial ranked list two at a time", async ({ p
       extraRequests.push(request.url());
   });
   const plan = await openCompare(page, true);
+  await expect(page.getByText(/We sample the centre and eight evenly spaced directions/)).toBeVisible();
   await plan.getByRole("radio", { name: "Change location" }).check();
   const rows = plan.getByRole("table", { name: "Suggested plans" }).getByRole("row");
   await expect(rows).toHaveCount(4);
@@ -358,11 +359,11 @@ test("Change location reveals the initial ranked list two at a time", async ({ p
   await expect(rows.nth(2)).toContainText("#2 · Ranked ridge 2");
   await expect(rows.nth(3)).toContainText("#3 · Ranked ridge 3");
 
-  await plan.getByRole("button", { name: "Show more locations" }).click();
+  await plan.getByRole("button", { name: "Search more locations" }).click();
   await expect(rows).toHaveCount(6);
   await expect(rows.nth(4)).toContainText("#4 · Ranked ridge 4");
   await expect(rows.nth(5)).toContainText("#5 · Ranked ridge 5");
-  await expect(plan.getByRole("button", { name: "Show more locations" })).toHaveCount(0);
+  await expect(plan.getByRole("button", { name: "Search more locations" })).toHaveCount(0);
   const choices = plan.getByRole("checkbox", { name: /^Select / });
   await choices.nth(0).check();
   await choices.nth(3).check();
