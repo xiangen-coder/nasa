@@ -10,7 +10,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { downloadReport } from "../lib/download-report";
 import type { Research } from "./LandingResearch";
 import type { ResearchPriority } from "./SearchConsole";
 import ResearchTerrainDetails from "./ResearchTerrainDetails";
@@ -780,10 +779,13 @@ export default function ResearchOverview({
               >
                 {missionSaveStatus?.status === "saving" ? "Saving mission…" : missionSaveStatus?.status === "saved" ? "Mission saved" : "Save mission"}
               </button>
-              <button className="button subtle" onClick={() => downloadReport(
-                JSON.stringify({ assessment: result, equipment, priority }, null, 2), "json", "lunar-mission-result",
-              )}>
-                Download results <Download size={15} aria-hidden="true" />
+              <button className="button subtle" onClick={() => {
+                const closed = Array.from(content.current?.querySelectorAll<HTMLDetailsElement>("details:not([open])") ?? []);
+                closed.forEach((details) => { details.open = true; });
+                try { window.print(); }
+                finally { closed.forEach((details) => { details.open = false; }); }
+              }}>
+                Save as PDF <Download size={15} aria-hidden="true" />
               </button>
               {missionSaveStatus?.status === "saved" && (
                 <button className="button subtle" onClick={() => onNavigate(13)}>
