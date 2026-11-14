@@ -203,7 +203,7 @@ test("header account dropdown supports saved searches and logout on desktop and 
   await page.goto("/#search");
   const header = page.getByRole("banner");
   const account = header.getByRole("button", { name: "Hi, Xiang En" });
-  const saved = header.getByRole("button", { name: "Account & saved searches" });
+  const saved = header.getByRole("button", { name: "Account & saved missions" });
   await account.click();
   await expect(account).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Tab");
@@ -214,7 +214,7 @@ test("header account dropdown supports saved searches and logout on desktop and 
   await account.click();
   await saved.click();
   await expect(page).toHaveURL(/#account$/);
-  await expect(page.getByRole("button", { name: "Save search" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Saved missions" })).toBeVisible();
   await page.setViewportSize({ width: 320, height: 780 });
   await header.getByRole("button", { name: "Education", exact: true }).click();
   await account.click();

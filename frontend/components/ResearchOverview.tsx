@@ -82,6 +82,7 @@ export default function ResearchOverview({
   comparisonRadiusKm,
   onNavigate,
   onSaveMission,
+  onRunAgain,
   onAddComparison,
   onNewSearch,
   equipment,
@@ -95,7 +96,8 @@ export default function ResearchOverview({
   comparisonOrigin: Site;
   comparisonRadiusKm?: number;
   onNavigate: (view: number) => void;
-  onSaveMission: (mission: Research['mission']) => void;
+  onSaveMission: (assessment: Research) => void;
+  onRunAgain?: () => void;
   onAddComparison: (site: Site) => void;
   onNewSearch: () => void;
   equipment: SolarSettings;
@@ -196,6 +198,7 @@ export default function ResearchOverview({
           <button type="button" className="button primary new-search" onClick={onNewSearch}>
             New search
           </button>
+          {onRunAgain && <button type="button" className="button subtle" onClick={onRunAgain} disabled={busy}>{busy ? "Running again…" : "Run again"}</button>}
           {result && (
             <a className="button subtle" href={quickMapSiteUrl(result.mission)} target="_blank" rel="noreferrer">
               View site in LROC QuickMap <ArrowUpRight size={14} aria-hidden="true" />
@@ -203,6 +206,7 @@ export default function ResearchOverview({
           )}
         </div>
       </header>
+      {result && assessmentError && <p className="error" role="alert">{assessmentError}</p>}
       {result ? (
         <>
           <section id="result-summary" tabIndex={-1} className="result-section">
@@ -755,7 +759,7 @@ export default function ResearchOverview({
               <button className="button subtle" onClick={() => onNavigate(11)}>
                 Back to comparison
               </button>
-              <button className="button primary" onClick={() => onSaveMission(result.mission)}>
+              <button className="button primary" onClick={() => onSaveMission(result)}>
                 Save mission
               </button>
             </div>

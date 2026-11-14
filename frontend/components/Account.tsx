@@ -5,11 +5,14 @@ import { Moon } from "lucide-react";
 import { accountApi as api } from "../lib/account-api";
 import { validRecord, type SearchRecord } from "../lib/search-record";
 
+import { validSnapshot, type MissionSnapshot } from "../lib/saved-mission";
+
 type Saved = {
   id: string;
   name: string;
   payload: SearchRecord;
   created_at: string;
+  has_snapshot?: boolean;
 };
 type Action = "login" | "signup" | "reset" | "update-password";
 const labels = {
@@ -30,9 +33,13 @@ function LunarMark() {
 export default function Account({
   record,
   onRestore,
+  snapshot,
+  onOpenResult,
   onUsernameChange,
 }: {
   record: SearchRecord;
+  snapshot?: MissionSnapshot;
+  onOpenResult: (record: SearchRecord, snapshot: MissionSnapshot) => void;
   onRestore: (record: SearchRecord) => void;
   onUsernameChange: (username: string | null) => void;
 }) {
@@ -274,12 +281,11 @@ export default function Account({
   return (
     <section
       className="panel account-panel"
-      aria-label="Account and saved searches"
+      aria-label="Account and saved missions"
     >
-      <h2>Saved searches</h2>
+      <h2>Saved missions</h2>
       <p>
-        Save a site, mission window, and chosen alternatives, then reopen the
-        same inputs on another device.
+        Open a saved mission to see its assessment and charts. Earlier saved searches open in Configure.
       </p>
       {feedback}
       <div className="account-actions">
@@ -301,7 +307,7 @@ export default function Account({
           Sign out
         </button>
       </div>
-      <form
+      {snapshot && <form
         className="account-form"
         onSubmit={(e) => {
           e.preventDefault();
@@ -309,15 +315,16 @@ export default function Account({
             await api("/history", "POST", {
               name: name.trim() || record.mission.name.slice(0, 80),
               payload: record,
+              snapshot,
             });
             setName("");
-            setMessage("Search saved to your account.");
+            setMessage("Mission saved to your account.");
             await refresh();
           });
         }}
       >
         <label>
-          Save current search: {record.mission.name}
+          Save mission · {record.mission.name}
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -330,11 +337,11 @@ export default function Account({
             className="button primary"
             disabled={busy || !validRecord(record)}
           >
-            Save search
+            Save mission
           </button>
         </div>
-      </form>
-      {saved.length === 0 && !busy && <p>No saved searches yet.</p>}
+      </form>}
+      {saved.length === 0 && !busy && <p>No saved missions yet.</p>}
       {saved.map((r) => (
         <article key={r.id} className="saved-search">
           <div>
@@ -342,16 +349,27 @@ export default function Account({
             <br />
             <small>
               {r.payload.mission.name} · {r.payload.mission.start.slice(0, 10)}{" "}
-              to {r.payload.mission.end.slice(0, 10)} UTC
+              to {r.payload.mission.end.slice(0, 10)} UTC · Saved {new Date(r.created_at).toLocaleDateString()}
             </small>
           </div>
           <div className="account-actions">
             <button
               className="button subtle"
               disabled={busy}
-              onClick={() => onRestore(r.payload)}
+              onClick={() => {
+                if (!r.has_snapshot) {
+                  onRestore(r.payload);
+                  return;
+                }
+                void run(async () => {
+                  const opened = await api(`/history?id=${encodeURIComponent(r.id)}`);
+                  if (!validRecord(opened.record) || !validSnapshot(opened.snapshot, opened.record))
+                    throw new Error("Saved mission result unavailable.");
+                  onOpenResult(opened.record, opened.snapshot);
+                });
+              }}
             >
-              Open search
+              {r.has_snapshot ? "Open result" : "Open saved search"}
             </button>
             <button
               className="button subtle"

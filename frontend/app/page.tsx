@@ -14,6 +14,7 @@ import { PortableEducation, PortableJourney } from "../components/PortableLunar"
 import PreliminaryComparison from "../components/PreliminaryComparison";
 import ComparisonPicker, { inComparisonArea, siteKey } from "../components/ComparisonPicker";
 import type { ResearchArea, ResearchAreaResult } from "../lib/research-area";
+import type { MissionSnapshot } from "../lib/saved-mission";
 import type { SearchRecord } from "../lib/search-record";
 import { referenceSites } from "../lib/reference-sites";
 const Account = dynamic(() => import("../components/Account"));
@@ -521,8 +522,12 @@ export default function Page() {
     if (labOpen) setLabVisited(true);
   }, [labOpen]);
   const researchActions=useRef<ResearchActions|null>(null);
-  const [missionToSave, setMissionToSave] = useState<SearchRecord | null>(null);
-  const setView=(next:number)=>{if(!viewPaths[next]||next===6)return;if(next!==13)setMissionToSave(null);setViewState(next);if(location.hash!==`#${viewPaths[next]}`)location.hash=viewPaths[next];window.scrollTo({top:0,behavior:"instant"});};
+  const [missionToSave, setMissionToSave] = useState<{ record: SearchRecord; snapshot: MissionSnapshot } | null>(null);
+  const [reopenedMission, setReopenedMission] = useState<{ record: SearchRecord; snapshot: MissionSnapshot } | null>(null);
+  const rerunRequest = useRef<AbortController | null>(null);
+  const [rerunningMission, setRerunningMission] = useState(false);
+  const [rerunError, setRerunError] = useState("");
+  const setView=(next:number)=>{if(!viewPaths[next]||next===6)return;if(next!==13)setMissionToSave(null);if(next!==8){rerunRequest.current?.abort();setRerunningMission(false);setRerunError("");}if(next!==8&&next!==13)setReopenedMission(null);setViewState(next);if(location.hash!==`#${viewPaths[next]}`)location.hash=viewPaths[next];window.scrollTo({top:0,behavior:"instant"});};
   const pendingSearchFocus = useRef(false);
   function openSearchForm() {
     pendingSearchFocus.current = true;
@@ -889,6 +894,7 @@ export default function Page() {
   const comparisonLimits = comparisonState?.results.find((result) => sameMission(result.mission, comparisonMission))?.limits;
   const whatIfContext = JSON.stringify([comparisonMission, comparisonLimits, activeArea?.area, researchEquipment]);
   const comparisonScenarios = whatIfComparison?.context === whatIfContext ? whatIfComparison.scenarios : [];
+  const displayedResult = reopenedMission?.snapshot.assessment ?? researchResult;
   return (
     <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} style={{"--ui-scale":preferences.scale} as CSSProperties}>
       <div className="stars" aria-hidden="true"/>
@@ -918,13 +924,41 @@ export default function Page() {
               setView(8);
             }} onSearch={()=>setView(7)} onCancel={cancelComparison}/>}
           {view===11&&<ResearchComparisonReport key={missionKey(comparisonMission)} mission={comparisonMission} alternatives={searchRecord.alternatives} comparison={comparisonState} scenarios={comparisonScenarios} evidenceSite={reportSite} onEvidenceSiteChange={setReportSite} onInspect={result=>{setResearchResult(result);setView(8);}} equipment={researchEquipment}/>}
-          {view===13&&<Account record={missionToSave ?? searchRecord} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority);setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
+          {view===13&&<Account record={missionToSave?.record ?? searchRecord} snapshot={missionToSave?.snapshot}
+            onOpenResult={(record, snapshot) => { setReopenedMission({ record, snapshot }); setResearchEquipment(snapshot.equipment); setView(8); }} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority);setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
           {education&&<PortableEducation animate={preferences.animate}/>}
           {labVisited&&<div hidden={!labOpen}><MissionLab mode="professional" classroomNav={null} linkedTool={view===16?14:undefined} onModeChange={mode=>setView(mode==="education"?14:12)} mission={mission()} selected={selected} onSelected={setSelected} sites={sites} onMap={()=>setView(0)} start={start} end={end} startTime={startTime} endTime={endTime} onStart={setStart} onEnd={setEnd} onStartTime={setStartTime} onEndTime={setEndTime} onInterval={setIntervalMinutes} onClearance={setClearance} onRestore={restoreMission}/></div>}
-          {view===8&&<ResearchOverview key={JSON.stringify(researchResult?.mission)} result={researchResult} onNewSearch={openSearchForm} comparisonOrigin={comparisonOrigin} comparisonRadiusKm={comparisonRadius} onNavigate={setView} onSaveMission={(mission) => {
-            setMissionToSave({ ...searchRecord, mission, alternatives: [] });
+          {view===8&&<ResearchOverview key={JSON.stringify(displayedResult?.mission)} result={displayedResult} onNewSearch={openSearchForm} comparisonOrigin={comparisonOrigin} comparisonRadiusKm={comparisonRadius} onNavigate={setView} onRunAgain={reopenedMission ? async () => {
+            if (rerunningMission) return;
+            const controller = new AbortController();
+            rerunRequest.current = controller;
+            setRerunningMission(true);
+            setRerunError("");
+            try {
+              const assessment = reopenedMission.snapshot.assessment;
+              const response = await fetch("/api/research/evaluate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mission: assessment.mission, limits: assessment.limits }),
+                signal: controller.signal,
+              });
+              if (!response.ok) throw new Error("Unable to refresh this mission.");
+              const updated: Research = await response.json();
+              if (!controller.signal.aborted) setReopenedMission({
+                ...reopenedMission, snapshot: { ...reopenedMission.snapshot, assessment: updated },
+              });
+            } catch {
+              if (!controller.signal.aborted) setRerunError("Unable to refresh this mission. Try again.");
+            } finally {
+              if (!controller.signal.aborted) setRerunningMission(false);
+            }
+          } : undefined} onSaveMission={(assessment) => {
+            setMissionToSave({
+              record: { ...(reopenedMission?.record ?? searchRecord), mission: assessment.mission, alternatives: [] },
+              snapshot: { version: 1, assessment, equipment: researchEquipment },
+            });
             setView(13);
-          }} onAddComparison={addComparisonSite} busy={researchBusy || !!activeArea?.busy} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={researchPriority} animate={preferences.animate} assessmentError={comparisonState?.error}/>}
+          }} onAddComparison={addComparisonSite} busy={rerunningMission || (!reopenedMission && (researchBusy || !!activeArea?.busy))} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={reopenedMission?.record.priority ?? researchPriority} animate={preferences.animate} assessmentError={reopenedMission ? rerunError : comparisonState?.error}/>}
           <div hidden={![0,1,3].includes(view)}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>

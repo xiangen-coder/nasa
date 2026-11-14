@@ -294,7 +294,7 @@ export default function Navigation({
           {accountName && accountOpen && (
             <div id="header-account-actions" className="header-account-menu">
               <button type="button" onClick={() => navigate(13)}>
-                <UserRound size={17} aria-hidden="true" /> Account &amp; saved searches
+                <UserRound size={17} aria-hidden="true" /> Account &amp; saved missions
               </button>
               <button type="button" className="header-logout" disabled={logoutPending} onClick={() => void logout()}>
                 <LogOut size={17} aria-hidden="true" /> Log out
