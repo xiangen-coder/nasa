@@ -11,8 +11,10 @@ import {
   Settings,
   X,
   UserRound,
+  LogOut,
   FlaskConical,
 } from "lucide-react";
+import { accountApi } from "../lib/account-api";
 import PreferencesControls, { type Preferences } from "./Preferences";
 
 export const viewPaths = [
@@ -39,7 +41,6 @@ export const toolItems = [
   { view: 16, label: "Mission planner", icon: Rocket, detail: "Vehicle worksheet & launch weather" },
   { view: 4, label: "Lunar mission archive", icon: Archive, detail: "Historical missions & documented 3D paths" },
   { view: 12, label: "Mission lab", icon: FlaskConical, detail: "Scenarios, equipment & classroom activities" },
-  { view: 13, label: "Account & saved searches", icon: UserRound, detail: "Sign in to save and reopen your searches" },
 ];
 
 const educationLinks = [
@@ -53,6 +54,7 @@ export default function Navigation({
   view,
   education,
   accountName,
+  onLogout,
   onNavigate,
   preferences,
   onPreferences,
@@ -60,12 +62,36 @@ export default function Navigation({
   view: number;
   education: boolean;
   accountName?: string | null;
+  onLogout: () => void;
   onNavigate: (view: number) => void;
   preferences: Preferences;
   onPreferences: (value: Preferences) => void;
 }) {
   const [more, setMore] = useState(false);
   const [educationSection, setEducationSection] = useState<string>(educationLinks[0].heading);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  const accountMenu = useRef<HTMLDivElement>(null);
+  const accountButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    setAccountOpen(false);
+    setLogoutError("");
+  }, [view]);
+  async function logout() {
+    setLogoutPending(true);
+    setLogoutError("");
+    try {
+      await accountApi("", "POST", { action: "logout" });
+      setAccountOpen(false);
+      onLogout();
+      accountButton.current?.focus();
+    } catch (error) {
+      setLogoutError(error instanceof Error ? error.message : "Could not log out. Try again.");
+    } finally {
+      setLogoutPending(false);
+    }
+  }
   const dropdown = useRef<HTMLDivElement>(null);
   const moreButton = useRef<HTMLButtonElement>(null);
   const settings = useRef<HTMLDialogElement>(null);
@@ -73,12 +99,14 @@ export default function Navigation({
   useEffect(() => {
     const outside = (e: PointerEvent) => {
       if (!dropdown.current?.contains(e.target as Node)) setMore(false);
+      if (!accountMenu.current?.contains(e.target as Node)) setAccountOpen(false);
     };
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);
   }, []);
   const navigate = (next: number) => {
     setMore(false);
+    setAccountOpen(false);
     setEducationSection(educationLinks[0].heading);
     onNavigate(next);
   };
@@ -112,6 +140,7 @@ export default function Navigation({
 
                 event.preventDefault();
                 setEducationSection(heading);
+                setAccountOpen(false);
                 const headerHeight = event.currentTarget.closest("header")?.offsetHeight ?? 0;
                 target.tabIndex = -1;
                 target.focus({ preventScroll: true });
@@ -236,14 +265,44 @@ export default function Navigation({
             Education
           </button>
         </div>
-        <button
-          type="button"
-          className="header-login button subtle"
-          aria-current={view === 13 ? "page" : undefined}
-          onClick={() => navigate(13)}
-        >
-          <span>{accountName ? `Hi, ${accountName}` : "Login"}</span>
-        </button>
+        <div className="header-account" ref={accountMenu} onKeyDown={(event) => {
+          if (event.key === "Escape" && accountOpen) {
+            event.stopPropagation();
+            setAccountOpen(false);
+            accountButton.current?.focus();
+          }
+        }}>
+          <button
+            ref={accountButton}
+            type="button"
+            className="header-login button subtle"
+            aria-current={!accountName && view === 13 ? "page" : undefined}
+            aria-expanded={accountName ? accountOpen : undefined}
+            aria-controls={accountName && accountOpen ? "header-account-actions" : undefined}
+            onClick={() => {
+              if (accountName) {
+                setMore(false);
+                setAccountOpen(!accountOpen);
+              } else {
+                navigate(13);
+              }
+            }}
+          >
+            <span>{accountName ? `Hi, ${accountName}` : "Login"}</span>
+            {accountName && <ChevronDown size={14} aria-hidden="true" />}
+          </button>
+          {accountName && accountOpen && (
+            <div id="header-account-actions" className="header-account-menu">
+              <button type="button" onClick={() => navigate(13)}>
+                <UserRound size={17} aria-hidden="true" /> Account &amp; saved searches
+              </button>
+              <button type="button" className="header-logout" disabled={logoutPending} onClick={() => void logout()}>
+                <LogOut size={17} aria-hidden="true" /> Log out
+              </button>
+            </div>
+          )}
+          {logoutError && <p className="header-account-error" role="alert">{logoutError}</p>}
+        </div>
         <button
           ref={settingsButton}
           className="settings-trigger glass"

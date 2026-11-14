@@ -186,3 +186,52 @@ test("Configure offers three references and carries a custom map point back", as
   await expect(page.locator(".research-centre-summary")).toContainText("20 km search radius");
   await expect(page.getByText("No qualifying landing point found in this research area.")).toBeVisible();
 });
+
+test("header account dropdown supports saved searches and logout on desktop and mobile", async ({ page }) => {
+  let signedIn = true;
+  let shouldFail = true;
+  await page.route("**/api/account", async (route) => {
+    if (route.request().method() === "POST") {
+      expect(route.request().postDataJSON()).toEqual({ action: "logout" });
+      if (shouldFail) return route.fulfill({ status: 502, json: { error: "Could not sign out. Please retry." } });
+      signedIn = false;
+      return route.fulfill({ json: { ok: true } });
+    }
+    return route.fulfill({ json: { configured: true, user: signedIn ? { username: "Xiang En", email: "test@example.com" } : null } });
+  });
+  await page.route("**/api/account/history", (route) => route.fulfill({ json: { records: [] } }));
+  await page.goto("/#search");
+  const header = page.getByRole("banner");
+  const account = header.getByRole("button", { name: "Hi, Xiang En" });
+  const saved = header.getByRole("button", { name: "Account & saved searches" });
+  await account.click();
+  await expect(account).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Tab");
+  await expect(saved).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(account).toBeFocused();
+  await expect(saved).toBeHidden();
+  await account.click();
+  await saved.click();
+  await expect(page).toHaveURL(/#account$/);
+  await expect(page.getByRole("button", { name: "Save search" })).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 780 });
+  await header.getByRole("button", { name: "Education", exact: true }).click();
+  await account.click();
+  const logout = header.getByRole("button", { name: "Log out" });
+  const bounds = await logout.boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+  await page.locator("main").click({ position: { x: 5, y: 5 } });
+  await expect(logout).toBeHidden();
+  await account.click();
+  await logout.click();
+  await expect(header.getByRole("alert")).toContainText("Could not sign out");
+  await expect(account).toBeVisible();
+  shouldFail = false;
+  await logout.click();
+  await expect(header.getByRole("button", { name: "Login" })).toBeVisible();
+  await expect(logout).toBeHidden();
+  await header.getByRole("button", { name: "Login" }).click();
+  await expect(page).toHaveURL(/#account$/);
+});
