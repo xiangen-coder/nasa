@@ -383,6 +383,13 @@ export default function PreliminaryComparison({
                         lunar reference sphere · NASA LOLA global map
                       </dd>
                     )}
+                  {terrain?.regional_score != null && terrain.slope_p95_deg != null &&
+                    limits?.max_slope_deg != null && terrain.slope_p95_deg > limits.max_slope_deg && (
+                      <dd>
+                        The regional 95th-percentile slope ({terrain.slope_p95_deg.toFixed(1)}°)
+                        exceeds the {limits.max_slope_deg}° scoring cutoff, so the regional score is 0 / 100.
+                      </dd>
+                    )}
                   {terrain?.regional_only && (
                     <dd>
                       {terrain.source?.name} · {terrain.radius_m?.toFixed(0)} m sampling radius

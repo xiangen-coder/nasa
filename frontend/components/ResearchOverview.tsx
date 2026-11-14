@@ -614,6 +614,13 @@ export default function ResearchOverview({
                     The score uses the 95th-percentile slope and sits outside the overall landing score.
                   </p>
                 )}
+                {terrain?.regional_score != null && terrain.slope_p95_deg != null &&
+                  result.limits?.max_slope_deg != null && terrain.slope_p95_deg > result.limits.max_slope_deg && (
+                    <p>
+                      The regional 95th-percentile slope ({terrain.slope_p95_deg.toFixed(1)}°)
+                      exceeds the {result.limits.max_slope_deg}° scoring cutoff, so the regional score is 0 / 100.
+                    </p>
+                  )}
                 <p>
                   Most sampled slopes are at or below the 95th-percentile slope.
                   Maximum slope highlights the steepest sampled ground.
