@@ -90,6 +90,7 @@ export default function ResearchOverview({
   comparisonRadiusKm,
   onNavigate,
   onSaveMission,
+  onOpenMissionLab,
   missionSaveStatus,
   onRunAgain,
   onAddComparison,
@@ -106,6 +107,7 @@ export default function ResearchOverview({
   comparisonRadiusKm?: number;
   onNavigate: (view: number) => void;
   onSaveMission: (assessment: Research) => void;
+  onOpenMissionLab: (assessment: Research) => void;
   missionSaveStatus?: { status: "saving" | "saved" | "error"; message?: string };
   onRunAgain?: () => void;
   onAddComparison: (site: Site) => void;
@@ -223,6 +225,7 @@ export default function ResearchOverview({
           )}
         </div>
         <div className="result-title-actions">
+          {result && <button className="button subtle" onClick={() => onOpenMissionLab(result)}>Open in Mission Lab</button>}
           <button type="button" className="button primary new-search" onClick={onNewSearch}>
             New search
           </button>

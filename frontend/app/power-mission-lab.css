@@ -1,0 +1,57 @@
+.power-lab { display: grid; gap: 16px; }
+.power-lab-title, .power-lab-actions, .power-lab-steps { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.power-lab h1, .power-lab h2 { font-family: Fraunces, Georgia, serif; margin: 0; }
+.power-lab h1 { font-size: clamp(2rem, 4vw, 3.25rem); }
+.power-lab p { color: #c6d5ea; margin-block: 7px 12px; }
+.power-lab-panel {
+  min-width: 0; padding: clamp(14px, 2vw, 24px); border: 1px solid #809bb85c;
+  border-radius: 14px; background: linear-gradient(120deg, #1c2c45, #142138);
+  scroll-margin-top: 150px;
+}
+.power-lab-panel h2 { margin-bottom: 12px; }
+.power-lab-source strong { color: #8bedf4; }
+.power-lab-source dl, .power-lab-metrics { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-block: 12px; }
+.power-lab-source dl > div, .power-lab-metrics > div { border: 1px solid #8198bb59; border-radius: 9px; padding: 10px; overflow-wrap: anywhere; }
+.power-lab dt { color: #bfd0e7; font-size: .82rem; }
+.power-lab dd { margin: 4px 0 0; font-weight: 700; }
+.power-lab-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.power-lab-metrics dd { font-size: 1.25rem; }
+.power-lab-columns { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 14px; }
+.power-lab-form, .power-lab-activity { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-block: 12px; }
+.power-lab label { display: grid; gap: 5px; font-size: .86rem; }
+.power-lab :is(input,select,textarea) {
+  width: 100%; min-width: 0; color: #edf3ff; background: #111d30; border: 1px solid #829aba85;
+  border-radius: 7px; padding: 8px 10px; font: inherit;
+}
+.power-lab textarea { min-height: 72px; }
+.power-lab :focus-visible { outline: 2px solid #8bedf4; outline-offset: 3px; }
+.power-lab details { margin-block: 12px; padding-block-start: 8px; border-top: 1px solid #8198bb59; }
+.power-lab summary { cursor: pointer; }
+.power-lab-chart { min-width: 0; }
+.power-lab-lane { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px; align-items: center; margin-block: 6px; font-size: .8rem; }
+.power-lab-lane div { display: flex; height: 10px; overflow: hidden; border-radius: 3px; background: #0a1425; }
+.power-lab-lane i { flex-basis: 0; }
+.power-lab-lane i[data-visible=true] { background: #54e7ed; }
+.power-lab-lane + .power-lab-lane i[data-visible=true] { background: #8cafe7; }
+.power-lab-lane i[data-visible=null] { background: repeating-linear-gradient(45deg,#496079 0 3px,#142138 3px 6px); }
+.power-lab .power-lab-outcome { border: 1px solid #65ccd3; border-radius: 7px; padding: 10px; color: #9fe6ed; }
+.power-lab .power-lab-outcome[data-alert=true] { border-color: #ffce67; color: #ffce67; }
+.power-lab .table-scroll { overflow-x: auto; }
+.power-lab .account-actions { margin-block-start: 12px; }
+@media (max-width: 850px) {
+  .power-lab-columns { grid-template-columns: minmax(0,1fr); }
+  .power-lab-source dl { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media print {
+  body:has(div:not([hidden]) > .power-lab) .lunar-app > :not(.main-shell),
+  body:has(div:not([hidden]) > .power-lab) main > :not(:has(> .power-lab)), body:has(div:not([hidden]) > .power-lab) .footer,
+  .power-lab :is(button, .power-lab-steps) { display: none !important; }
+  .power-lab { display: block; print-color-adjust: exact; }
+  .power-lab-panel { margin-block: 8px; }
+  .power-lab-columns { display: block; }
+  .power-lab-chart { break-inside: avoid; }
+}
+
+@media print {
+  body:has(.power-lab:not([hidden] *)) .lunar-app main > div:has(> .power-lab):not([hidden]) { display: block !important; }
+}

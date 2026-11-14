@@ -21,6 +21,8 @@ import type { ResearchPriority } from "./SearchConsole";
 import type { Site, Mission } from "../app/types";
 
 type Source = {
+  frame?: string;
+  reference?: string;
   name?: string;
   source_url?: string;
   resolution_m?: number;
@@ -40,6 +42,8 @@ type Factor = {
 export type ResearchSpan = { start: string; end: string; hours: number };
 type Span = ResearchSpan;
 export type Research = {
+  id?: string;
+  assessed_at?: string;
   mission: Mission;
   limits?: Record<string, number>;
   formula?: string;
@@ -88,6 +92,7 @@ export type Research = {
     reason?: string;
     mode?: string;
     cached?: boolean;
+    retrieved_at?: string;
     sunlight_hours?: number;
     sunlight_windows?: Span[];
     earth_windows?: Span[];

@@ -368,3 +368,46 @@ test("retired map explorer bookmarks open Configure", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Find landing point", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Find your next horizon." })).toHaveCount(0);
 });
+
+test("Mission Lab imports the Result and models a battery change", async ({ page }) => {
+  test.setTimeout(90000);
+  await openCompare(page);
+  await page.route("**/api/research/research-area", async (route) => {
+    const { mission } = route.request().postDataJSON();
+    const result = evidence(mission, 70, true);
+    result.geometry.series = Array.from({ length: 25 }, (_, hour) => ({
+      ...result.geometry.series[0],
+      time: new Date(Date.parse(mission.start) + hour * 3600000).toISOString(),
+    }));
+    await route.fulfill({ json: { results: [result], recommended: true, sampled: 1, reasons: [],
+      counts: { evaluated: 1, limits: 0, missing: 0, unavailable: 0, focus_missing: 0 } } });
+  });
+  await page.getByRole("button", { name: "Back to Search", exact: true }).first().click();
+  await page.getByRole("button", { name: "Find landing point", exact: true }).click();
+  await page.getByRole("article", { name: /Recommended landing point:/ }).getByRole("button", { name: "More details" }).click();
+  let analysisRequests = 0;
+  page.on("request", (request) => {
+    if (/\/api\/research\/(evaluate|research-area)$/.test(request.url())) analysisRequests++;
+  });
+  await page.getByRole("button", { name: "Open in Mission Lab" }).click();
+  await expect(page.getByText("Imported from your Result")).toBeVisible();
+  await page.getByRole("button", { name: "Run power simulation" }).click();
+  await expect(page.getByRole("region", { name: "Mission Lab" }).getByRole("alert")).toContainText("Effective incident irradiance");
+  await page.getByRole("spinbutton", { name: "Effective incident irradiance" }).fill("1000");
+  await page.getByRole("button", { name: "Run power simulation" }).click();
+  await expect(page.getByText("Generated energy · 9.07 kWh")).toBeVisible();
+  await page.getByLabel("Variant (kWh)").fill("3");
+  await page.getByRole("button", { name: "Test change" }).click();
+  await expect(page.getByRole("rowheader", { name: "Variant" })).toBeVisible();
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.getByText("Draft saved on this device.")).toBeVisible();
+  const downloadEvent = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export data" }).click();
+  const download = await downloadEvent;
+  const report = JSON.parse(await readFile((await download.path())!, "utf8"));
+  expect(report.simulation.generated).toBeCloseTo(9.072);
+  expect(report.variant.power.battery).toBe("3");
+  await page.getByRole("button", { name: "Back to Result" }).click();
+  await expect(page.locator("#result-summary")).toBeVisible();
+  expect(analysisRequests).toBe(0);
+});
