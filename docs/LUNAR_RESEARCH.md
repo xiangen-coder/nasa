@@ -60,19 +60,18 @@ The panel lists the 13 **historical 2022** candidate names from [the user's NASA
 
 ## Score normalization and safety
 
-Nominal formula: **0.35T + 0.25S + 0.20C + 0.15H + 0.05I**; all factors clipped to [0,100].
+Nominal formula: **(35T + 25S + 20C + 5I) / 85**; all factors clipped to [0,100].
 
 - T: `0.60 × slope_score + 0.25 × roughness_score + 0.15 × relief_score − hazard_penalty × hazard_fraction`. Slope score = `100 × (max_slope − p95_slope)/(max_slope − good_slope)`. Roughness and relief = `100 × (1 − measurement/limit)`, individually clipped. Missing hazards leave T explicitly topographic-only and provisional; no fabricated zero-hazard measurement is supplied. DEMs coarser than the configured resolution limit cannot produce T.
 - S: duration-weighted Sun-centre visibility percentage; terrain screened when possible, otherwise labelled geometric-only.
 - C: duration-weighted Earth-centre visibility percentage with the existing configurable clearance angle. Range/light-time are displayed separately; no arbitrary distance penalty implies a radio link budget.
-- H: `100 × overlap_length(observed seasonal min–max, operating limits)/observed_range_width`. A single-valued range scores 100 only if within limits, otherwise 0. This is an explicitly provisional historical range proxy, **not fraction of mission time**. No valid paired values means unavailable.
 - I: `100 × documented resource-evidence or PSR fraction`, only from a registered product; unavailable by default.
 
-If factors are unavailable, divide each available nominal weight by the sum of available weights. Display nominal and effective weights, contributions, missing factors and the available-weight percentage. No available factors yields a null score. Scores with missing hazards, incomplete terrain horizons or historical thermal/PSR proxies remain provisional even if all five numeric factors exist. With the bundled historical thermal product a complete mission score is **not** claimed.
+If factors are unavailable, divide each available nominal weight by the sum of available weights. Display nominal and effective weights, contributions, missing factors and the available-weight percentage. No available factors yields a null score. Scores with missing hazards, incomplete terrain horizons or PSR proxies remain provisional.
 
-Measured maximum slope, detrended roughness, local relief and mapped hazard fraction beyond their configured limits trigger hard failures. A high weighted score cannot erase a failure. Missing constraints give `not_established`, never `safe`. Historical thermal range excursions are warnings, not future mission-specific measured failures. Compare only sites with comparable factor/terrain coverage; the UI warns when rankings could otherwise mislead.
+Measured maximum slope, detrended roughness, local relief and mapped hazard fraction beyond their configured limits trigger hard failures. A high weighted score cannot erase a failure. Missing constraints give `not_established`, never `safe`. Historical temperature is displayed for reference and excluded from eligibility and scoring. Compare only sites with comparable factor/terrain coverage; the UI warns when rankings could otherwise mislead.
 
-Defaults: radius 100 m; good slope 2°; maximum slope 15°; maximum roughness 5 m; maximum relief 50 m; scoring DEM pixel limit 20 m; hazard penalty 100; maximum mapped hazard fraction 0.05; operating range 100–350 K. These are research settings, not spacecraft certification requirements.
+Defaults: radius 100 m; good slope 2°; maximum slope 15°; maximum roughness 5 m; maximum relief 50 m; scoring DEM pixel limit 20 m; hazard penalty 100; maximum mapped hazard fraction 0.05. These are research settings, not spacecraft certification requirements.
 
 ## Download, preprocessing and configuration
 

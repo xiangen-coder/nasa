@@ -49,7 +49,7 @@ export default function TerrainAssessment({location,onSelect}:{location:Site;onS
         </svg><figcaption>{layer==="slope"?"Slope":"Elevation"}: {number(lo,layer==="slope"?"°":" m")} (blue) → {number(hi,layer==="slope"?"°":" m")} (orange). {data.coordinate_note}</figcaption></figure>}
         {source&&<div className="info"><strong>{source.name}</strong><p>{source.quality}</p>{source.source_url&&<a href={source.source_url} target="_blank" rel="noreferrer">Dataset provenance ↗</a>}<p>Frame: {source.frame||"See source metadata"} · Period: {source.observation_period||"See source product"}</p></div>}
         <ul className="muted">{data.limitations.map(s=><li key={s}>{s}</li>)}</ul>
-        <p className="muted">This page reads the same terrain registry as NASA landing research. Sunlight horizons and five-factor scoring are calculated in the assessment. Boulder-scale hazards remain unverified.</p>
+        <p className="muted">This page reads the same terrain registry as NASA landing research. Sunlight horizons and research scoring are calculated in the assessment. Boulder-scale hazards remain unverified.</p>
       </>}
     </div>
   </section>;

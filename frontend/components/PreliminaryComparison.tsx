@@ -21,7 +21,6 @@ const criteria = [
   ["S", "Sunlight"],
   ["C", "Earth visibility"],
   ["T", "Terrain"],
-  ["H", "Temperature"],
 ] as const;
 const key = (s: Site) => `${s.latitude},${s.longitude}`;
 const withUnit = (value: number | undefined, unit: string) =>

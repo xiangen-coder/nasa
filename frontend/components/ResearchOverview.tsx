@@ -725,7 +725,7 @@ export default function ResearchOverview({
                 </ul>
               </aside>
             </div>
-            <h3>Five-factor score calculation</h3>
+            <h3>Research score calculation</h3>
             <p>
               The score adds each available factor score multiplied by its used weight.
               The model scales the available weights to total 100% and requires both

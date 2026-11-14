@@ -163,8 +163,6 @@ const DEFAULTS = {
   max_resolution_m: 20,
   hazard_penalty: 100,
   max_hazard_fraction: 0.05,
-  min_temperature_k: 100,
-  max_temperature_k: 350,
 };
 const LABELS: Record<keyof typeof DEFAULTS, string> = {
   radius_m: "Terrain radius (m)",
@@ -175,8 +173,6 @@ const LABELS: Record<keyof typeof DEFAULTS, string> = {
   max_resolution_m: "Maximum DEM pixel size (m)",
   hazard_penalty: "Hazard penalty (points)",
   max_hazard_fraction: "Maximum hazard fraction (0–1)",
-  min_temperature_k: "Minimum operating temperature (K)",
-  max_temperature_k: "Maximum operating temperature (K)",
 };
 const num = (v: number | null | undefined, suffix = "") =>
   v == null
@@ -435,7 +431,7 @@ export default function LandingResearch({
         <div>
           <h2>NASA landing research</h2>
           <p>
-            Five-factor screening · existing map selection and mission dates
+            Research screening · existing map selection and mission dates
           </p>
         </div>
         <span className="tag">RESEARCH MODEL v1</span>
@@ -458,8 +454,8 @@ export default function LandingResearch({
               : priority === "I" ? "Water-ice potential" : "Earth communication"}
         </p>
         <p className="muted">
-          0.35 Terrain + 0.25 Sunlight + 0.20 Communication + 0.15 Temperature +
-          0.05 Ice. A high score never establishes landing safety. Unknown
+          Terrain, sunlight, Earth visibility and ice evidence contribute to the score.
+          Historical temperature is shown for reference. Unknown
           factors remain unavailable.
         </p>
         <div className="astro-inputs">
@@ -585,7 +581,7 @@ export default function LandingResearch({
                   <tr>
                     <th>Rank / point</th>
                     <th>Score</th>
-                    {["T", "S", "C", "H", "I"].map((k) => (
+                    {["T", "S", "C", "I"].map((k) => (
                       <th key={k}>{k}</th>
                     ))}
                     <th>Available weight / missing</th>
@@ -614,7 +610,7 @@ export default function LandingResearch({
                         {num(r.score)}{" "}
                         {r.provisional ? "provisional" : "complete"}
                       </td>
-                      {["T", "S", "C", "H", "I"].map((k) => (
+                      {["T", "S", "C", "I"].map((k) => (
                         <td key={k}>{num(r.factors[k].score)}</td>
                       ))}
                       <td>

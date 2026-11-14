@@ -11,8 +11,8 @@ from app.astronomy import HorizonsUnavailable
 from app.landing_research import Limits, score_factors, research
 from app import lunar_rasters
 
-def score(t=None,g=None,h=None,haz=None,ice=None):
-    return score_factors(t or {},g or {},h or {},haz or {},ice or {},Limits())
+def score(t=None,g=None,haz=None,ice=None):
+    return score_factors(t or {},g or {},haz or {},ice or {},Limits())
 
 def test_missing_is_not_zero():
     r=score();assert r['score'] is None;assert r['available_weight']==0
@@ -22,20 +22,15 @@ def test_provisional_weights_and_contributions():
     r=score(g={'available':True,'mode':'reference_geometry_only','metrics':{'sun_visible_pct':80,'earth_visible_pct':40},'source_url':'https://ssd.jpl.nasa.gov/'})
     assert r['score']==pytest.approx((.25*80+.2*40)/.45)
     assert sum(f['effective_weight'] for f in r['factors'].values())==pytest.approx(1)
-    assert r['provisional'];assert r['missing']==['T','H','I']
+    assert r['provisional'];assert r['missing']==['T','I']
 
 def test_high_score_does_not_override_hard_failure():
     r=score(t={'available':True,'slope_max_deg':20,'slope_p95_deg':1,'roughness_m':0,'relief_m':0,'resolution_m':5,'source':{}})
-    assert r['score']==100;assert r['safety_status']=='fails_configured_limits'
+    assert r['safety_status']=='fails_configured_limits'
 
 def test_bad_resolution_not_terrain_score():
     r=score(t={'available':True,'slope_max_deg':1,'slope_p95_deg':1,'roughness_m':0,'relief_m':0,'resolution_m':240,'source':{}})
     assert r['factors']['T']['score'] is None
-
-def test_temperature_range_overlap_not_time_fraction():
-    r=score(h={'available':True,'minimum_k':50,'maximum_k':150,'source':{}})
-    assert r['factors']['H']['score']==50
-    assert r['provisional'] and r['warnings']
 
 @pytest.mark.parametrize('kwargs',[{'good_slope_deg':16},{'min_temperature_k':400},{'max_roughness_m':0},{'max_slope_deg':float('nan')}])
 def test_invalid_limits(kwargs):
@@ -117,6 +112,24 @@ def test_horizons_failure_retains_other_data(monkeypatch):
     request=module.ResearchRequest(mission=Mission(latitude=-89,longitude=0,start='2026-11-05T00:00:00Z',end='2026-11-06T00:00:00Z'))
     result=research(request)
     assert result['score'] is None and result['geometry']['reason']=='Offline'
+
+@pytest.mark.parametrize("thermal", [
+    {"available": False},
+    {"available": True, "minimum_k": 50, "maximum_k": 400},
+])
+def test_temperature_does_not_block_strict_screening(monkeypatch, thermal):
+    terrain = dict(available=True, slope_max_deg=1, slope_p95_deg=1,
+                   roughness_m=0, relief_m=0, resolution_m=5, source={})
+    monkeypatch.setattr(lunar_rasters, "local_terrain", lambda *a, **kw: terrain)
+    monkeypatch.setattr(lunar_rasters, "site_elevation", lambda *a: {})
+    monkeypatch.setattr(lunar_rasters, "measurement", lambda *a: {"available": True, "value": 0})
+    monkeypatch.setattr(lunar_rasters, "ice_evidence", lambda *a: {})
+    monkeypatch.setattr(lunar_rasters, "temperature_range", lambda *a: thermal)
+    monkeypatch.setattr(lunar_rasters, "horizon", lambda *a, **kw: {"available": False})
+    request = type("Request", (), {"mission": Location(latitude=-89, longitude=0), "limits": Limits()})()
+    result = research(request, plan_b=True)
+    assert result == {"status": "missing", "reasons": ["A higher-resolution local terrain skyline is required."]}
+
 
 def test_api_validation():
     from app.main import app

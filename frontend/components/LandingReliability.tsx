@@ -33,7 +33,7 @@ export default function LandingReliability({mission,limits,onSelect,onAddCompari
 
  {report&&<><p className="info"><strong>Spacecraft suitability: {report.spacecraft_suitability}.</strong> This is a regional terrain screen; no touchdown or abort authorization is implied.</p><p>Baseline terrain: {report.baseline.status.replaceAll('_',' ')} · screening radius {n(report.baseline.screening_radius_m)} m.</p>{report.baseline.constraints_failed.map(s=><p className="error" key={s}>{s}</p>)}
 
- <div className="table-scroll"><table><thead><tr><th>Comparison</th><th>Nominal</th><th>With RMS sensitivity margins</th></tr></thead><tbody><tr><th>Five-factor score / 100</th><td>{n(report.nominal_analysis.score)}</td><td>{n(report.margin_analysis.score)} · provisional; missing {report.margin_analysis.missing.join(', ')||'none'}</td></tr><tr><th>Terrain component / 100</th><td>{n(report.baseline.nominal_terrain_score)}</td><td>{n(report.baseline.margin_terrain_score)}</td></tr></tbody></table></div>
+ <div className="table-scroll"><table><thead><tr><th>Comparison</th><th>Nominal</th><th>With RMS sensitivity margins</th></tr></thead><tbody><tr><th>Research score / 100</th><td>{n(report.nominal_analysis.score)}</td><td>{n(report.margin_analysis.score)} · provisional; missing {report.margin_analysis.missing.join(', ')||'none'}</td></tr><tr><th>Terrain component / 100</th><td>{n(report.baseline.nominal_terrain_score)}</td><td>{n(report.baseline.margin_terrain_score)}</td></tr></tbody></table></div>
 
  <p>RMS margins are a sensitivity scenario, not a statistical confidence interval. Missing uncertainty data makes the margin-based total unavailable. A higher available-weight percentage does not indicate higher accuracy.</p>
 
