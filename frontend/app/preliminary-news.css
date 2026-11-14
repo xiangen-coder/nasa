@@ -639,3 +639,15 @@
     animation: none;
   }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .lunar-shortcut-placeholder img {
+    animation: lunar-spacecraft-hover 4.8s ease-in-out infinite;
+  }
+}
+
+@keyframes lunar-spacecraft-hover {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  35% { transform: translate(-3px, -9px) rotate(5deg); }
+  70% { transform: translate(2px, -4px) rotate(-1deg); }
+}
