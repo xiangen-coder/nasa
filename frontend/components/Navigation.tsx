@@ -69,6 +69,66 @@ export default function Navigation({
 }) {
   const [more, setMore] = useState(false);
   const [educationSection, setEducationSection] = useState<string>(educationLinks[0].heading);
+  const educationNav = useRef<HTMLElement>(null);
+  const educationIndicator = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!education) return;
+    const nav = educationNav.current;
+    const classroom = document.querySelector("lunar-education");
+    if (!nav) return;
+
+    let frame = 0;
+    function updateSection() {
+      frame = 0;
+      const root = classroom?.shadowRoot;
+      const readingLine = (nav?.closest("header")?.getBoundingClientRect().bottom ?? 0) + 32;
+      let current: string = educationLinks[0].heading;
+      for (const { heading } of educationLinks) {
+        const target = root?.querySelector(`[id$="-${heading}"]`);
+        if (target && target.getBoundingClientRect().top <= readingLine) current = heading;
+      }
+      if (root?.querySelector('[id$="-school-quiz-title"]') &&
+          window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+        current = educationLinks[educationLinks.length - 1].heading;
+      }
+      setEducationSection(current);
+    }
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(updateSection);
+    };
+    const resize = new ResizeObserver(schedule);
+    resize.observe(nav);
+    if (classroom) resize.observe(classroom);
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    schedule();
+    return () => {
+      cancelAnimationFrame(frame);
+      resize.disconnect();
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [education]);
+
+  useEffect(() => {
+    const nav = educationNav.current;
+    const indicator = educationIndicator.current;
+    if (!education || !nav || !indicator) return;
+    const position = () => {
+      const tab = nav.querySelector<HTMLElement>('a[aria-current="location"]');
+      if (!tab) return;
+      indicator.style.width = `${tab.offsetWidth}px`;
+      indicator.style.height = `${tab.offsetHeight}px`;
+      indicator.style.transform = `translate(${tab.offsetLeft}px, ${tab.offsetTop}px)`;
+      indicator.dataset.positioned = "true";
+    };
+    position();
+    const resize = new ResizeObserver(position);
+    resize.observe(nav);
+    nav.querySelectorAll("a").forEach((tab) => resize.observe(tab));
+    return () => resize.disconnect();
+  }, [education, educationSection]);
+
   const [accountOpen, setAccountOpen] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
   const [logoutError, setLogoutError] = useState("");
@@ -127,7 +187,13 @@ export default function Navigation({
         </span>
       </a>
       {education ? (
-        <nav className="nav-pill glass" aria-label="Education navigation">
+        <nav
+          ref={educationNav}
+          className="nav-pill glass education-nav-pill"
+          data-animate={preferences.animate}
+          aria-label="Education navigation"
+        >
+          <span ref={educationIndicator} className="education-nav-indicator" aria-hidden="true" />
           {educationLinks.map(({ label, heading }) => (
             <a
               key={heading}

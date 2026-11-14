@@ -177,3 +177,26 @@
   outline: 2px solid var(--classroom-accent);
   outline-offset: 3px;
 }
+
+/* The active Education tab shares one indicator across the section links. */
+.education-nav-pill > a { position: relative; }
+.education-nav-pill > .education-nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 99px;
+  background: rgba(221, 236, 255, .19);
+  box-shadow: inset 0 1px 0 #ffffff50, 0 3px 12px #00000016;
+  pointer-events: none;
+  visibility: hidden;
+}
+.education-nav-indicator[data-positioned="true"] { visibility: visible; }
+.education-nav-pill:has(.education-nav-indicator[data-positioned="true"]) > a[aria-current="location"] {
+  background: transparent;
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .education-nav-pill[data-animate="true"] .education-nav-indicator {
+    transition: transform .24s ease, width .24s ease, height .24s ease;
+  }
+}
