@@ -26,7 +26,7 @@ function ShortcutArt({ label, illustration }: { label: string; illustration: "uf
   );
 }
 
-export default function NewsSidebar() {
+export default function NewsSidebar({ showAiPet }: { showAiPet: boolean }) {
   const [feed, setFeed] = useState<Feed | null>(null),
     [loading, setLoading] = useState(false),
     [open, setOpen] = useState<Article | null>(null);
@@ -76,9 +76,11 @@ export default function NewsSidebar() {
   return (
     <>
       <div className="lunar-shortcuts">
-        <div className="lunar-shortcut-placeholder">
-          <ShortcutArt label="Ask Lunar AI" illustration="ufo" />
-        </div>
+        {showAiPet && (
+          <div className="lunar-shortcut-placeholder">
+            <ShortcutArt label="Ask Lunar AI" illustration="ufo" />
+          </div>
+        )}
         <button
           type="button"
           ref={launcher}
