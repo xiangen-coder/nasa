@@ -9,9 +9,14 @@ export default function CinematicHero({ animate }: { animate: boolean }) {
     const player = video.current;
     if (!player) return;
 
+    const desktop = window.matchMedia("(min-width: 1024px) and (pointer: fine)");
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     function syncPlayback() {
       if (!player) return;
+      const source = desktop.matches
+        ? "/illustration/lunar-homepage-loop-4k.mp4"
+        : "/illustration/lunar-homepage-loop.mp4";
+      if (player.getAttribute("src") !== source) player.src = source;
       if (animate && !motion.matches) {
         void player.play().catch(() => {});
       } else {
@@ -20,8 +25,10 @@ export default function CinematicHero({ animate }: { animate: boolean }) {
     }
 
     syncPlayback();
+    desktop.addEventListener("change", syncPlayback);
     motion.addEventListener("change", syncPlayback);
     return () => {
+      desktop.removeEventListener("change", syncPlayback);
       motion.removeEventListener("change", syncPlayback);
       player.pause();
     };
@@ -32,7 +39,6 @@ export default function CinematicHero({ animate }: { animate: boolean }) {
       <video
         ref={video}
         className="cinematic-video"
-        src="/illustration/lunar-homepage-loop.mp4"
         muted
         loop
         playsInline
