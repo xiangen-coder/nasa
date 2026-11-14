@@ -9,6 +9,7 @@ import "./mission-lab.css";
 import "./account.css";
 import "./classroom-theme.css";
 import "./research-workflow.css";
+import "./about-lunar.css";
 export const metadata: Metadata = {
   title: "Lunar Landing Site Navigator",
   description:
