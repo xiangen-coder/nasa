@@ -84,9 +84,23 @@
 .lunar-ai-user { background: #23394b; white-space: pre-wrap; }
 .lunar-ai-message pre { overflow: auto; }
 .lunar-ai-message a { color: #a7ece2; text-decoration: underline; }
-.lunar-ai-pill { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 13px; border-radius: 999px; bottom: calc(max(20px, env(safe-area-inset-bottom)) + 70px); }
-.lunar-ai-pill svg { color: #a7ece2; }
+.lunar-ai-pill {
+  display: grid;
+  place-items: center;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 68px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.lunar-ai-pill img { width: 64px; height: 64px; object-fit: contain; }
+@media (prefers-reduced-motion: no-preference) {
+  .lunar-ai-pill img { animation: lunar-spacecraft-hover 4.8s ease-in-out infinite; }
+}
 @media (max-width: 600px) {
+  .lunar-ai-pill { bottom: calc(max(18px, env(safe-area-inset-bottom)) + 50px); }
+  .lunar-ai-pill img { width: 46px; height: 46px; }
   .lunar-ai-companion { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: min(340px, calc(100vw - 24px)); height: min(560px, calc(100dvh - 24px)); }
   .lunar-ai-header button, .lunar-ai-context button, .lunar-ai-composer button { width: 40px; height: 40px; }
   .lunar-ai-composer textarea { font-size: 16px; }

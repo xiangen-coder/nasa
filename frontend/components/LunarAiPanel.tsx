@@ -96,8 +96,8 @@ export default function LunarAiPanel({ context, signedIn, onSignIn, options }: P
 
   if (minimized) return (
     <button className="lunar-ai-pill" ref={pill} type="button" onClick={() => setMinimized(false)}
-      aria-label="Restore Lunar AI">
-      <Orbit size={17} aria-hidden="true" /> Lunar AI
+      aria-label="Restore Lunar AI" title="Restore Lunar AI">
+      <img src="/illustration/shortcut-ufo.webp" alt="" width={64} height={64} />
     </button>
   );
 
