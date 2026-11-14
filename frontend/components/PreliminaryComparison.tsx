@@ -1,6 +1,6 @@
 "use client";
 import { formatCoordinates } from "../lib/format-coordinates";
-import { ChevronRight, ChevronDown, Info, TriangleAlert } from "lucide-react";
+import { ChevronRight, ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Mission, Site } from "../app/types";
 import type { Research, ResearchComparison } from "./LandingResearch";
@@ -22,6 +22,7 @@ const criteria = [
   ["S", "Sunlight"],
   ["C", "Earth visibility"],
   ["T", "Terrain"],
+  ["H", "Temperature"],
 ] as const;
 const key = (s: Site) => `${s.latitude},${s.longitude}`;
 const withUnit = (value: number | undefined, unit: string) =>
@@ -755,8 +756,6 @@ const missionTime = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "UTC",
 });
 const kilometres = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
-const isTimeNote = (reason: string) => /stopped after|time limit was reached/i.test(reason);
-
 function AssessmentSummary({ mission, radiusKm, result }: {
   mission: Mission;
   radiusKm: number;
@@ -768,9 +767,6 @@ function AssessmentSummary({ mission, radiusKm, result }: {
   const startTime = windowAvailable ? missionTime.format(start).replace(/:00$/, "") : "";
   const endTime = windowAvailable ? missionTime.format(end).replace(/:00$/, "") : "";
   const coordinatesAvailable = Number.isFinite(mission.latitude) && Number.isFinite(mission.longitude);
-  const scored = result?.counts.evaluated ?? 0;
-  const reasons = result?.reasons?.filter((reason) => !isTimeNote(reason)) ?? [];
-  const timing = result?.reasons?.filter(isTimeNote) ?? [];
   const radiusM = Math.round(radiusKm * 1000);
   const outerRings = [radiusM / 3, radiusM * 2 / 3, radiusM];
   const nearbyRings = [500, 1000, 2000].filter((distance) => distance < radiusM);
@@ -794,24 +790,7 @@ function AssessmentSummary({ mission, radiusKm, result }: {
         </div>
       </dl>
       {result && (
-        <>
-          <div className="compare-assessment-banner glass" role="status">
-            {scored === 0 ? <TriangleAlert aria-hidden="true" /> : <Info aria-hidden="true" />}
-            <div>
-              <h2>{scored === 0 ? "No landing-point scores available" : "Landing-site assessment complete"}</h2>
-              <p>{result.sampled} sampled · {scored} scored · {result.counts.missing} yielded no score · {result.counts.unavailable} unavailable
-                {result.counts.focus_missing > 0 && ` · ${result.counts.focus_missing} lacked a mapped shadow target`}
-              </p>
-            </div>
-            <div className="compare-scored"><strong>{scored}</strong><span>Scored sites</span></div>
-          </div>
-          <div className="compare-assessment-disclosures">
-            <details className="glass" open>
-              <summary>Assessment notes <ChevronDown size={16} aria-hidden="true" /></summary>
-              {reasons.length ? <ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
-                : <p>Scores use available evidence.</p>}
-              {timing.map((note) => <p className="compare-assessment-note" key={note}><Info size={16} aria-hidden="true" />{note}</p>)}
-            </details>
+        <div className="compare-assessment-disclosures">
             <details className="glass" open>
               <summary>How sites were sampled <ChevronDown size={16} aria-hidden="true" /></summary>
               <ul>
@@ -820,8 +799,7 @@ function AssessmentSummary({ mission, radiusKm, result }: {
                 <li>Outer rings at ⅓, ⅔ and the full radius ({outerRings.map((distance) => kilometres.format(distance / 1000)).join(", ")} km).</li>
               </ul>
             </details>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );

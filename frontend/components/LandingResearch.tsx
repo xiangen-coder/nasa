@@ -454,8 +454,8 @@ export default function LandingResearch({
               : priority === "I" ? "Water-ice potential" : "Earth communication"}
         </p>
         <p className="muted">
-          Terrain, sunlight, Earth visibility and ice evidence contribute to the score.
-          Historical temperature is shown for reference. Unknown
+          Terrain, sunlight, Earth visibility, historical temperature and ice evidence contribute to the score.
+          The temperature score uses the assumed 100–350 K range. Unknown
           factors remain unavailable.
         </p>
         <div className="astro-inputs">
@@ -581,7 +581,7 @@ export default function LandingResearch({
                   <tr>
                     <th>Rank / point</th>
                     <th>Score</th>
-                    {["T", "S", "C", "I"].map((k) => (
+                    {["T", "S", "C", "H", "I"].map((k) => (
                       <th key={k}>{k}</th>
                     ))}
                     <th>Available weight / missing</th>
@@ -610,7 +610,7 @@ export default function LandingResearch({
                         {num(r.score)}{" "}
                         {r.provisional ? "provisional" : "complete"}
                       </td>
-                      {["T", "S", "C", "I"].map((k) => (
+                      {["T", "S", "C", "H", "I"].map((k) => (
                         <td key={k}>{num(r.factors[k].score)}</td>
                       ))}
                       <td>

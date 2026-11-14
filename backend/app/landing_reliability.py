@@ -71,9 +71,9 @@ def screened(location,limits,vehicle):
 
     hazards=rasters.measurement('hazards',location)
 
-    nominal=score_factors(t,{},hazards,{},limits)
+    nominal=score_factors(t,{}, {},hazards,{},limits)
 
-    conservative=score_factors(adjusted,{},hazards,{},limits)
+    conservative=score_factors(adjusted,{}, {},hazards,{},limits)
 
     if adjusted.get('slope_mean_deg',0)>6:conservative['constraints_failed'].append('Apollo reference mean-slope limit of 6 degrees exceeded under sensitivity screen.')
 
@@ -182,7 +182,7 @@ def exploration_candidates(unverified, screening_radius, limits):
         if not terrain.get('available') or terrain['slope_mean_deg'] > 6:
             continue
         hazards = rasters.measurement('hazards', mission)
-        nominal = score_factors(terrain, {}, hazards, {}, limits)
+        nominal = score_factors(terrain, {}, {}, hazards, {}, limits)
         score = nominal['factors']['T']['score']
         if score is None or nominal['constraints_failed']:
             continue
@@ -255,7 +255,7 @@ def assess(request:ReliabilityRequest):
 
     robust_terrain=dict(baseline['terrain']);robust_terrain.update(baseline['bounds'])
 
-    adjusted=score_factors(robust_terrain if baseline['uncertainty']['available'] else {},base['geometry'],base['hazards'],base['ice'],request.limits)
+    adjusted=score_factors(robust_terrain if baseline['uncertainty']['available'] else {},base['geometry'],base['temperature'],base['hazards'],base['ice'],request.limits)
 
     if baseline['margin_terrain_score'] is None:adjusted['score']=None
     mitigation=[{'issue':'Footprint-scale evidence and regolith bearing capacity','adjustment':'Obtain sub-metre stereo topography, boulder inventory and soil bearing evidence. A 5 m regional DEM cannot validate Apollo footpad contact, 0.61 m surface irregularities or soil penetration.','status':'required'}, {'issue':'Visibility transition uncertainty','adjustment':f'Repeat visibility calculations with a smaller time step than the current {request.mission.interval_minutes} minutes; schedule operations with a buffer around sampled rise/set and blackout boundaries.','status':'required'},{'issue':'Unmapped subpixel boulders and craters','adjustment':'Review native-resolution imagery and obtain validated hazard maps before committing to a footprint.','status':'required'},

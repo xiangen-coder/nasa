@@ -19,8 +19,8 @@ from . import lunar_rasters as rasters
 from datetime import datetime
 
 router=APIRouter(prefix='/api/research',tags=['Landing research'])
-WEIGHTS={'T':35/85,'S':25/85,'C':20/85,'I':5/85}
-NAMES={'T':'Terrain safety','S':'Sunlight availability','C':'Earth communication','I':'Water ice potential'}
+WEIGHTS={'T':.35,'S':.25,'C':.20,'H':.15,'I':.05}
+NAMES={'T':'Terrain safety','S':'Sunlight availability','C':'Earth communication','H':'Temperature suitability','I':'Water ice potential'}
 
 class Limits(BaseModel):
     model_config=ConfigDict(extra='forbid',allow_inf_nan=False)
@@ -51,7 +51,7 @@ class ResearchAreaRequest(ResearchRequest):
 
 def clamp(x): return max(0.,min(100.,float(x)))
 
-def score_factors(terrain,geometry,hazards,ice,limits):
+def score_factors(terrain,geometry,thermal,hazards,ice,limits):
     factors={k:{'name':NAMES[k],'weight':w,'score':None,'contribution':None,'quality':'unavailable','explanation':'No supported measurement.'} for k,w in WEIGHTS.items()}
     failures=[];warnings=[]
     t=terrain
@@ -93,6 +93,11 @@ def score_factors(terrain,geometry,hazards,ice,limits):
             factors[key].update(score=clamp(geometry['metrics'][field]),quality=geometry['mode'],source={'source_url':geometry['source_url'],'name':'JPL Horizons lunar surface observer'},
                 explanation='Duration-weighted percentage of mission intervals with body centre above the sampled terrain horizon. Subpixel obstructions are unresolved.' if geometry['mode'].endswith('terrain_screened') else 'Duration-weighted percentage above reference tangent plane. Terrain obstruction unknown; geometric screening only.')
     else: warnings.append(geometry.get('reason','Horizons unavailable.'))
+    if thermal.get('available'):
+        lo,hi=thermal['minimum_k'],thermal['maximum_k']
+        value=100. if lo==hi and limits.min_temperature_k<=lo<=limits.max_temperature_k else 0. if lo==hi else clamp(100*max(0,min(hi,limits.max_temperature_k)-max(lo,limits.min_temperature_k))/(hi-lo))
+        factors['H'].update(score=value,quality='historical seasonal range proxy',source=thermal['source'],
+            explanation='100 × length of overlap between observed seasonal min–max range and operating range / observed range width. Not time-in-range, mission temperature prediction or equipment thermal modelling.')
     if ice.get('available'):
         factors['I'].update(score=clamp(100*ice['value']),quality=ice['source']['interpretation'],source=ice['source'],
             explanation='100 × registered mapped ice-evidence or PSR fraction. PSR is a resource-potential proxy, not confirmed ice abundance, accessibility or safety.')
@@ -117,7 +122,7 @@ def score_factors(terrain,geometry,hazards,ice,limits):
         )
     available=sum(v['weight'] for v in factors.values() if v['score'] is not None)
     missing=[k for k,v in factors.items() if v['score'] is None]
-    provisional=bool(regional or missing or not hazards.get('available') or geometry.get('mode')!='terrain_screened' or ice.get('source',{}).get('interpretation') in ('psr_fraction', 'psr_pixel'))
+    provisional=bool(regional or missing or not hazards.get('available') or geometry.get('mode')!='terrain_screened' or thermal.get('available') or ice.get('source',{}).get('interpretation') in ('psr_fraction', 'psr_pixel'))
     # A terrain measurement alone does not support a mission score.
     has_visibility = factors['S']['score'] is not None and factors['C']['score'] is not None
     for f in factors.values():
@@ -126,7 +131,7 @@ def score_factors(terrain,geometry,hazards,ice,limits):
     return {'factors':factors,'score':sum(f['contribution'] or 0 for f in factors.values()) if has_visibility else None,
             'available_weight':available,'missing':missing,'provisional':provisional,'constraints_failed':failures,'warnings':warnings,
             'safety_status':'fails_configured_limits' if failures else 'not_established',
-            'formula':'(35T + 25S + 20C + 5I) / 85; available weights renormalized for provisional scores. Temperature is displayed as historical evidence.'}
+            'formula':'0.35T + 0.25S + 0.20C + 0.15H + 0.05I; available weights renormalized for provisional scores.'}
 
 def regional_slope_score(terrain, limits):
     """Use the configured slope preference for a standalone regional score."""
@@ -168,7 +173,7 @@ def research(request, *, deadline=None, allow_remote=True):
         geometry['sunlight_hours']=sum(w['hours'] for w in geometry['sunlight_windows'])
     except HorizonsUnavailable as exc:
         geometry={'available':False,'reason':str(exc)}
-    assessment = score_factors(t,geometry,hazards,ice,limits)
+    assessment = score_factors(t,geometry,thermal,hazards,ice,limits)
     if broad_horizon and not t['available']:
         resolution = screening['source']['resolution_m']
         assessment['factors']['T']['explanation'] = (

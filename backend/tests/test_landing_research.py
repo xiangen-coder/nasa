@@ -11,8 +11,8 @@ from app.astronomy import HorizonsUnavailable
 from app.landing_research import Limits, score_factors, research
 from app import lunar_rasters
 
-def score(t=None,g=None,haz=None,ice=None):
-    return score_factors(t or {},g or {},haz or {},ice or {},Limits())
+def score(t=None,g=None,h=None,haz=None,ice=None):
+    return score_factors(t or {},g or {},h or {},haz or {},ice or {},Limits())
 
 def test_missing_is_not_zero():
     r=score();assert r['score'] is None;assert r['available_weight']==0
@@ -22,11 +22,22 @@ def test_provisional_weights_and_contributions():
     r=score(g={'available':True,'mode':'reference_geometry_only','metrics':{'sun_visible_pct':80,'earth_visible_pct':40},'source_url':'https://ssd.jpl.nasa.gov/'})
     assert r['score']==pytest.approx((.25*80+.2*40)/.45)
     assert sum(f['effective_weight'] for f in r['factors'].values())==pytest.approx(1)
-    assert r['provisional'];assert r['missing']==['T','I']
+    assert r['provisional'];assert r['missing']==['T','H','I']
 
 def test_high_score_does_not_override_hard_failure():
     r=score(t={'available':True,'slope_max_deg':20,'slope_p95_deg':1,'roughness_m':0,'relief_m':0,'resolution_m':5,'source':{}})
     assert r['safety_status']=='fails_configured_limits'
+
+def test_historical_temperature_changes_score_without_a_limit_failure():
+    geometry = dict(available=True, mode='terrain_screened',
+                    metrics=dict(sun_visible_pct=80, earth_visible_pct=40),
+                    source_url='https://ssd.jpl.nasa.gov/')
+    warm = score(g=geometry, h=dict(available=True, minimum_k=150, maximum_k=250, source={}))
+    cold = score(g=geometry, h=dict(available=True, minimum_k=40, maximum_k=80, source={}))
+    assert cold['factors']['H']['score'] == 0
+    assert cold['score'] < warm['score']
+    assert cold['constraints_failed'] == []
+
 
 def test_bad_resolution_not_terrain_score():
     r=score(t={'available':True,'slope_max_deg':1,'slope_p95_deg':1,'roughness_m':0,'relief_m':0,'resolution_m':240,'source':{}})
