@@ -61,6 +61,8 @@ async function openCompare(page: Page, withAlternatives = false) {
   const configure = page.locator("#landing-search-form");
   await configure.getByLabel("Start date", { exact: true }).fill(start.slice(0, 10));
   await configure.getByLabel("End date", { exact: true }).fill(end.slice(0, 10));
+  await configure.getByLabel("Start time (UTC)", { exact: true }).fill("00:00");
+  await configure.getByLabel("End time (UTC)", { exact: true }).fill("00:00");
   await configure.getByLabel("Search radius (km)").fill("5");
   await expect(configure.getByText(/cyan ring marks the 5 km search radius/)).toBeVisible();
   await configure.getByRole("button", { name: "Find landing point", exact: true }).click();
@@ -410,4 +412,16 @@ test("Mission Planner imports the Result and models a battery change", async ({ 
   await page.getByRole("button", { name: "Back to Result" }).click();
   await expect(page.locator("#result-summary")).toBeVisible();
   expect(analysisRequests).toBe(0);
+});
+
+
+test("Configure defaults to the current UTC minute and offers two research focuses", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-15T23:58:42Z"));
+  await page.goto("/#search");
+  const form = page.locator("#landing-search-form");
+  await expect(form.getByLabel("Start date", { exact: true })).toHaveValue("2026-11-15");
+  await expect(form.getByLabel("End date", { exact: true })).toHaveValue("2026-11-22");
+  await expect(form.getByLabel("Start time (UTC)", { exact: true })).toHaveValue("23:58");
+  await expect(form.getByLabel("End time (UTC)", { exact: true })).toHaveValue("23:58");
+  await expect(form.getByLabel("Research focus").locator("option")).toHaveText(["Overall consideration", "Water-ice potential"]);
 });

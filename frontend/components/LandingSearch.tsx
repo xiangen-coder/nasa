@@ -261,9 +261,6 @@ export default function LandingSearch({
               onChange={(e) => onPriority(e.target.value)}
             >
               <option value="overall">Overall consideration</option>
-              <option value="T">Terrain safety</option>
-              <option value="S">Sunlight availability</option>
-              <option value="C">Earth communication</option>
               <option value="I">Water-ice potential</option>
             </select>
           </label>

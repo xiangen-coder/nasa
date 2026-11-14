@@ -578,10 +578,20 @@ export default function Page() {
     latitude: -89.54,
     longitude: 0,
   });
-  const [start, setStart] = useState("2026-10-01");
-  const [end, setEnd] = useState("2026-10-08");
-  const [startTime, setStartTime] = useState("00:00");
-  const [endTime, setEndTime] = useState("00:00");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  function resetMissionWindow() {
+    const now = Date.now();
+    const begin = new Date(now).toISOString();
+    const finish = new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
+    setStart(begin.slice(0, 10));
+    setStartTime(begin.slice(11, 16));
+    setEnd(finish.slice(0, 10));
+    setEndTime(finish.slice(11, 16));
+  }
+  useEffect(resetMissionWindow, []);
   const [interval, setIntervalMinutes] = useState(60);
   const [clearance, setClearance] = useState(0);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
@@ -979,7 +989,7 @@ export default function Page() {
               setMissionSaveStatus({ assessment: missionToSave.snapshot.assessment, status: "saved" });
               setMissionToSave(null);
             } : undefined}
-            onOpenResult={(record, snapshot) => { setReopenedMission({ record, snapshot }); setResearchEquipment(snapshot.equipment); setView(8); }} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority);setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
+            onOpenResult={(record, snapshot) => { setReopenedMission({ record, snapshot }); setResearchEquipment(snapshot.equipment); setView(8); }} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority === "I" ? "I" : "overall");setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
           {education&&<PortableEducation animate={preferences.animate}/>}
           {(view===12 || labSource)&&<div hidden={view!==12}><PowerMissionLab key={JSON.stringify([labSource?.key, labReportVersion])} openSavedReport={openSavedLabReport} source={labSource} sourceError={labError} onResult={()=>{
             if (labSource && displayedResult !== labSource.assessment) {
@@ -990,7 +1000,7 @@ export default function Page() {
             }
             setView(8);
           }} onConfigure={openSearchForm}/></div>}
-          {view===8&&<ResearchOverview key={JSON.stringify(displayedResult?.mission)} result={displayedResult} onNewSearch={openSearchForm} comparisonOrigin={comparisonOrigin} comparisonRadiusKm={comparisonRadius} onNavigate={setView} onRunAgain={reopenedMission ? async () => {
+          {view===8&&<ResearchOverview key={JSON.stringify(displayedResult?.mission)} result={displayedResult} onNewSearch={() => { resetMissionWindow(); openSearchForm(); }} comparisonOrigin={comparisonOrigin} comparisonRadiusKm={comparisonRadius} onNavigate={setView} onRunAgain={reopenedMission ? async () => {
             if (rerunningMission) return;
             const controller = new AbortController();
             rerunRequest.current = controller;
