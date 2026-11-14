@@ -200,7 +200,7 @@ export const initialProgress: PlanBProgress = {
 };
 
 export async function findPlanB({
-  original, area, mode, dates, equipment, priority, signal, update,
+  original, area, mode, dates, equipment, priority, signal, update, excludedSites = new Set<string>(),
 }: {
   original: Research;
   area?: ResearchArea;
@@ -209,6 +209,7 @@ export async function findPlanB({
   equipment: SolarSettings;
   priority: ResearchPriority;
   signal: AbortSignal;
+  excludedSites?: ReadonlySet<string>;
   update: (progress: PlanBProgress) => void;
 }) {
   if (!validSolar(equipment)) throw Error("Review the original mission’s solar and battery settings.");
@@ -225,11 +226,14 @@ export async function findPlanB({
   if (mode !== "delay") {
     const centre = area?.centre ?? mission;
     const radiusKm = area?.radiusKm ?? comparisonRadiusKm;
+    const isNewSite = (location: Site) =>
+      siteKey(location) !== siteKey(mission) && !excludedSites.has(siteKey(location)) &&
+      inComparisonArea(centre, location, radiusKm);
     report(`Screening terrain within ${radiusKm} km…`);
     progress.shortlist = await planBRequest<PlanBShortlist>("/api/reliability/plan-b-sites",
       { mission: centre, limits, search_radius_m: Math.round(radiusKm * 1000), shadow_focus: priority === "I" }, signal, () => true);
     locations = progress.shortlist.candidates.filter(({ location }, index, candidates) =>
-      siteKey(location) !== siteKey(mission) && inComparisonArea(centre, location, radiusKm) &&
+      isNewSite(location) &&
       candidates.findIndex((candidate) => siteKey(candidate.location) === siteKey(location)) === index);
     if (priority === "I") {
       for (const site of locations.filter((site) => site.shadow_distance_m == null)) {
@@ -238,11 +242,11 @@ export async function findPlanB({
       locations = locations.filter((site) => site.shadow_distance_m != null);
     }
     for (const site of progress.shortlist.exploration_candidates ?? []) {
-      if (siteKey(site.location) !== siteKey(mission) && inComparisonArea(centre, site.location, radiusKm))
+      if (isNewSite(site.location))
         exploration.set(site, ["Available terrain supports comparison. Footprint and uncertainty evidence is incomplete."]);
     }
     for (const site of progress.shortlist.comparison_candidates ?? []) {
-      if (siteKey(site.location) !== siteKey(mission) && inComparisonArea(centre, site.location, radiusKm))
+      if (isNewSite(site.location))
         exploration.set(site, ["Terrain evidence is incomplete for this nearby comparison point."]);
     }
   }

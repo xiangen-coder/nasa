@@ -2,10 +2,10 @@
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { comparisonDistanceKm, comparisonRadiusKm } from "./ComparisonPicker";
+import { comparisonDistanceKm, comparisonRadiusKm, inComparisonArea, siteKey } from "./ComparisonPicker";
 import type { Research } from "./LandingResearch";
 import type { Mission } from "../app/types";
-import type { ResearchArea } from "../lib/research-area";
+import type { ResearchArea, ResearchAreaResult } from "../lib/research-area";
 import type { ResearchPriority } from "./SearchConsole";
 import type { SolarSettings } from "./mission-lab/scenario-science";
 import {
@@ -16,6 +16,7 @@ import {
   initialProgress,
   latestTouchdown,
   missionKey,
+  sameMission,
   rankOptions,
   searchDates,
   solarEstimate,
@@ -219,6 +220,7 @@ export default function PlanBComparison({
   original,
   pendingMission,
   area,
+  areaResult,
   priority,
   equipment,
   alternativePicker,
@@ -230,6 +232,7 @@ export default function PlanBComparison({
   original?: Research;
   pendingMission?: Mission;
   area?: ResearchArea;
+  areaResult?: ResearchAreaResult;
   priority: ResearchPriority;
   equipment: SolarSettings;
   alternativePicker: ReactNode;
@@ -259,12 +262,41 @@ export default function PlanBComparison({
     [],
   );
 
+  const reused: PlanBForecast[] = [];
+  if (mode === "relocate" && area && areaResult && original) {
+    for (const result of areaResult.results) {
+      const location = result.mission;
+      const originalWindow = {
+        ...original.mission,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      };
+      if (siteKey(location) === siteKey(original.mission) ||
+          !inComparisonArea(area.centre, location, area.radiusKm) ||
+          !sameMission(location, originalWindow)) continue;
+
+      const energy = solarEstimate(result, equipment);
+      const reasons = [...result.constraints_failed];
+      if (areaResult.recommended !== true && !reasons.length)
+        reasons.push("Required landing evidence was unresolved in the initial search.");
+      if (result.geometry.mode !== "terrain_screened" || !energy ||
+          !Number.isFinite(result.geometry.sunlight_hours) ||
+          !Number.isFinite(result.geometry.metrics?.longest_blackout_hours))
+        reasons.push("Complete terrain-screened Sun and Earth observations are unavailable.");
+      if (energy && (energy.unmet_kwh ?? 0) > 1e-8)
+        reasons.push("The modeled solar array and battery leave some configured equipment demand unmet.");
+      reused.push({ location, result, energy: energy?.total_kwh, reasons });
+    }
+  }
+
   async function run() {
     if (!original || controller.current) return;
     setMessage("");
     setProgress(initialProgress);
-    setSelectedKeys([]);
-    setExpanded(null);
+    if (mode !== "relocate") {
+      setSelectedKeys([]);
+      setExpanded(null);
+    }
     setStatus("idle");
     let dates;
     try {
@@ -283,7 +315,7 @@ export default function PlanBComparison({
     const active = new AbortController();
     controller.current = active;
     setStatus("running");
-    setEditing(false);
+    setEditing(mode === "relocate");
     try {
       await findPlanB({
         original,
@@ -293,6 +325,7 @@ export default function PlanBComparison({
         equipment,
         priority,
         signal: active.signal,
+        excludedSites: new Set(reused.map(({ location }) => siteKey(location))),
         update: (next) => {
           if (controller.current === active) setProgress(next);
         },
@@ -323,6 +356,7 @@ export default function PlanBComparison({
     progress.forecastsUnavailable > 0;
   const done = status !== "idle" && status !== "running";
   const options = new Map<string, PlanBForecast>();
+  for (const option of reused) options.set(missionKey(option.result.mission), option);
   if (done) {
     for (const option of [...ranked, ...progress.forecasts]) {
       const key = missionKey(option.result.mission);
@@ -484,7 +518,7 @@ export default function PlanBComparison({
                 </>
               )}
               <button type="submit" className="button primary" disabled={!original}>
-                {mode === "relocate" ? "Suggest nearby points" : "Run What IF"}
+                {mode === "relocate" ? (reused.length ? "Search more locations" : "Suggest nearby points") : "Run What IF"}
               </button>
             </fieldset>
             {status === "running" && (
@@ -542,7 +576,7 @@ export default function PlanBComparison({
               )}
             </div>
           )}
-          {original && done && (
+          {original && (done || reused.length > 0) && (
             <>
               <section aria-label="Suggested comparison options">
                 <h3>
@@ -552,7 +586,8 @@ export default function PlanBComparison({
                       ? "Choose locations to compare"
                       : "Choose options to compare"}
                 </h3>
-                {ranked.length === 0 && (
+                {reused.length > 0 && <p>Showing {reused.length} locations already assessed for this research area and mission window.</p>}
+                {done && ranked.length === 0 && !reused.some((option) => !option.reasons.length) && (
                   <p className="info">
                     No backup passed the checks in this search. Any available
                     forecasts are marked Unverified.
@@ -630,7 +665,7 @@ export default function PlanBComparison({
                                 Date.parse(original.mission.start)) /
                               3_600_000;
                             const distance = comparisonDistanceKm(
-                              original.mission,
+                              area?.centre ?? original.mission,
                               candidate,
                             );
                             return (
@@ -654,7 +689,7 @@ export default function PlanBComparison({
                                     <small>{utc(candidate.start)}</small>
                                     <small>
                                       {mode !== "delay" &&
-                                        `${number.format(distance)} km away`}
+                                        `${number.format(distance)} km from research centre`}
                                       {mode === "both" && " · "}
                                       {mode !== "relocate" &&
                                         `+${number.format(hours)} h`}

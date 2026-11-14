@@ -31,7 +31,7 @@ function evidence(mission: Mission, score = 80, original = false) {
   };
 }
 
-async function openCompare(page: Page) {
+async function openCompare(page: Page, withAlternatives = false) {
   await page.route("**/api/research/datasets", (route) => route.fulfill({
     json: { datasets: [], reference_points: [], regions: [] },
   }));
@@ -43,7 +43,10 @@ async function openCompare(page: Page) {
     const { mission, radius_m } = route.request().postDataJSON();
     expect(radius_m).toBe(5000);
     await route.fulfill({ json: {
-      results: [evidence(mission, 70, true)], sampled: 17,
+      results: withAlternatives ? [
+        evidence({ ...mission, name: "Recommended ridge", latitude: mission.latitude + 0.14 }),
+        evidence({ ...mission, name: "Previously assessed ridge", latitude: mission.latitude - 0.14 }, 75),
+      ] : [evidence(mission, 70, true)], recommended: true, sampled: 17,
       counts: { evaluated: 1, limits: 0, missing: 16, unavailable: 0, focus_missing: 0 }, reasons: [],
     } });
   });
@@ -357,4 +360,39 @@ test("saved mission opens its completed result without a new analysis", async ({
   await page.getByRole("button", { name: "Run again" }).click();
   await expect(page.locator("#result-summary")).toContainText("85.00 / 100");
   expect(analysisCount).toBe(1);
+});
+
+test("Change location reuses results from the original circle and skips them in a new search", async ({ page }) => {
+  let shortlistCalls = 0;
+  const assessed: Mission[] = [];
+  await page.route("**/api/reliability/plan-b-sites", async (route) => {
+    shortlistCalls++;
+    const { mission, search_radius_m } = route.request().postDataJSON();
+    expect(mission.latitude).toBe(-89.54);
+    expect(search_radius_m).toBe(5000);
+    await route.fulfill({ json: {
+      candidates: [
+        { location: { ...mission, name: "Previously assessed ridge", latitude: mission.latitude - 0.14 } },
+        { location: { ...mission, name: "New ridge", latitude: mission.latitude - 0.10 } },
+      ],
+    } });
+  });
+  await page.route("**/api/research/plan-b", async (route) => {
+    const { mission } = route.request().postDataJSON();
+    assessed.push(mission);
+    await route.fulfill({ json: { status: "evaluated", result: evidence(mission) } });
+  });
+  const plan = await openCompare(page, true);
+  await plan.getByRole("radio", { name: "Change location" }).check();
+  await expect(plan.getByRole("row", { name: /Previously assessed ridge/ })).toBeVisible();
+  expect(shortlistCalls).toBe(0);
+  expect(assessed).toHaveLength(0);
+
+  await plan.getByRole("button", { name: "Search more locations" }).click();
+  await expect(plan.getByRole("row", { name: /New ridge/ })).toBeVisible();
+  await expect(plan.getByRole("row", { name: /Previously assessed ridge/ })).toHaveCount(1);
+  expect(shortlistCalls).toBe(1);
+  expect(assessed.map((mission) => mission.name)).toEqual(["New ridge"]);
+  expect(Date.parse(assessed[0].start)).toBe(Date.parse(start));
+  expect(Date.parse(assessed[0].end)).toBe(Date.parse(end));
 });

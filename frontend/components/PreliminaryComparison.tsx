@@ -641,6 +641,7 @@ export default function PreliminaryComparison({
             original={selected}
             pendingMission={searchingArea ? mission : undefined}
             area={area}
+            areaResult={areaResult}
             priority={priority}
             equipment={equipment}
             alternativePicker={alternativePicker}
