@@ -50,6 +50,8 @@ const educationLinks = [
 export default function Navigation({
   view,
   education,
+  compareAvailable,
+  resultAvailable,
   accountName,
   onLogout,
   onNavigate,
@@ -58,6 +60,8 @@ export default function Navigation({
 }: {
   view: number;
   education: boolean;
+  compareAvailable: boolean;
+  resultAvailable: boolean;
   accountName?: string | null;
   onLogout: () => void;
   onNavigate: (view: number) => void;
@@ -222,12 +226,15 @@ export default function Navigation({
       ) : <nav className="nav-pill glass" aria-label="Main navigation">
         {[
           { label: "Configure", view: 7 },
-          { label: "Compare", view: 11 },
-          { label: "Result", view: 8 },
+          { label: "Compare", view: 11, disabled: !compareAvailable },
+          { label: "Result", view: 8, disabled: !resultAvailable },
         ].map((item) => (
           <a
             key={item.view}
-            href={`#${viewPaths[item.view]}`}
+            href={item.disabled ? undefined : `#${viewPaths[item.view]}`}
+            role={item.disabled ? "link" : undefined}
+            aria-disabled={item.disabled || undefined}
+            title={item.disabled ? "Run Find landing point to see assessment results" : undefined}
             aria-current={
               view === item.view || (item.view === 8 && view === 15)
                 ? "page"
@@ -235,7 +242,7 @@ export default function Navigation({
             }
             onClick={(e) => {
               e.preventDefault();
-              navigate(item.view);
+              if (!item.disabled) navigate(item.view);
             }}
           >
             {item.label}

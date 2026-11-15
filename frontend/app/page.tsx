@@ -1005,7 +1005,7 @@ export default function Page() {
   return (
     <div className={`app-shell lunar-app ${full?"full-view":"simple-view"}`} style={{"--ui-scale":preferences.scale} as CSSProperties}>
       <div className="stars" aria-hidden="true"/>
-      <Navigation view={view} education={education} accountName={accountName} onLogout={()=>{setAccountName(null);if(view===13)setView(7);}} onNavigate={setView} preferences={preferences} onPreferences={updatePreferences}/>
+      <Navigation view={view} education={education} compareAvailable={!!comparisonState?.results.length || comparisonScenarios.length > 0} resultAvailable={!!displayedResult} accountName={accountName} onLogout={()=>{setAccountName(null);if(view===13)setView(7);}} onNavigate={setView} preferences={preferences} onPreferences={updatePreferences}/>
       {!education&&<NewsSidebar key={view === 8 || view === 12 ? view : "news"} showAiPet={view === 8 || view === 12} aiContext={aiContext} signedIn={Boolean(accountName)} onSignIn={() => setView(13)} planner={view === 12}/>}
       <div className="main-shell">
         <div className="workspace-with-news"><main id="main-content">

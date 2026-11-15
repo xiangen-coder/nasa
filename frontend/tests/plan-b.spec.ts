@@ -58,6 +58,12 @@ async function openCompare(page: Page, withAlternatives = false) {
     } });
   });
   await page.goto("/#search", { waitUntil: "domcontentloaded" });
+  const navigation = page.getByRole("navigation", { name: "Main navigation" });
+  const tabs = ["Compare", "Result"].map((name) => navigation.getByRole("link", { name, exact: true }));
+  for (const tab of tabs) {
+    await expect(tab).toBeDisabled();
+    await expect(tab).not.toHaveAttribute("href");
+  }
   const configure = page.locator("#landing-search-form");
   await configure.getByLabel("Start date", { exact: true }).fill(start.slice(0, 10));
   await configure.getByLabel("End date", { exact: true }).fill(end.slice(0, 10));
@@ -67,6 +73,7 @@ async function openCompare(page: Page, withAlternatives = false) {
   await expect(configure.getByText(/cyan ring marks the 5 km search radius/)).toBeVisible();
   await configure.getByRole("button", { name: "Find landing point", exact: true }).click();
   await expect(page.locator(".research-centre-summary")).toContainText("5 km");
+  for (const tab of tabs) await expect(tab).toBeEnabled();
   const plan = page.getByRole("article", { name: "What IF" });
   await expect(plan.getByRole("button", { name: "Run What IF" })).toBeVisible();
   return plan;
