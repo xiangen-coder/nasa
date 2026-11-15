@@ -131,6 +131,48 @@ def test_api_validation():
     assert client.get('/api/research/imagery?latitude=0&longitude=0').status_code==422
     assert client.get('/api/research/datasets').status_code==200
 
+def test_date_comparison_matches_visibility_at_shared_timestamps(monkeypatch):
+    from app import landing_research as module
+
+    for name in ("local_terrain", "site_elevation", "measurement", "ice_evidence", "temperature_range"):
+        monkeypatch.setattr(module.rasters, name, lambda *args, **kwargs: {"available": False})
+
+    def horizon(location, height, *, allow_remote=True):
+        return {
+            "available": True, "quality": "regional" if allow_remote else "global",
+            "profile": [{"azimuth": 0, "elevation": 10 if allow_remote else 0}],
+            "source": {"resolution_m": 20 if allow_remote else 1895},
+        }
+
+    def observations(mission, height, **kwargs):
+        return {"source_url": "https://ssd.jpl.nasa.gov/horizons/", "series": [
+            {"time": timestamp.isoformat(), "sun_azimuth": 45, "earth_azimuth": 90,
+             "sun_elevation": 5, "earth_elevation": 5}
+            for timestamp in epochs(mission)
+        ]}
+
+    monkeypatch.setattr(module.rasters, "horizon", horizon)
+    monkeypatch.setattr(module, "surface_observations", observations)
+    mission = {"latitude": -89, "longitude": 0, "interval_minutes": 60,
+               "start": "2026-11-14T00:00:00Z", "end": "2026-11-16T00:00:00Z"}
+    area = module.find_research_area(module.ResearchAreaRequest(mission=mission, radius_m=250))
+    baseline = area["results"][0]
+    alternate = module.evaluate_plan_b(module.ResearchRequest(
+        mission={**baseline["mission"], "start": "2026-11-15T00:00:00Z", "end": "2026-11-17T00:00:00Z"},
+        allow_remote_terrain=baseline["allow_remote_terrain"],
+    ))
+    assert alternate["status"] == "evaluated"
+    compared = alternate["result"]
+    assert baseline["horizon"] == compared["horizon"]
+
+    def visibility(result):
+        return {r["time"]: (r["sun_visible"], r["earth_visible"]) for r in result["geometry"]["series"]}
+
+    original, delayed = visibility(baseline), visibility(compared)
+    overlap = original.keys() & delayed.keys()
+    assert len(overlap) == 25
+    assert all(original[stamp] == delayed[stamp] == (True, True) for stamp in overlap)
+
 def test_terrain_endpoint_native_window_no_horizons(raster_registry,monkeypatch):
     from app.main import app
     import app.landing_research as module

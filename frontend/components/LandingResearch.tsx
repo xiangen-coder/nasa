@@ -45,6 +45,7 @@ export type Research = {
   id?: string;
   assessed_at?: string;
   mission: Mission;
+  allow_remote_terrain?: boolean;
   limits?: Record<string, number>;
   formula?: string;
   score: number | null;

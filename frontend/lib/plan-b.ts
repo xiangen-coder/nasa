@@ -122,10 +122,25 @@ export function comparableScores(original: Research, candidate: Research) {
 }
 
 export function comparableVisibility(original: Research, candidate: Research) {
+  const samePoint = siteKey(original.mission) === siteKey(candidate.mission);
   return original.geometry.available && candidate.geometry.available &&
+    original.mission.interval_minutes === candidate.mission.interval_minutes &&
+    original.mission.clearance_deg === candidate.mission.clearance_deg &&
     original.geometry.mode === candidate.geometry.mode &&
+    original.horizon.method === candidate.horizon.method &&
+    original.horizon.source?.source_url === candidate.horizon.source?.source_url &&
     original.horizon.source?.name === candidate.horizon.source?.name &&
-    original.horizon.source?.resolution_m === candidate.horizon.source?.resolution_m;
+    original.horizon.source?.resolution_m === candidate.horizon.source?.resolution_m &&
+    (!samePoint || (original.observer_height?.value === candidate.observer_height?.value &&
+      JSON.stringify(original.horizon.profile ?? null) === JSON.stringify(candidate.horizon.profile ?? null)));
+}
+
+export function horizonLabel(result?: Research) {
+  if (!result?.geometry.available) return "Unavailable";
+  if (!result.horizon.available) return "Reference horizon";
+  const { name, resolution_m } = result.horizon.source ?? {};
+  return [name ?? "Terrain horizon", resolution_m == null ? undefined : `${Number(resolution_m.toFixed(2))} m pixels`]
+    .filter(Boolean).join(" · ");
 }
 
 export function comparableTerrain(original: Research, candidate: Research) {
@@ -146,7 +161,7 @@ export function rankOptions(options: PlanBOption[], priority: ResearchPriority, 
       : result.score ?? -1;
   };
   return [...options].sort((a, b) =>
-    
+    Number(a.result.constraints_failed.length > 0) - Number(b.result.constraints_failed.length > 0) ||
     (priority === "I" && mode !== "delay" ? (a.shadow_distance_m ?? Infinity) - (b.shadow_distance_m ?? Infinity) : 0) ||
     score(b.result) - score(a.result) || Date.parse(a.result.mission.start) - Date.parse(b.result.mission.start));
 }
@@ -244,7 +259,11 @@ export async function findPlanB({
     const candidate = candidateMission(mission, site.location, touchdownAt(dates.first, index));
     report(`Checking ${candidate.name} · ${candidate.start.slice(0, 10)} UTC…`);
     try {
-      const assessment = await planBRequest<PlanBAssessment>("/api/research/plan-b", { mission: candidate, limits }, signal,
+      const assessment = await planBRequest<PlanBAssessment>("/api/research/plan-b", {
+        mission: candidate,
+        limits,
+        allow_remote_terrain: original.allow_remote_terrain ?? original.horizon.quality !== "global",
+      }, signal,
         (data) => data.status !== "unavailable");
       signal.throwIfAborted();
       if (assessment.status !== "evaluated") {

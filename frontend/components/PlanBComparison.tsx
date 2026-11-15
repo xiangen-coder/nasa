@@ -13,6 +13,7 @@ import {
   comparableScores,
   comparableTerrain,
   comparableVisibility,
+  horizonLabel,
   findPlanB,
   initialProgress,
   latestTouchdown,
@@ -279,7 +280,7 @@ export default function PlanBComparison({
           !sameMission(location, originalWindow)) continue;
 
       const energy = solarEstimate(result, equipment);
-      const reasons = result.warnings ?? [];
+      const reasons = [...result.constraints_failed, ...(result.warnings ?? [])];
       reused.push({ location, result, energy: energy?.total_kwh, reasons });
     }
   }
@@ -343,7 +344,7 @@ export default function PlanBComparison({
     status !== "running"
       ? rankOptions(progress.options, priority, mode).map((option) => ({
           ...option,
-          reasons: [],
+          reasons: option.result.constraints_failed,
         }))
       : [];
   const incomplete =
@@ -723,7 +724,9 @@ export default function PlanBComparison({
                                       )}
                                   </td>
                                   <td>
-                                    {result.provisional ? "Provisional" : "Scored"}
+                                    {result.constraints_failed.length ? "Limits exceeded" : result.provisional ? "Provisional" : "Scored"}
+                                    <small>{horizonLabel(result)} · {candidate.interval_minutes} min · {candidate.clearance_deg}° Earth clearance</small>
+                                    {!visibility && <small>Visibility settings differ from the original.</small>}
                                     {added && <small>In comparison</small>}
                                   </td>
                                   <td>

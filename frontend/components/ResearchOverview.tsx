@@ -24,6 +24,8 @@ import EnergyOnlyCharts from "./mission-lab/EnergyOnlyCharts";
 import EquipmentControls from "./mission-lab/EquipmentControls";
 import { solarEnergy, type SolarSettings } from "./mission-lab/scenario-science";
 import type { Site } from "../app/types";
+import { horizonLabel } from "../lib/plan-b";
+import { formatCoordinates } from "../lib/format-coordinates";
 import { quickMapSiteUrl } from "../lib/quickmap";
 import {
   inComparisonArea,
@@ -36,12 +38,12 @@ const focusLabels: Record<ResearchPriority, string> = {
   overall: "Overall consideration",
   T: "Terrain safety",
   S: "Sunlight availability",
-  C: "Earth communication",
+  C: "Earth-centre visibility",
 };
 const factorLabels: Record<string, string> = {
   T: "Terrain",
   S: "Sunlight",
-  C: "Earth communication",
+  C: "Earth-centre visibility",
   H: "Temperature",
   I: "Water ice evidence",
 };
@@ -87,6 +89,7 @@ function openResultSection(id: string) {
 export default function ResearchOverview({
   result,
   comparisonOrigin,
+  assessedAreaCentre,
   comparisonRadiusKm,
   onNavigate,
   onSaveMission,
@@ -104,6 +107,7 @@ export default function ResearchOverview({
 }: {
   result: Research | null;
   comparisonOrigin: Site;
+  assessedAreaCentre?: Site;
   comparisonRadiusKm?: number;
   onNavigate: (view: number) => void;
   onSaveMission: (assessment: Research) => void;
@@ -221,8 +225,10 @@ export default function ResearchOverview({
                 {Math.abs(result.mission.longitude).toFixed(4)}° {result.mission.longitude < 0 ? "W" : "E"}
               </span>
               <span>{utc(result.mission.start)} → {utc(result.mission.end)}</span>
+              <span>{horizonLabel(result)} · {result.mission.interval_minutes} min sampling · {result.mission.clearance_deg}° Earth clearance</span>
             </p>
           )}
+          {assessedAreaCentre && <p>Search centre · {assessedAreaCentre.name} ({formatCoordinates(assessedAreaCentre.latitude, assessedAreaCentre.longitude)})</p>}
         </div>
         <div className="result-title-actions">
           <button type="button" className="button primary new-search" onClick={onNewSearch}>
@@ -267,7 +273,7 @@ export default function ResearchOverview({
                     : "Share of the mission window with the Sun above the applicable horizon.",
                 ],
                 [
-                  "Earth visibility",
+                  "Earth-centre visibility",
                   value(result.factors.C?.score, "%"),
                   "Share with direct Earth geometry above the configured clearance.",
                 ],

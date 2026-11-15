@@ -6,8 +6,15 @@ import type {Research} from "./LandingResearch";
 type Source={name?:string;source_url?:string;quality?:string;frame?:string;observation_period?:string;resolution_m?:number};
 type TerrainResult={location:Site;radius_m:number;terrain:Research["terrain"];regional_elevation:{available:boolean;value?:number;reason?:string;source?:Source;coverage_type?:"global"|"regional"};coordinate_note:string;limitations:string[]};
 const number=(n:number|undefined,unit="")=>n==null?"Unavailable":`${n.toLocaleString("en-GB",{maximumFractionDigits:2})}${unit}`;
-export default function TerrainAssessment({location,onSelect}:{location:Site;onSelect:(site:Site)=>void}){
-  const [radius,setRadius]=useState(100),[layer,setLayer]=useState<"slope"|"elevation">("slope"),[retry,setRetry]=useState(0);
+type TerrainLayer = "slope" | "elevation";
+
+export default function TerrainAssessment({ location, onSelect, fixedLayer }: {
+  location: Site;
+  onSelect: (site: Site) => void;
+  fixedLayer?: TerrainLayer;
+}) {
+  const [radius,setRadius]=useState(100),[selectedLayer,setLayer]=useState<TerrainLayer>("slope"),[retry,setRetry]=useState(0);
+  const layer = fixedLayer ?? selectedLayer;
   const [response,setResponse]=useState<{key:string;data?:TerrainResult;error?:string}|null>(null);
   const key=`${location.latitude},${location.longitude},${radius},${retry}`;
   useEffect(()=>{
@@ -29,7 +36,7 @@ export default function TerrainAssessment({location,onSelect}:{location:Site;onS
     <div className="terrain-content">
       <p><strong>{location.name}</strong> · {location.latitude.toFixed(5)}° N, {location.longitude.toFixed(5)}° E</p>
       <div className="astro-inputs"><label>Latitude (° N)<input type="number" min="-90" max="90" step="any" value={location.latitude} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&Math.abs(n)<=90)onSelect({...location,name:"Custom terrain point",latitude:n});}}/></label><label>Longitude (° E)<input type="number" min="-180" max="180" step="any" value={location.longitude} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&Math.abs(n)<=180)onSelect({...location,name:"Custom terrain point",longitude:n});}}/></label></div>
-      <div className="astro-inputs"><label>Analysis radius<select value={radius} onChange={e=>setRadius(Number(e.target.value))}>{[25,50,100,250,500].map(n=><option key={n} value={n}>{n} m</option>)}</select></label><label>Diagnostic layer<select value={layer} onChange={e=>setLayer(e.target.value as "slope"|"elevation")}><option value="slope">Slope</option><option value="elevation">Elevation</option></select></label></div>
+      <div className="astro-inputs"><label>Analysis radius<select value={radius} onChange={e=>setRadius(Number(e.target.value))}>{[25,50,100,250,500].map(n=><option key={n} value={n}>{n} m</option>)}</select></label>{!fixedLayer && <label>Diagnostic layer<select value={layer} onChange={e=>setLayer(e.target.value as TerrainLayer)}><option value="slope">Slope</option><option value="elevation">Elevation</option></select></label>}</div>
       {!current&&<p role="status">Reading a local raster window…</p>}
       {current?.error&&<div role="alert"><p>{current.error}</p><button className="button subtle" onClick={()=>setRetry(v=>v+1)}>Retry terrain request</button></div>}
       {data&&<>
