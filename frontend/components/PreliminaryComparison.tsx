@@ -11,6 +11,7 @@ import {
   comparableScores,
   comparableTerrain,
   comparableVisibility,
+  horizonLabel,
   sameMission,
   type PlanBForecast,
 } from "../lib/plan-b";
@@ -18,7 +19,7 @@ import PlanBComparison from "./PlanBComparison";
 import type { ResearchArea, ResearchAreaResult } from "../lib/research-area";
 const criteria = [
   ["S", "Sunlight"],
-  ["C", "Earth visibility"],
+  ["C", "Earth-centre visibility"],
   ["T", "Terrain"],
   ["H", "Temperature"],
 ] as const;
@@ -157,15 +158,12 @@ export default function PreliminaryComparison({
     const result = assessments[index];
     const failure = scenario ? undefined : state?.failures[key(site)];
     const isSelected = index === 0;
-    const title = area && hasRecommendation ? (isSelected ? "Recommended landing point" : `Alternative ${index}`) : `Pre-Result ${index + 1}`;
-    const comparable =
-      selected &&
-      result &&
-      (scenario
-        ? comparableScores(selected, result)
-        : selected.available_weight === result.available_weight &&
-          selected.missing.join() === result.missing.join() &&
-          selected.geometry.mode === result.geometry.mode);
+    const title = isSelected
+      ? area && hasResults
+        ? hasRecommendation ? (priority === "overall" ? "Highest-scoring point evaluated" : "Highest-ranked point evaluated") : "Point for inspection"
+        : "Original scenario"
+      : `Alternative ${index}`;
+    const comparable = selected && result && comparableScores(selected, result);
     const delta =
       comparable && result?.score != null && selected?.score != null
         ? result.score - selected.score
@@ -181,6 +179,13 @@ export default function PreliminaryComparison({
           : "Not assessed yet";
     const limits = result?.limits;
     const terrain = result?.terrain;
+    const checkedTerrain = terrain?.available && !terrain.regional_only ? terrain : undefined;
+    const checks = [
+      ["Maximum slope", checkedTerrain?.slope_max_deg, limits?.max_slope_deg],
+      ["Roughness", checkedTerrain?.roughness_m, limits?.max_roughness_m],
+      ["Relief", checkedTerrain?.relief_m, limits?.max_relief_m],
+      ["Mapped hazard fraction", result?.hazards?.available ? result.hazards.value : undefined, limits?.max_hazard_fraction],
+    ] as const;
     const temperature = result?.temperature;
     const observer = result?.observer_height;
     const issues = [
@@ -207,15 +212,17 @@ export default function PreliminaryComparison({
       >
         <header className="pre-result-heading">
           <h2>{title}</h2>
-          {area && isSelected && !searchingArea && <p>{hasRecommendation
-            ? "Best of the points evaluated within your research area."
-            : "Preliminary comparison · evidence may be incomplete."}</p>}
+          {area && isSelected && areaResult && <p>
+            {areaResult.counts.evaluated} of {areaResult.sampled} points evaluated · {areaResult.counts.limits} exceeded configured limits.
+            {hasRecommendation && areaResult.counts.limits > 0 && " This point leads among those with no measured limit failures."}
+            {!hasRecommendation && hasResults && " No evaluated point qualified for recommendation."}
+          </p>}
           {searchingArea ? (
             <p role="status"><span className="pre-result-spinner" aria-hidden="true" />Searching the research area…</p>
-          ) : <p>{site.name}</p>}
+          ) : <p>{area && "Assessed point · "}{site.name}</p>}
           {area && !searchingArea && <p>
-            {formatCoordinates(site.latitude, site.longitude)} ·{" "}
-            {comparisonDistanceKm(area.centre, site).toFixed(2)} km from research centre
+            {formatCoordinates(site.latitude, site.longitude)} · {comparisonDistanceKm(area.centre, site).toFixed(2)} km from {area.centre.name}
+            {" "}({formatCoordinates(area.centre.latitude, area.centre.longitude)})
           </p>}
           {comparing && (
             <dl className="what-if-card-window">
@@ -259,6 +266,15 @@ export default function PreliminaryComparison({
             {status}
           </span>
         </div>
+        {result && <div className="pre-comparison-note">
+          <p>{result.constraints_failed.length ? "Ineligible for recommendation · configured limits exceeded." : "No configured limits exceeded in the available measurements."}</p>
+          <ul>{checks.map(([label, value, limit]) => <li key={label}>
+            {label} · {value == null || limit == null ? "Unknown" : value > limit ? "Failed" : "Passed"}
+          </li>)}</ul>
+          <p>{horizonLabel(result)} · {site.interval_minutes} min sampling · {site.clearance_deg}° Earth clearance</p>
+          {!isSelected && selected && !comparableVisibility(selected, result) &&
+            <p>Visibility methods or inputs differ. Sunlight, Earth visibility, and energy differences are unavailable.</p>}
+        </div>}
         <section className="pre-criteria" aria-label="Criteria at a glance">
           <h3>Criteria at a glance</h3>
           <dl>
@@ -342,7 +358,7 @@ export default function PreliminaryComparison({
             )}
             {scenario && (
               <div>
-                <dt>Sunlight and Earth communication</dt>
+                <dt>Sunlight and Earth-centre visibility</dt>
                 {result?.geometry.sunlight_hours != null && (
                   <dd>
                     {result.geometry.sunlight_hours.toFixed(1)} h of sunlight

@@ -5,7 +5,7 @@ import { formatCoordinates } from "../lib/format-coordinates";
 import { useState } from "react";
 import type { Mission, Site } from "../app/types";
 import type { Research, ResearchComparison, ResearchSpan } from "./LandingResearch";
-import { missionKey, sameMission, comparableScores, comparableVisibility, solarEstimate, type PlanBForecast } from "../lib/plan-b";
+import { missionKey, sameMission, comparableScores, comparableVisibility, horizonLabel, solarEstimate, type PlanBForecast } from "../lib/plan-b";
 import ResearchElevationChart from "./ResearchElevationChart";
 import ResearchSolarEstimate from "./ResearchSolarEstimate";
 import { defaultSolar, type SolarSettings } from "./mission-lab/scenario-science";
@@ -26,7 +26,7 @@ export function visibilityWindows(result: Research) {
     ["Earth visible", geometry.earth_windows],
     ["Sun and Earth visible", geometry.metrics?.operational_windows],
     ["Darkness", geometry.metrics?.darkness_windows],
-    ["Earth blackout", geometry.metrics?.blackout_windows],
+    ["Earth below visibility threshold", geometry.metrics?.blackout_windows],
   ] as const;
 }
 
@@ -44,7 +44,7 @@ export function ResearchWindows({ result, showTotals = true }: { result: Researc
 
 const measurements: { label: string; value: (r: Research) => string }[] = [
   { label: "Sun visibility", value: (r) => format(r.factors.S.score, "%") },
-  { label: "Earth visibility", value: (r) => format(r.factors.C.score, "%") },
+  { label: "Earth-centre visibility", value: (r) => format(r.factors.C.score, "%") },
   { label: "Simultaneous visibility", value: (r) => format(totalHours(r.geometry.metrics?.operational_windows), " h") },
   { label: "Longest darkness", value: (r) => format(r.geometry.metrics?.longest_darkness_hours, " h") },
   { label: "Longest Earth visibility gap", value: (r) => format(r.geometry.metrics?.longest_blackout_hours, " h") },
@@ -105,7 +105,8 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
   ];
   const complete = entries.flatMap(({ assessment }) => assessment ? [assessment] : []);
   if (!complete.length || (!singleMission && entries.length < 2)) return null;
-  const choice = complete.find((r) => missionKey(r.mission) === preferred);
+  const eligible = complete.filter((r) => !r.constraints_failed.length);
+  const choice = eligible.find((r) => missionKey(r.mission) === preferred);
   const evidence = complete.find((r) => missionKey(r.mission) === evidenceSite) ?? complete[0];
   const label = (point: Mission) => entries.some((entry) => entry.mission.name === point.name && !sameMission(entry.mission, point))
     ? `${point.name} · ${utc(point.start)}`
@@ -125,6 +126,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
   const sharedLocation = entries.every(({ mission: point }) =>
     point.latitude === base.mission.latitude && point.longitude === base.mission.longitude);
   const mismatchedEvidence = complete.length > 1 && complete.some((r) => !comparableScores(complete[0], r));
+  const mismatchedVisibility = complete.length > 1 && complete.some((r) => !comparableVisibility(complete[0], r));
   const advice = singleMission ? "Review mission visibility, terrain measurements and evidence coverage for this site." : incomplete
     ? "Some selected options are awaiting an assessment or have unavailable data."
     : mismatchedEvidence
@@ -150,6 +152,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
     ["Mission end (UTC)", ...entries.map(({ mission }) => utc(mission.end))],
     ["Sampling interval", ...entries.map(({ mission }) => `${mission.interval_minutes} min`)],
     ["Earth clearance", ...entries.map(({ mission }) => `${mission.clearance_deg}°`)],
+    ["Horizon model", ...entries.map(({ assessment }) => horizonLabel(assessment))],
     ["Assessment status", ...entries.map(assessmentStatus)],
   ];
   const sunlightRow = ["Sunlight (mission total)", ...entries.map(({ assessment }) => format(sunlight(assessment), " h"))];
@@ -200,7 +203,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
       </table>
     </div>;
   }
-  const operationalRows = [sunlightRow, ...measurementRows.slice(1, 5), energyRow, ...(hasScenarioEnergyDifference ? [scenarioEnergyRow] : [])];
+  const operationalRows = [...identityRows.slice(3, 6), sunlightRow, ...measurementRows.slice(1, 5), energyRow, ...(hasScenarioEnergyDifference ? [scenarioEnergyRow] : [])];
   const terrainRows = [...measurementRows.slice(5, 14), evidenceRow, measurementRows[15], measurementRows[16]];
   const scoreRows = [measurementRows[14]];
   return (
@@ -263,6 +266,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
       </section>
       <section className="report-panel">
         <h3>Mission availability &amp; energy</h3>
+        {mismatchedVisibility && <p className="report-evidence-warning">The horizon model or visibility settings differ. Read the sunlight, Earth-centre visibility and energy values as individual estimates. Use matching visibility methods and settings to measure the effect of changing dates or sites.</p>}
         {comparisonTable(operationalRows, "Side-by-side research comparison", true)}
         {hasScenarioEnergyDifference && <p>The What IF estimate records the value at evaluation. The main energy row uses the report’s current equipment settings.</p>}
         {maxHours > 0 && entries.some(({ assessment }) => sunlight(assessment) != null) && (
@@ -317,7 +321,7 @@ export default function ResearchComparisonReport({ mission, alternatives, compar
       <label className="research-preferred">Preferred point for further study
         <select value={choice ? preferred : ""} onChange={(event) => setPreferred(event.target.value)}>
           <option value="">Select an assessed point</option>
-          {complete.map((r) => <option key={missionKey(r.mission)} value={missionKey(r.mission)}>{label(r.mission)}</option>)}
+          {eligible.map((r) => <option key={missionKey(r.mission)} value={missionKey(r.mission)}>{label(r.mission)}</option>)}
         </select>
       </label>
       {choice && <p><strong>{label(choice.mission)}</strong> selected for further study.</p>}

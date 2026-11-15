@@ -61,11 +61,12 @@ export type LabSource = ReturnType<typeof adaptAssessment>;
 
 export function simulatePower(source: LabSource, inputs: PowerInputs, activities: Activity[]) {
   if (!source.complete) throw Error("Open a Result with a complete sunlight timeline for the selected mission window.");
-  const power = Object.fromEntries(Object.entries(powerFields).map(([key, [label, , min, max]]) => {
+  const power = Object.fromEntries(Object.entries(powerFields).map(([key, [label, unit, min, max]]) => {
     const raw = inputs[key as PowerKey]?.trim();
     if (!raw && optionalLimits.includes(key)) return [key, Infinity];
     const number = Number(raw);
-    if (!raw || !Number.isFinite(number) || number < min || number > max)
+    if (!raw) throw Error(`Enter ${label.toLowerCase()} (${unit}).`);
+    if (!Number.isFinite(number) || number < min || number > max)
       throw Error(`${label} must be between ${min} and ${max}.`);
     return [key, number];
   })) as Record<PowerKey, number>;

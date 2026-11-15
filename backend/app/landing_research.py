@@ -20,7 +20,7 @@ from datetime import datetime
 
 router=APIRouter(prefix='/api/research',tags=['Landing research'])
 WEIGHTS={'T':.35,'S':.25,'C':.20,'H':.15,'I':.05}
-NAMES={'T':'Terrain safety','S':'Sunlight availability','C':'Earth communication','H':'Temperature suitability','I':'Water ice potential'}
+NAMES={'T':'Terrain safety','S':'Sunlight availability','C':'Earth-centre visibility','H':'Temperature suitability','I':'Water ice potential'}
 
 class Limits(BaseModel):
     model_config=ConfigDict(extra='forbid',allow_inf_nan=False)
@@ -43,11 +43,13 @@ class Limits(BaseModel):
 class ResearchRequest(BaseModel):
     mission: Mission
     limits: Limits=Field(default_factory=Limits)
+    allow_remote_terrain: bool = True
 
 
 class ResearchAreaRequest(ResearchRequest):
     radius_m: int = Field(ge=250, le=20000)
     focus: Literal["overall", "T", "S", "C", "I"] = "overall"
+
 
 def clamp(x): return max(0.,min(100.,float(x)))
 
@@ -181,6 +183,7 @@ def research(request, *, deadline=None, allow_remote=True):
             f'Footprint scoring requires a complete local window with pixels at most {limits.max_resolution_m:g} m.'
         )
     return {'mission':mission.model_dump(mode='json'),'limits':limits.model_dump(),'terrain':t,'horizon':screening,'observer_height':observer_height,
+            'allow_remote_terrain':allow_remote,
             'geometry':geometry,'temperature':thermal,'hazards':hazards,'ice':ice,
             **assessment,
             'limitations':['Research ranking only; never a NASA landing certification or a safe-site recommendation.',
@@ -196,12 +199,12 @@ def check_research_intervals(request:ResearchRequest):
 @router.post('/evaluate')
 def evaluate(request:ResearchRequest):
     check_research_intervals(request)
-    return research(request)
+    return research(request, allow_remote=request.allow_remote_terrain)
 
 @router.post('/plan-b')
 def evaluate_plan_b(request:ResearchRequest):
     check_research_intervals(request)
-    return plan_b_outcome(research(request))
+    return plan_b_outcome(research(request, allow_remote=request.allow_remote_terrain))
 
 
 def plan_b_outcome(result):
@@ -233,9 +236,12 @@ def find_research_area(request: ResearchAreaRequest):
     candidates = [centre]
     # Visit all rings early so a timed-out search can still include distant sites.
     radii = candidate_radii(request.radius_m, include_nearby=True)
-    for bearing in (0, 180, 90, 270, 45, 225, 135, 315):
+    directions = {0: "north", 180: "south", 90: "east", 270: "west",
+                  45: "northeast", 225: "southwest", 135: "southeast", 315: "northwest"}
+    for bearing, direction in directions.items():
         for radius in radii:
-            candidate = radial_candidate(centre, radius, bearing, f"Candidate {bearing}° / {radius:.0f} m")
+            distance_label = f"{radius / 1000:.2f}".rstrip("0").rstrip(".")
+            candidate = radial_candidate(centre, radius, bearing, f"{distance_label} km {direction} of {centre.name}")
             distance = rasters.GEOD.inv(
                 centre.longitude, centre.latitude, candidate.longitude, candidate.latitude,
             )[2]
@@ -260,6 +266,8 @@ def find_research_area(request: ResearchAreaRequest):
             counts["missing"] += 1
             continue
         counts["evaluated"] += 1
+        if result.get("constraints_failed"):
+            counts["limits"] += 1
         assessed.append((candidate, result))
 
     distances = [None] * len(assessed)
@@ -280,9 +288,9 @@ def find_research_area(request: ResearchAreaRequest):
         factor = result["factors"][request.focus]["score"]
         return (factor if factor is not None else -1), overall
 
-    ranked.sort(key=ranking, reverse=True)
+    ranked.sort(key=lambda item: (not item[0].get("constraints_failed"), ranking(item)), reverse=True)
     results = [result for result, _ in ranked[:5]]
-    recommended = bool(results)
+    recommended = bool(results) and not results[0].get("constraints_failed")
     return {
         "counts": counts,
         "sampled": len(candidates),

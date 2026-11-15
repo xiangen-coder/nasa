@@ -66,7 +66,8 @@ def test_shadow_reports_full_partial_and_missing_coverage():
     assert water.research_shadow(0, 0, 5000)["shadow_fraction"] is None
 
 
-def test_area_ranks_scores_even_with_limit_failures(monkeypatch):
+@pytest.mark.parametrize("eligible_score", [None, 43])
+def test_area_preserves_failed_points_for_inspection_without_recommending_them(monkeypatch, eligible_score):
     request = research.ResearchAreaRequest(
         mission=dict(name="Centre", latitude=-86.1315, longitude=148.3593,
                      start="2026-10-01T00:00:00Z", end="2026-10-08T00:00:00Z",
@@ -77,12 +78,15 @@ def test_area_ranks_scores_even_with_limit_failures(monkeypatch):
     scores = iter(range(49))
 
     def evaluate(candidate, **kwargs):
-        return {"mission": candidate.mission, "score": next(scores),
-                "constraints_failed": ["Slope exceeded"]}
+        score = next(scores)
+        return {"mission": candidate.mission, "score": score,
+                "constraints_failed": [] if score == eligible_score else ["Slope exceeded"]}
 
     monkeypatch.setattr(research, "research", evaluate)
     result = research.find_research_area(request)
-    assert result["recommended"]
+    assert result["recommended"] == (eligible_score is not None)
     assert result["counts"]["evaluated"] == 49
-    assert [point["score"] for point in result["results"]] == [48, 47, 46, 45, 44]
+    assert result["counts"]["limits"] == (49 if eligible_score is None else 48)
+    expected = [48, 47, 46, 45, 44] if eligible_score is None else [eligible_score, 48, 47, 46, 45]
+    assert [point["score"] for point in result["results"]] == expected
     assert result["results"][0]["mission"] != request.mission

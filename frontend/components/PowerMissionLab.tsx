@@ -38,9 +38,11 @@ export type PlannerAiContext = {
   variant: { powerInputs: PowerInputs; simulation: ReturnType<typeof powerSummary> } | null;
 };
 
-export default function PowerMissionLab({ onAiContextChange, source, onResult, onConfigure, sourceError, openSavedReport = false }: {
+export default function PowerMissionLab({ onAiContextChange, source, onResult, onConfigure, sourceError, currentResult, onUseCurrentResult, openSavedReport = false }: {
   onAiContextChange?: (value: PlannerAiContext) => void;
   source: LabSource | null; onResult: () => void; onConfigure: () => void; sourceError?: string; openSavedReport?: boolean;
+  currentResult: LabSource["assessment"] | null;
+  onUseCurrentResult: (assessment: LabSource["assessment"]) => void;
 }) {
   const [draft, setDraft] = useState(initialDraft);
   const [run, setRun] = useState<PowerRun | null>(null);
@@ -138,6 +140,12 @@ export default function PowerMissionLab({ onAiContextChange, source, onResult, o
         {source && <button className="button subtle" onClick={() => save(false)}>Save draft</button>}
       </div>
     </header>
+    {currentResult && <article className="power-lab-panel">
+      <p>{source ? "The open Planner draft uses a different assessment." : "A site assessment is ready to import."}</p>
+      <p>{currentResult.mission.name} · {utc(currentResult.mission.start)} → {utc(currentResult.mission.end)}</p>
+      <button className="button primary" onClick={() => onUseCurrentResult(currentResult)}>Use current Result</button>
+    </article>}
+    {sourceError && <p role="alert" className="error">{sourceError}</p>}
     {source ? <>
       <article className="power-lab-panel power-lab-source">
         <div className="power-lab-title"><strong>Imported from your Result</strong><button className="text-button" onClick={onResult}>View source Result ↗</button></div>
@@ -152,6 +160,7 @@ export default function PowerMissionLab({ onAiContextChange, source, onResult, o
         {source.coordinateMetadata.frame && <p>Coordinate frame · {source.coordinateMetadata.frame}{source.coordinateMetadata.datum && ` · ${source.coordinateMetadata.datum}`}</p>}
         {source.assessedAt && Number.isFinite(Date.parse(source.assessedAt)) && <p>Assessment timestamp · {utc(source.assessedAt)}</p>}
         {source.resultId && <p>Result ID · {source.resultId}</p>}
+        <p>Planner uses the selected site, mission window, and visibility samples from Results. Set panel area, efficiency, and effective panel-plane irradiance for this simulation.</p>
         <button className="text-button" onClick={onConfigure}>Change site or dates</button>
       </article>
       <section className="power-lab-panel" id="power-lab-step-0" tabIndex={-1}>
@@ -166,7 +175,8 @@ export default function PowerMissionLab({ onAiContextChange, source, onResult, o
           <h2>2. Lander &amp; operations</h2>
           <button className="button subtle" onClick={() => updateSetup({ ...draft, power: { ...smallLander } })}>Apply Small lander preset</button>
           <p>Editable example equipment values.</p>
-          <div className="power-lab-form">{fields.slice(0, 6).map(powerInput)}</div>
+          <div className="power-lab-form">{[...fields.slice(0, 6), "irradiance" as const].map(powerInput)}</div>
+          <p>Enter the assumed irradiance at the panel surface during sunlit intervals, including the effect of panel orientation.</p>
           <h3>Daily operating plan · UTC</h3>
           <p>Repeats daily. Activity loads replace standby and should include heaters and communications.</p>
           {draft.activities.map((activity, index) => <div className="power-lab-activity" key={index}>
@@ -176,10 +186,10 @@ export default function PowerMissionLab({ onAiContextChange, source, onResult, o
             <button className="text-button" aria-label={"Remove activity " + (index + 1)} onClick={() => updateSetup({ ...draft, activities: draft.activities.filter((_, i) => i !== index) })}>Remove</button>
           </div>)}
           <button className="text-button" onClick={() => updateSetup({ ...draft, activities: [...draft.activities, { name: "Science", start: 6, end: 18, watts: 90 }] })}>+ Add activity</button>
-          <details open={draft.power.irradiance === "" || undefined}>
+          <details>
             <summary>Advanced power assumptions</summary>
-            <p>Enter effective irradiance at the panel surface during sunlit intervals. Include any assumed orientation effect in that value. Blank power limits are unlimited and apply at the electrical bus.</p>
-            <div className="power-lab-form">{fields.slice(6).map(powerInput)}</div>
+            <p>Blank power limits are unlimited and apply at the electrical bus.</p>
+            <div className="power-lab-form">{fields.slice(6).filter((field) => field !== "irradiance").map(powerInput)}</div>
           </details>
           <button className="button primary" onClick={() => calculate()}>Run power simulation</button>
         </section>
@@ -264,6 +274,6 @@ export default function PowerMissionLab({ onAiContextChange, source, onResult, o
         </div>
         {notice && <p role="status">{notice}</p>}
       </section>
-    </> : <article className="power-lab-panel"><h2>Open a site assessment</h2><p>{sourceError || "Open Mission Planner from a completed Result to use its site and mission timeline."}</p><button className="button primary" onClick={onConfigure}>Configure a search</button></article>}
+    </> : !currentResult && <article className="power-lab-panel"><h2>Open a site assessment</h2><p>Open Mission Planner from a completed Result to use its site and mission timeline.</p><button className="button primary" onClick={onConfigure}>Configure a search</button></article>}
   </section>;
 }

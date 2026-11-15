@@ -9,7 +9,7 @@ const limits = { max_slope_deg: 13 };
 
 function evidence(mission: Mission, score = 80, original = false) {
   return {
-    mission, limits, score, available_weight: original ? 0.8 : 0.95,
+    mission, limits, score, allow_remote_terrain: false, available_weight: original ? 0.8 : 0.95,
     missing: original ? ["H"] : [], provisional: true, constraints_failed: [], safety_status: "not_established",
     warnings: [], limitations: [
       "Research ranking only; never a NASA landing certification or a safe-site recommendation.",
@@ -96,7 +96,7 @@ test("shows the assessed site's summary, methods, Lunar Journey and Water/Ice Ev
     } } });
   });
   await openCompare(page);
-  await page.getByRole("article", { name: /Recommended landing point:/ }).getByRole("button", { name: "More details" }).click();
+  await page.getByRole("article", { name: /Highest-scoring point evaluated:/ }).getByRole("button", { name: "More details" }).click();
   await page.evaluate(() => {
     window.print = () => {
       const report = document.querySelector(".assessment-print-report");
@@ -157,11 +157,12 @@ test("delay search samples then refines, ranks by score and preserves the origin
   await page.route("**/api/research/plan-b", async (route) => {
     const body = route.request().postDataJSON();
     expect(body.limits).toEqual(limits);
+    expect(body.allow_remote_terrain).toBe(false);
     candidates.push(body.mission);
     await route.fulfill({ json: { status: "evaluated", result: evidence(body.mission, candidates.length) } });
   });
   const plan = await openCompare(page);
-  const original = page.getByRole("article", { name: /Recommended landing point:/ });
+  const original = page.getByRole("article", { name: /Highest-scoring point evaluated:/ });
   const criteria = original.getByRole("region", { name: "Criteria at a glance" });
   await expect(criteria.getByRole("meter", { name: "Water ice potential" })).toHaveCount(0);
   await expect(criteria.getByRole("meter", { name: "Temperature" })).toHaveCount(0);
@@ -224,7 +225,7 @@ test("location and combined searches keep the baseline and enforce the selected 
   expect(candidates.some((mission) => mission.start.startsWith("2028-12-01"))).toBeTruthy();
   expect(candidates.some((mission) => mission.name === "Far")).toBeFalsy();
   expectMissionSettings(candidates);
-  const original = page.getByRole("article", { name: /Recommended landing point:/ });
+  const original = page.getByRole("article", { name: /Highest-scoring point evaluated:/ });
   const originalBox = await original.boundingBox();
   const planBox = await plan.boundingBox();
   expect(planBox!.x).toBeGreaterThanOrEqual(originalBox!.x + originalBox!.width);
@@ -312,7 +313,7 @@ test("saved mission opens its completed result without a new analysis", async ({
     }] : [] } });
   });
   await openCompare(page);
-  await page.getByRole("article", { name: /Recommended landing point:/ }).getByRole("button", { name: "More details" }).click();
+  await page.getByRole("article", { name: /Highest-scoring point evaluated:/ }).getByRole("button", { name: "More details" }).click();
   await page.route("**/api/research/evaluate", (route) => {
     analysisCount++;
     const { mission } = route.request().postDataJSON();
@@ -386,7 +387,7 @@ test("Mission Planner imports the Result and models a battery change", async ({ 
   });
   await page.getByRole("button", { name: "Back to Search", exact: true }).first().click();
   await page.getByRole("button", { name: "Find landing point", exact: true }).click();
-  await page.getByRole("article", { name: /Recommended landing point:/ }).getByRole("button", { name: "More details" }).click();
+  await page.getByRole("article", { name: /Highest-scoring point evaluated:/ }).getByRole("button", { name: "More details" }).click();
   let analysisRequests = 0;
   page.on("request", (request) => {
     if (/\/api\/research\/(evaluate|research-area)$/.test(request.url())) analysisRequests++;
@@ -394,7 +395,7 @@ test("Mission Planner imports the Result and models a battery change", async ({ 
   await page.getByRole("button", { name: "Open in Mission Planner" }).click();
   await expect(page.getByText("Imported from your Result")).toBeVisible();
   await page.getByRole("button", { name: "Run power simulation" }).click();
-  await expect(page.getByRole("region", { name: "Mission Planner" }).getByRole("alert")).toContainText("Effective incident irradiance");
+  await expect(page.getByRole("region", { name: "Mission Planner" }).getByRole("alert")).toContainText("Enter effective incident irradiance (W/m²).");
   await page.getByRole("spinbutton", { name: "Effective incident irradiance" }).fill("1000");
   await page.getByRole("button", { name: "Run power simulation" }).click();
   await expect(page.getByText("Generated energy · 9.07 kWh")).toBeVisible();

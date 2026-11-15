@@ -746,6 +746,7 @@ export default function Page() {
             body: JSON.stringify({
               mission: { ...activeArea.area.centre, name: point.name, latitude: point.latitude, longitude: point.longitude },
               limits: activeArea.area.limits,
+              allow_remote_terrain: false,
             }),
           });
           if (!response.ok) throw Error("Assessment unavailable");
@@ -956,6 +957,20 @@ export default function Page() {
   }
 
   const displayedResult = reopenedMission?.snapshot.assessment ?? researchResult;
+  const assessedAreaCentre = !reopenedMission && activeArea?.result && displayedResult &&
+    (comparisonState?.results.includes(displayedResult) || comparisonScenarios.some(({ result }) => result === displayedResult))
+    ? activeArea.area.centre : undefined;
+  function openAssessmentInPlanner(assessment: Research) {
+    try {
+      const imported = adaptAssessment(assessment, assessedAreaCentre);
+      setOpenSavedLabReport(false);
+      setLabSource((previous) => previous?.assessment === assessment && previous.key === imported.key ? previous : imported);
+      setLabError("");
+    } catch (error) {
+      setLabError(error instanceof Error ? error.message : "Could not import the selected Result.");
+    }
+    setView(12);
+  }
   const aiAssessment = view === 12 ? labSource?.assessment : displayedResult;
   const plannerContext = view === 12 && labSource && plannerAiContext?.source === labSource
     ? {
@@ -1037,7 +1052,7 @@ export default function Page() {
             } : undefined}
             onOpenResult={(record, snapshot) => { setReopenedMission({ record, snapshot }); setResearchEquipment(snapshot.equipment); setView(8); }} onUsernameChange={setAccountName} onRestore={r=>{restoreMission(r.mission);setChosenAlternatives(r.alternatives);setResearchPriority(r.priority === "I" ? "I" : "overall");setRadiusKm(r.radiusKm ?? 20);areaRequest.current?.abort();setAreaSearch(undefined);setView(7);}}/>}
           {education&&<PortableEducation animate={preferences.animate}/>}
-          {(view===12 || labSource)&&<div hidden={view!==12}><PowerMissionLab onAiContextChange={setPlannerAiContext} key={JSON.stringify([labSource?.key, labReportVersion])} openSavedReport={openSavedLabReport} source={labSource} sourceError={labError} onResult={()=>{
+          {(view===12 || labSource)&&<div hidden={view!==12}><PowerMissionLab onAiContextChange={setPlannerAiContext} key={JSON.stringify([labSource?.key, labReportVersion])} openSavedReport={openSavedLabReport} source={labSource} sourceError={labError} currentResult={displayedResult !== labSource?.assessment ? displayedResult : null} onUseCurrentResult={openAssessmentInPlanner} onResult={()=>{
             if (labSource && displayedResult !== labSource.assessment) {
               setReopenedMission({
                 record: { ...searchRecord, mission: labSource.site, alternatives: [] },
@@ -1046,7 +1061,7 @@ export default function Page() {
             }
             setView(8);
           }} onConfigure={openSearchForm}/></div>}
-          {view===8&&<ResearchOverview key={JSON.stringify(displayedResult?.mission)} result={displayedResult} onNewSearch={() => { resetMissionWindow(); openSearchForm(); }} comparisonOrigin={comparisonOrigin} comparisonRadiusKm={comparisonRadius} onNavigate={setView} onRunAgain={reopenedMission ? async () => {
+          {view===8&&<ResearchOverview key={JSON.stringify(displayedResult?.mission)} result={displayedResult} onNewSearch={() => { resetMissionWindow(); openSearchForm(); }} comparisonOrigin={comparisonOrigin} assessedAreaCentre={assessedAreaCentre} comparisonRadiusKm={comparisonRadius} onNavigate={setView} onRunAgain={reopenedMission ? async () => {
             if (rerunningMission) return;
             const controller = new AbortController();
             rerunRequest.current = controller;
@@ -1057,7 +1072,7 @@ export default function Page() {
               const response = await fetch("/api/research/evaluate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ mission: assessment.mission, limits: assessment.limits }),
+                body: JSON.stringify({ mission: assessment.mission, limits: assessment.limits, allow_remote_terrain: assessment.allow_remote_terrain }),
                 signal: controller.signal,
               });
               if (!response.ok) throw new Error("Unable to refresh this mission.");
@@ -1070,20 +1085,7 @@ export default function Page() {
             } finally {
               if (!controller.signal.aborted) setRerunningMission(false);
             }
-          } : undefined} onOpenMissionLab={(assessment) => {
-            try {
-              const centre = !reopenedMission && activeArea?.result?.results.some((item) => sameMission(item.mission, assessment.mission))
-                ? activeArea.area.centre : undefined;
-              const imported = adaptAssessment(assessment, centre);
-              setOpenSavedLabReport(false);
-              setLabSource((previous) => previous?.assessment === assessment && previous.key === imported.key ? previous : imported);
-              setLabError("");
-            } catch (error) {
-              setLabSource(null);
-              setLabError(error instanceof Error ? error.message : "Could not import the selected Result.");
-            }
-            setView(12);
-          }} onSaveMission={saveDisplayedMission} missionSaveStatus={missionSaveStatus && missionSaveStatus.assessment === displayedResult ? missionSaveStatus : undefined} onAddComparison={addComparisonSite} busy={rerunningMission || (!reopenedMission && (researchBusy || !!activeArea?.busy))} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={reopenedMission?.record.priority ?? researchPriority} animate={preferences.animate} assessmentError={reopenedMission ? rerunError : comparisonState?.error}/>}
+          } : undefined} onOpenMissionLab={openAssessmentInPlanner} onSaveMission={saveDisplayedMission} missionSaveStatus={missionSaveStatus && missionSaveStatus.assessment === displayedResult ? missionSaveStatus : undefined} onAddComparison={addComparisonSite} busy={rerunningMission || (!reopenedMission && (researchBusy || !!activeArea?.busy))} equipment={researchEquipment} onEquipmentChange={setResearchEquipment} priority={reopenedMission?.record.priority ?? researchPriority} animate={preferences.animate} assessmentError={reopenedMission ? rerunError : comparisonState?.error}/>}
           <div hidden={![1,3].includes(view)}>
             <section className="task-intro panel">
               <h2>Which location and mission window should I investigate?</h2>
